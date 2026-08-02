@@ -9,7 +9,7 @@ import { RoleGate } from "@/components/dashboard/role-gate";
 import { useAuth } from "@/contexts/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { peso } from "@/components/admin/primitives";
-import { myWalletQuery } from "@/lib/wallet";
+import { minimumWalletBalanceQuery, myWalletQuery } from "@/lib/wallet";
 import { myStoresQuery } from "@/lib/stores";
 import { storeAvailability } from "@/lib/store-status";
 import { toast } from "sonner";
@@ -92,6 +92,7 @@ function SellerDashboard() {
 function SellerOverview() {
   const { user } = useAuth();
   const { data: wallet } = useQuery(myWalletQuery(user?.id, "seller"));
+  const { data: minimumBalance } = useQuery(minimumWalletBalanceQuery("seller"));
   const { data: stores } = useQuery(myStoresQuery(user?.id));
   const store = stores?.[0] ?? null;
   const availability = store ? storeAvailability(store) : null;
@@ -146,6 +147,12 @@ function SellerOverview() {
               <p className="text-xs text-muted-foreground">
                 {availability?.detail ?? "Set your opening hours in My stores."}
               </p>
+              {minimumBalance != null && (wallet?.balance ?? 0) < minimumBalance ? (
+                <p className="mt-2 text-sm text-destructive">
+                  Your wallet balance is below the required minimum of {peso(minimumBalance)}. Top
+                  up to keep your storefront live.
+                </p>
+              ) : null}
             </div>
             <span
               className={

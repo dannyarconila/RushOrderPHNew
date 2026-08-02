@@ -37,7 +37,7 @@ export const adminLoginFn = createServerFn({ method: "POST" })
 
 export const adminLogoutFn = createServerFn({ method: "POST" }).handler(async () => {
   const mod = await import("./auth.server");
-  const session = await mod.adminSession();
+  const session = await mod.useAdminSession();
   const adminId = session.data.adminId;
   if (adminId) {
     const account = await mod.findAccountById(adminId);
@@ -66,6 +66,7 @@ export const adminCompleteSetupFn = createServerFn({ method: "POST" })
     const passwordError = contracts.validateAdminPassword(data.password);
     if (passwordError) throw new Error(passwordError);
     if (
+      mod.DEFAULT_ADMIN_PASSWORD &&
       username.toLowerCase() === contracts.DEFAULT_ADMIN_USERNAME.toLowerCase() &&
       data.password === mod.DEFAULT_ADMIN_PASSWORD
     ) {
@@ -168,6 +169,9 @@ export const adminResetCredentialsFn = createServerFn({ method: "POST" })
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
     const account = await mod.requireReadyAdmin();
+    if (!mod.DEFAULT_ADMIN_PASSWORD) {
+      throw new Error("Factory credential reset is disabled for this deployment.");
+    }
     if (data.confirm.trim().toUpperCase() !== "RESET") throw new Error("Type RESET to confirm.");
     if (!(await mod.verifyPassword(data.currentPassword, account.password_hash))) {
       throw new Error("Your current password is incorrect.");
@@ -198,7 +202,7 @@ export const adminResetCredentialsFn = createServerFn({ method: "POST" })
       entityId: account.id,
     });
 
-    const session = await mod.adminSession();
+    const session = await mod.useAdminSession();
     await session.clear();
     return { ok: true as const };
   });

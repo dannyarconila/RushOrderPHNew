@@ -74,15 +74,116 @@ export const adminMutateFn = createServerFn({ method: "POST" })
     const requirePermission = async (permission: Parameters<typeof mod.requireReadyAdmin>[0]) =>
       mod.requireReadyAdmin(permission);
 
+    /**
+     * Enforce wallet minimums: toggle seller stores and rider presence based on
+     * current balance and configured minimum for the role. Runs with the
+     * service-role client so it has authority to update records atomically.
+     */
+    const enforceWalletState = async (userId: string, walletType: "seller" | "rider") => {
+      // Read current balance
+      const { data: walletRow, error: walletErr } = await supabaseAdmin
+        .from("wallets")
+        .select("id,balance,wallet_type")
+        .eq("user_id", userId)
+        .eq("wallet_type", walletType as never)
+        .maybeSingle();
+      if (walletErr) throw new Error(walletErr.message);
+      const balance = Number(walletRow?.balance ?? 0);
+
+      // Read required minimum using DB helper
+      const { data: minVal, error: minErr } = await supabaseAdmin.rpc(
+        "minimum_wallet_balance_for_role",
+        { _role: walletType },
+      );
+      if (minErr) throw new Error(minErr.message);
+      const required = Number(minVal ?? 0);
+
+      if (walletType === "seller") {
+        const shouldBeOnline = balance >= required;
+        // Update all stores owned by this user to reflect wallet enforcement
+        const { error: updateErr } = await supabaseAdmin
+          .from("stores")
+          .update({
+            is_online: shouldBeOnline,
+            wallet_hold: !shouldBeOnline,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("owner_id", userId);
+        if (updateErr) throw new Error(updateErr.message);
+
+        // Notify owner if state changed (best-effort)
+        try {
+          await supabaseAdmin.from("notifications").insert({
+            user_id: userId,
+            title: shouldBeOnline ? "Store restored online" : "Store taken offline",
+            body: shouldBeOnline
+              ? "Your store has been restored online after your wallet balance met the platform minimum."
+              : "Your store has been taken offline because your wallet balance fell below the required minimum. Top up to resume receiving orders.",
+            kind: "wallet",
+          });
+        } catch (e) {
+          // swallow notification errors to avoid blocking the main operation
+          console.error("notify-enforce-seller", e);
+        }
+
+        await mod.audit({
+          account: await mod.requireReadyAdmin("wallets"),
+          action: "wallet_enforcement",
+          entityType: "stores",
+          entityId: userId,
+          details: { walletType, balance, required },
+        });
+      } else {
+        // rider
+        const shouldBeOnline = balance >= required;
+        const { error: updateErr } = await supabaseAdmin
+          .from("rider_status")
+          .upsert(
+            { user_id: userId, is_online: shouldBeOnline, last_seen_at: new Date().toISOString() },
+            { onConflict: "user_id" },
+          );
+        if (updateErr) throw new Error(updateErr.message);
+
+        try {
+          await supabaseAdmin.from("notifications").insert({
+            user_id: userId,
+            title: shouldBeOnline ? "You are online" : "You went offline",
+            body: shouldBeOnline
+              ? "Your rider account is now online — your wallet balance meets the required minimum."
+              : "Your rider account has been taken offline because your wallet balance fell below the required minimum. Top up to resume receiving dispatches.",
+            kind: "wallet",
+          });
+        } catch (e) {
+          console.error("notify-enforce-rider", e);
+        }
+
+        await mod.audit({
+          account: await mod.requireReadyAdmin("wallets"),
+          action: "wallet_enforcement",
+          entityType: "rider_status",
+          entityId: userId,
+          details: { walletType, balance, required },
+        });
+      }
+    };
+
     switch (data.action) {
       case "set_application_status": {
         const account = await requirePermission("applications");
         const table = data.kind === "seller" ? "seller_applications" : "rider_applications";
-        const { error } = await supabaseAdmin
+
+        // Update the application status and notes
+        const { error: updateError } = await supabaseAdmin
           .from(table)
-          .update({ status: data.status as never, review_notes: data.notes ?? null })
+          .update({
+            status: data.status as never,
+            review_notes: data.notes ?? null,
+            reviewed_at: new Date().toISOString(),
+          })
           .eq("id", data.id);
-        if (error) throw new Error(error.message);
+        if (updateError) throw new Error(updateError.message);
+
+        // Audit the status change
         await mod.audit({
           account,
           action:
@@ -91,6 +192,104 @@ export const adminMutateFn = createServerFn({ method: "POST" })
           entityId: data.id,
           details: { status: data.status },
         });
+
+        // If approved, ensure the user has a wallet and credit the configurable welcome bonus.
+        if (data.status === "approved") {
+          // Fetch the application to obtain the user_id
+          const { data: appRow, error: appError } = await supabaseAdmin
+            .from(table)
+            .select("user_id")
+            .eq("id", data.id)
+            .maybeSingle();
+          if (appError) throw new Error(appError.message);
+          const userId: string | undefined = appRow?.user_id;
+          if (userId) {
+            const walletType = data.kind === "seller" ? "seller" : "rider";
+
+            // Ensure a wallet row exists for this user
+            const { data: existingWallet, error: walletSelectError } = await supabaseAdmin
+              .from("wallets")
+              .select("id,balance")
+              .eq("user_id", userId)
+              .eq("wallet_type", walletType as never)
+              .maybeSingle();
+            if (walletSelectError) throw new Error(walletSelectError.message);
+
+            let walletId: string;
+            let currentBalance = 0;
+            if (!existingWallet) {
+              const { data: insertWallet, error: insertError } = await supabaseAdmin
+                .from("wallets")
+                .insert({ user_id: userId, wallet_type: walletType })
+                .select("id,balance")
+                .maybeSingle();
+              if (insertError) throw new Error(insertError.message);
+              if (!insertWallet) throw new Error("Wallet creation returned no record.");
+              walletId = insertWallet.id;
+              currentBalance = Number(insertWallet.balance ?? 0);
+            } else {
+              walletId = existingWallet.id;
+              currentBalance = Number(existingWallet.balance ?? 0);
+            }
+
+            // Read configured welcome bonus from system settings
+            const { data: settingRow, error: settingError } = await supabaseAdmin
+              .from("system_settings")
+              .select("value")
+              .eq("key", "welcome_wallet_bonus")
+              .maybeSingle();
+            if (settingError) throw new Error(settingError.message);
+
+            const rawWelcomeAmount = settingRow?.value;
+            const welcomeAmount =
+              typeof rawWelcomeAmount === "number"
+                ? rawWelcomeAmount
+                : Number(rawWelcomeAmount ?? 0) || 0;
+
+            if (welcomeAmount > 0) {
+              const newBalance = currentBalance + welcomeAmount;
+              const { error: walletUpdateError } = await supabaseAdmin
+                .from("wallets")
+                .update({ balance: newBalance })
+                .eq("id", walletId);
+              if (walletUpdateError) throw new Error(walletUpdateError.message);
+
+              // Insert a wallet transaction record
+              const { error: txError } = await supabaseAdmin.from("wallet_transactions").insert({
+                wallet_id: walletId,
+                amount: welcomeAmount,
+                kind: "welcome",
+                description: "Welcome Credit",
+              });
+              if (txError) throw new Error(txError.message);
+
+              // Notify the user
+              const { error: notifyError } = await supabaseAdmin.from("notifications").insert({
+                user_id: userId,
+                title: "Welcome Credit",
+                body: `A welcome credit of ₱${welcomeAmount.toFixed(2)} has been added to your wallet.`,
+                kind: "wallet",
+              });
+              if (notifyError) throw new Error(notifyError.message);
+
+              await mod.audit({
+                account,
+                action: "welcome_credit_awarded",
+                entityType: "wallets",
+                entityId: walletId,
+                details: { amount: welcomeAmount, for: walletType },
+              });
+
+              // Enforce wallet-driven online/offline state now the welcome credit has been applied.
+              try {
+                await enforceWalletState(userId, walletType as "seller" | "rider");
+              } catch (e) {
+                console.error("enforce-after-welcome", e);
+              }
+            }
+          }
+        }
+
         return { ok: true };
       }
 
@@ -236,12 +435,30 @@ export const adminMutateFn = createServerFn({ method: "POST" })
           _notes: data.notes ?? undefined,
         });
         if (error) throw new Error(error.message);
+
+        // Fetch the topup row to find which wallet and user were affected so we can enforce wallet state.
+        const { data: topupRow, error: topupErr } = await supabaseAdmin
+          .from("wallet_topups")
+          .select("user_id,wallet_type")
+          .eq("id", data.id)
+          .maybeSingle();
+        if (topupErr) throw new Error(topupErr.message);
+
         await mod.audit({
           account,
           action: "wallet_topup_approved",
           entityType: "wallet_topups",
           entityId: data.id,
         });
+
+        if (topupRow?.user_id && topupRow?.wallet_type) {
+          try {
+            await enforceWalletState(topupRow.user_id, topupRow.wallet_type as "seller" | "rider");
+          } catch (e) {
+            console.error("enforce-after-topup", e);
+          }
+        }
+
         return { ok: true };
       }
 
@@ -316,6 +533,13 @@ export const adminMutateFn = createServerFn({ method: "POST" })
             balance: newBalance,
           },
         });
+
+        // Enforce wallet-driven online/offline state after an admin adjustment.
+        try {
+          await enforceWalletState(data.userId, data.walletType);
+        } catch (e) {
+          console.error("enforce-after-adjust", e);
+        }
 
         return { ok: true };
       }

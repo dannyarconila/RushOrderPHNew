@@ -204,7 +204,8 @@ function DispatchPanel({ orderId }: { orderId: string }) {
     });
 
     return () => {
-      void sub.unsubscribe();
+      // Use supabase.removeChannel to reliably remove the realtime channel instance
+      void supabase.removeChannel(sub);
     };
   }, [orderId, queryClient]);
 
@@ -225,7 +226,8 @@ function DispatchPanel({ orderId }: { orderId: string }) {
     });
 
     return () => {
-      void sub.unsubscribe();
+      // Use supabase.removeChannel to reliably remove the realtime channel instance
+      void supabase.removeChannel(sub);
     };
   }, [job?.assigned_rider_id]);
 

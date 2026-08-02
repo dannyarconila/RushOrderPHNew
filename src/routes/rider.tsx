@@ -32,7 +32,7 @@ import {
   watchRiderLocation,
   stopWatchingLocation,
 } from "@/lib/dispatch";
-import { myWalletQuery } from "@/lib/wallet";
+import { minimumWalletBalanceQuery, myWalletQuery } from "@/lib/wallet";
 
 export const Route = createFileRoute("/rider")({
   head: () => ({
@@ -85,6 +85,7 @@ function RiderOverview() {
   const [dismissedOffer, setDismissedOffer] = useState<string | null>(null);
 
   const { data: wallet } = useQuery(myWalletQuery(user?.id, "rider"));
+  const { data: minimumBalance } = useQuery(minimumWalletBalanceQuery("rider"));
   const { data: status } = useQuery(riderStatusQuery(user?.id));
   const { data: history } = useQuery(riderHistoryQuery(user?.id));
   const { data: activeJob } = useQuery(activeJobQuery(user?.id));
@@ -134,7 +135,12 @@ function RiderOverview() {
       )
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "dispatch_jobs" },
+        {
+          event: "*",
+          schema: "public",
+          table: "dispatch_jobs",
+          filter: `assigned_rider_id=eq.${user.id}`,
+        },
         refreshDispatch,
       )
       .subscribe();
@@ -148,6 +154,7 @@ function RiderOverview() {
     if (!online) return;
 
     const watchId = watchRiderLocation(async (coords) => {
+      console.debug("watchRiderLocation: coords", coords);
       try {
         await setRiderPresence(true, coords);
       } catch (err) {
@@ -220,11 +227,20 @@ function RiderOverview() {
           </div>
           <Switch
             checked={online}
-            disabled={presence.isPending}
+            disabled={
+              presence.isPending ||
+              (!online && minimumBalance != null && (wallet?.balance ?? 0) < minimumBalance)
+            }
             onCheckedChange={(next) => presence.mutate(next)}
             aria-label="Toggle rider availability"
           />
         </div>
+        {minimumBalance != null && (wallet?.balance ?? 0) < minimumBalance ? (
+          <p className="mt-3 text-sm text-destructive">
+            Your wallet balance must be at least {peso(minimumBalance)} to stay online. Top up to
+            receive bookings.
+          </p>
+        ) : null}
       </Panel>
 
       <div className="grid gap-4 sm:grid-cols-3">

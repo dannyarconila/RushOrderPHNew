@@ -129,6 +129,20 @@ export function myWalletQuery(userId: string | undefined, walletType: WalletType
   });
 }
 
+export function minimumWalletBalanceQuery(role: "seller" | "rider") {
+  return queryOptions({
+    queryKey: ["minimum-wallet-balance", role],
+    queryFn: async (): Promise<number> => {
+      const { data, error } = await supabase.rpc("minimum_wallet_balance_for_role", {
+        _role: role,
+      });
+      if (error) throw error;
+      return Number(data ?? 0);
+    },
+    staleTime: 300_000,
+  });
+}
+
 export function myWalletTransactionsQuery(walletId: string | undefined, limit = 50) {
   return queryOptions({
     queryKey: ["wallet-transactions", walletId ?? null, limit],

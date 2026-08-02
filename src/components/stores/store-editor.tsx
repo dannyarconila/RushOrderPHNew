@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Loader2, Save } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -8,9 +8,11 @@ import { Field, SelectField, TextAreaField, TextField } from "@/components/forms
 import { Panel } from "@/components/dashboard/primitives";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
+import { peso } from "@/lib/marketplace";
 import { supabase } from "@/integrations/supabase/client";
 import { BUCKETS } from "@/lib/storage";
 import { storeAvailability } from "@/lib/store-status";
+import { minimumWalletBalanceQuery, myWalletQuery } from "@/lib/wallet";
 import {
   DEFAULT_HOURS,
   SERVICE_TYPES,
@@ -65,9 +67,12 @@ export function StoreEditor({ store, userId }: { store: ManagedStore; userId: st
     store.delivery_fee_override != null ? String(store.delivery_fee_override) : "",
   );
   const [prepTime, setPrepTime] = useState(String(store.prep_time_minutes ?? 20));
+  const { data: wallet } = useQuery(myWalletQuery(userId, "seller"));
+  const { data: minimumBalance } = useQuery(minimumWalletBalanceQuery("seller"));
 
   const isVerified = store.verification_status === "verified";
   const availability = storeAvailability(store);
+  const walletBalanceLow = minimumBalance != null && (wallet?.balance ?? 0) < minimumBalance;
 
   const save = useMutation({
     mutationFn: async () => {
@@ -113,10 +118,10 @@ export function StoreEditor({ store, userId }: { store: ManagedStore; userId: st
 
   const toggleOnline = useMutation({
     mutationFn: async (next: boolean) => {
-      const { error } = await supabase
-        .from("stores")
-        .update({ is_online: next })
-        .eq("id", store.id);
+      const { error } = await supabase.rpc("store_set_online", {
+        _store_id: store.id,
+        _online: next,
+      });
       if (error) throw error;
     },
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: ["my-stores"] }),
@@ -153,12 +158,23 @@ export function StoreEditor({ store, userId }: { store: ManagedStore; userId: st
                 : "Verification pending — your storefront is hidden until it is approved."}
             </p>
           </div>
-          <Switch
-            checked={store.is_online}
-            disabled={!isVerified || toggleOnline.isPending}
-            onCheckedChange={(next) => toggleOnline.mutate(next)}
-            aria-label="Accepting orders"
-          />
+          <div className="flex flex-col items-end gap-2">
+            <Switch
+              checked={store.is_online}
+              disabled={
+                !isVerified || toggleOnline.isPending || (walletBalanceLow && !store.is_online)
+              }
+              onCheckedChange={(next) => toggleOnline.mutate(next)}
+              aria-label="Accepting orders"
+            />
+            {walletBalanceLow ? (
+              <p className="text-right text-xs text-destructive">
+                {minimumBalance != null
+                  ? `Your wallet balance must be at least ${peso(minimumBalance)} to keep the store open.`
+                  : "Your wallet balance is too low to keep the store open."}
+              </p>
+            ) : null}
+          </div>
         </div>
       </Panel>
 

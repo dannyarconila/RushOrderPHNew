@@ -104,12 +104,18 @@ export function riderStatusQuery(userId: string | undefined) {
 }
 
 export async function setRiderPresence(online: boolean, coords?: GeolocationCoordinates | null) {
-  const { error } = await supabase.rpc("rider_set_presence", {
+  console.debug("setRiderPresence: sending", { online, coords });
+  const { data, error } = await supabase.rpc("rider_set_presence", {
     _online: online,
     _lat: coords ? Number(coords.latitude.toFixed(6)) : undefined,
     _lng: coords ? Number(coords.longitude.toFixed(6)) : undefined,
   });
-  if (error) throw error;
+  if (error) {
+    console.error("setRiderPresence: error", { error, online, coords });
+    throw error;
+  }
+  console.debug("setRiderPresence: success", { data, online, coords });
+  return data as boolean;
 }
 
 /** Best-effort browser position; resolves to null when unavailable or denied. */
@@ -274,45 +280,68 @@ export function secondsLeft(expiresAt: string | null | undefined): number {
 /* ------------------------------------------------------------------ */
 
 export function watchDispatchJob(orderId: string, onChange: () => void) {
-  return supabase
-    .channel(`dispatch-job-${orderId}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "*",
-        schema: "public",
-        table: "dispatch_jobs",
-        filter: `order_id=eq.${orderId}`,
-      },
-      onChange,
-    )
-    .subscribe();
+  const channel = supabase.channel(`dispatch-job-${orderId}`).on(
+    "postgres_changes",
+    {
+      event: "*",
+      schema: "public",
+      table: "dispatch_jobs",
+      filter: `order_id=eq.${orderId}`,
+    },
+    (payload) => {
+      console.debug("watchDispatchJob: payload", { orderId, payload });
+      onChange();
+    },
+  );
+
+  channel.subscribe();
+  return channel;
 }
 
 export function watchAssignedRider(
   riderId: string,
   onChange: (location: { lat: number; lng: number } | null) => void,
 ) {
-  return supabase
-    .channel(`rider-location-${riderId}`)
-    .on(
-      "postgres_changes",
-      {
-        event: "UPDATE",
-        schema: "public",
-        table: "rider_status",
-        filter: `user_id=eq.${riderId}`,
-      },
-      (payload) => {
-        const row = payload.new as { latitude: number | null; longitude: number | null } | null;
-        if (row && row.latitude != null && row.longitude != null) {
-          onChange({ lat: Number(row.latitude), lng: Number(row.longitude) });
-        } else {
-          onChange(null);
-        }
-      },
-    )
-    .subscribe();
+  async function fetchCurrentLocation() {
+    const { data, error } = await supabase
+      .from("rider_status")
+      .select("latitude,longitude")
+      .eq("user_id", riderId)
+      .maybeSingle();
+
+    console.debug("watchAssignedRider: fetched current location", { riderId, data, error });
+
+    if (!error && data && data.latitude != null && data.longitude != null) {
+      onChange({ lat: Number(data.latitude), lng: Number(data.longitude) });
+    } else {
+      onChange(null);
+    }
+  }
+
+  void fetchCurrentLocation();
+
+  const channel = supabase.channel(`rider-location-${riderId}`).on(
+    "postgres_changes",
+    {
+      event: "*",
+      schema: "public",
+      table: "rider_status",
+      filter: `user_id=eq.${riderId}`,
+    },
+    (payload) => {
+      console.debug("watchAssignedRider: realtime payload", { riderId, payload });
+      const row = payload.new as { latitude: number | null; longitude: number | null } | null;
+      if (row && row.latitude != null && row.longitude != null) {
+        onChange({ lat: Number(row.latitude), lng: Number(row.longitude) });
+      } else {
+        onChange(null);
+      }
+    },
+  );
+
+  // Subscribe and return the channel so callers can remove it with supabase.removeChannel(channel)
+  channel.subscribe();
+  return channel;
 }
 
 export function removeRealtime(channel: ReturnType<typeof supabase.channel>) {

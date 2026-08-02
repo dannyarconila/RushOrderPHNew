@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Search, Star, Store as StoreIcon } from "lucide-react";
+import { Clock3, Search, ShoppingBag, Star, Store as StoreIcon } from "lucide-react";
 import { useMemo, useState } from "react";
 
 import { StorageImage } from "@/components/media/storage-image";
@@ -136,8 +136,9 @@ export function MarketplaceBrowser({
                 >
                   <div className="relative h-32 bg-secondary">
                     {store.banner_url ? (
-                      <img
-                        src={store.banner_url}
+                      <StorageImage
+                        bucket={BUCKETS.storeBanners}
+                        path={store.banner_url}
                         alt={`${store.name} banner`}
                         loading="lazy"
                         className="size-full object-cover"
@@ -180,6 +181,16 @@ export function MarketplaceBrowser({
                       {availability.detail ? (
                         <span className="text-xs text-muted-foreground">{availability.detail}</span>
                       ) : null}
+                    </div>
+                    <div className="mt-4 flex items-center gap-4 border-t border-border pt-3 text-xs text-muted-foreground">
+                      <span className="inline-flex items-center gap-1.5">
+                        <Clock3 className="size-3.5" />
+                        {store.prep_time_minutes} min prep
+                      </span>
+                      <span className="inline-flex items-center gap-1.5">
+                        <ShoppingBag className="size-3.5" />
+                        Min. {peso(Number(store.minimum_order ?? 0))}
+                      </span>
                     </div>
                   </div>
                 </Link>

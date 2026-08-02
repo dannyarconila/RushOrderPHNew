@@ -22,6 +22,15 @@ const INVALIDATIONS: Record<string, string[][]> = {
   orders: [["orders"], ["store-orders"], ["my-orders"], ["order"], ["admin"]],
   notifications: [["notifications"]],
   wallets: [["wallet"], ["wallet-transactions"], ["admin"]],
+  wallet_topups: [["wallet-topups"], ["admin"]],
+  payment_methods: [["payment-methods"], ["admin"]],
+  system_settings: [
+    ["public-settings"],
+    ["dispatch-settings"],
+    ["minimum-wallet-balance"],
+    ["setting"],
+    ["admin"],
+  ],
   dispatch_jobs: [["dispatch-job"], ["dispatch-active-job"], ["dispatch-history"], ["admin"]],
   deliveries: [["dispatch-job"], ["dispatch-active-job"], ["admin"]],
 };

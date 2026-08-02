@@ -1627,6 +1627,8 @@ export type Database = {
       dispatch_retry: { Args: { _job_id: string }; Returns: boolean };
       dispatch_settings: { Args: never; Returns: Json };
       dispatch_start: { Args: { _order_id: string }; Returns: string };
+      minimum_wallet_balance_for_role: { Args: { _role: string }; Returns: number };
+      store_set_online: { Args: { _store_id: string; _online: boolean }; Returns: boolean };
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"];

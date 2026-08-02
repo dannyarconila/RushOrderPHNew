@@ -20,7 +20,8 @@ import {
   type AdminSessionInfo,
 } from "./contracts";
 
-export const DEFAULT_ADMIN_PASSWORD = "123456789";
+/** Factory resets are opt-in; production credentials never live in source control. */
+export const DEFAULT_ADMIN_PASSWORD = process.env.ADMIN_FACTORY_RESET_PASSWORD ?? "";
 
 const PBKDF2_ITERATIONS = 100_000;
 const MAX_FAILED_ATTEMPTS = 5;
@@ -109,7 +110,7 @@ function sessionConfig() {
   };
 }
 
-export const adminSession = () => useSession<AdminSessionData>(sessionConfig());
+export const useAdminSession = () => useSession<AdminSessionData>(sessionConfig());
 
 export function clientIp(): string | null {
   try {
@@ -159,7 +160,9 @@ export class AdminAuthError extends Error {}
  * Never trust a client-side role check — call this in every admin handler.
  */
 export async function requireAdmin(permission?: AdminPermission): Promise<AdminAccount> {
-  const session = await adminSession();
+  // TanStack Start exposes request sessions through a hook-like server API.
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const session = await useAdminSession();
   const adminId = session.data.adminId;
   if (!adminId)
     throw new AdminAuthError("Your administrator session has ended. Please sign in again.");
@@ -286,7 +289,8 @@ export async function attemptLogin(username: string, password: string): Promise<
     })
     .eq("id", account.id);
 
-  const session = await adminSession();
+  // eslint-disable-next-line react-hooks/rules-of-hooks
+  const session = await useAdminSession();
   await session.update({ adminId: account.id, lastSeen: Date.now() });
 
   await audit({ account, action: "admin_login", details: { role: account.role } });
@@ -296,5 +300,5 @@ export async function attemptLogin(username: string, password: string): Promise<
 
 export const DEFAULT_CREDENTIALS = {
   username: DEFAULT_ADMIN_USERNAME,
-  password: DEFAULT_ADMIN_PASSWORD,
+  password: DEFAULT_ADMIN_PASSWORD || undefined,
 };
