@@ -1,0 +1,154 @@
+{
+  "version": 1,
+  "sdk_version": "0.25.0",
+  "path": "/mcp",
+  "auth": {
+    "type": "oauth",
+    "issuer": "https://ijwzqesqgkatznwukzme.supabase.co/auth/v1",
+    "accepted_audiences": ["authenticated"]
+  },
+  "mcp": {
+    "server": {
+      "name": "rushorder-ph-hub",
+      "version": "0.1.0",
+      "title": "RushOrder PH Hub"
+    },
+    "tools": [
+      {
+        "name": "search_stores",
+        "title": "Search stores",
+        "description": "Search the RushOrder PH marketplace for live stores by name, optionally filtered by service type (food, groceries, pharmacy, services).",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "query": {
+              "description": "Text to match against the store name.",
+              "type": "string"
+            },
+            "service_type": {
+              "description": "Service type filter, e.g. food, groceries, pharmacy or services.",
+              "type": "string"
+            },
+            "limit": {
+              "description": "Maximum number of stores to return (default 10, max 50).",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_store_products",
+        "title": "List store products",
+        "description": "List the published products of one RushOrder PH store, including price, stock and availability.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "store_id": {
+              "type": "string",
+              "description": "The store's UUID, as returned by search_stores."
+            },
+            "limit": {
+              "description": "Maximum number of products to return (default 25, max 100).",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          },
+          "required": ["store_id"]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_my_orders",
+        "title": "List my orders",
+        "description": "List the signed-in user's RushOrder PH orders, newest first, with status, totals and payment state.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "status": {
+              "description": "Optional status filter: pending, confirmed, preparing, ready, picked_up, delivered or cancelled.",
+              "type": "string"
+            },
+            "limit": {
+              "description": "Maximum number of orders to return (default 10, max 50).",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "get_order",
+        "title": "Get order details",
+        "description": "Fetch one RushOrder PH order the signed-in user can access, including its line items and delivery status.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "order_id": {
+              "type": "string",
+              "description": "The order UUID."
+            }
+          },
+          "required": ["order_id"]
+        },
+        "outputSchema": null
+      },
+      {
+        "name": "list_notifications",
+        "title": "List my notifications",
+        "description": "List the signed-in user's RushOrder PH notifications, newest first.",
+        "annotations": {
+          "readOnlyHint": true,
+          "idempotentHint": true,
+          "openWorldHint": false
+        },
+        "inputSchema": {
+          "$schema": "http://json-schema.org/draft-07/schema#",
+          "type": "object",
+          "properties": {
+            "unread_only": {
+              "description": "When true, return only unread notifications.",
+              "type": "boolean"
+            },
+            "limit": {
+              "description": "Maximum number of notifications to return (default 20, max 50).",
+              "type": "integer",
+              "minimum": -9007199254740991,
+              "maximum": 9007199254740991
+            }
+          }
+        },
+        "outputSchema": null
+      }
+    ]
+  }
+}

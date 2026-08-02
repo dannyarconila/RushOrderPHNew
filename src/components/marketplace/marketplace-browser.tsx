@@ -1,0 +1,222 @@
+import { Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { Search, Star, Store as StoreIcon } from "lucide-react";
+import { useMemo, useState } from "react";
+
+import { StorageImage } from "@/components/media/storage-image";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  categoriesQuery,
+  firstImage,
+  peso,
+  productSearchQuery,
+  storesQuery,
+  type ServiceType,
+} from "@/lib/marketplace";
+import { storeAvailability } from "@/lib/store-status";
+import { BUCKETS } from "@/lib/storage";
+import { cn } from "@/lib/utils";
+
+export function MarketplaceBrowser({
+  serviceType,
+  emptyLabel = "No stores are open in this lane yet. Check back shortly.",
+}: {
+  serviceType?: ServiceType;
+  emptyLabel?: string;
+}) {
+  const [term, setTerm] = useState("");
+  const [category, setCategory] = useState<string | null>(null);
+
+  const stores = useQuery(storesQuery(serviceType));
+  const categories = useQuery(categoriesQuery(serviceType));
+  const products = useQuery(productSearchQuery(term, serviceType));
+
+  const results = useMemo(() => {
+    const list = stores.data ?? [];
+    const needle = term.trim().toLowerCase();
+    return list.filter((s) => {
+      const matchesTerm =
+        !needle ||
+        s.name.toLowerCase().includes(needle) ||
+        (s.description ?? "").toLowerCase().includes(needle);
+      const matchesCategory = !category || s.category_id === category;
+      return matchesTerm && matchesCategory;
+    });
+  }, [stores.data, term, category]);
+
+  return (
+    <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+      <div className="flex flex-col gap-4">
+        <div className="relative">
+          <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+          <Input
+            value={term}
+            onChange={(e) => setTerm(e.target.value)}
+            placeholder="Search stores, dishes, groceries, medicines…"
+            className="h-12 rounded-full pl-11"
+            aria-label="Search stores and products"
+          />
+        </div>
+
+        {categories.data && categories.data.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            <CategoryChip active={category === null} onClick={() => setCategory(null)}>
+              All
+            </CategoryChip>
+            {categories.data.map((c) => (
+              <CategoryChip
+                key={c.id}
+                active={category === c.id}
+                onClick={() => setCategory(category === c.id ? null : c.id)}
+              >
+                {c.name}
+              </CategoryChip>
+            ))}
+          </div>
+        ) : null}
+      </div>
+
+      {term.trim().length >= 2 ? (
+        <section className="mt-8">
+          <h2 className="font-display text-lg font-bold tracking-tight">Matching items</h2>
+          {products.isLoading ? (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <Skeleton key={i} className="h-28 rounded-2xl" />
+              ))}
+            </div>
+          ) : (products.data ?? []).length === 0 ? (
+            <p className="mt-3 text-sm text-muted-foreground">
+              No products matched “{term.trim()}”.
+            </p>
+          ) : (
+            <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              {(products.data ?? []).map((p) => (
+                <Link
+                  key={p.id}
+                  to="/store/$storeId"
+                  params={{ storeId: p.store_id }}
+                  className="flex gap-3 rounded-2xl border border-border bg-card p-3 shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-0.5"
+                >
+                  <div className="size-16 shrink-0 overflow-hidden rounded-xl bg-secondary">
+                    <StorageImage
+                      bucket={BUCKETS.productImages}
+                      path={firstImage(p.images)}
+                      alt={p.name}
+                      className="size-full"
+                    />
+                  </div>
+                  <div className="min-w-0">
+                    <p className="truncate text-sm font-bold">{p.name}</p>
+                    <p className="truncate text-xs text-muted-foreground">{p.store?.name}</p>
+                    <p className="mt-1 text-sm font-bold text-primary">{peso(Number(p.price))}</p>
+                  </div>
+                </Link>
+              ))}
+            </div>
+          )}
+        </section>
+      ) : null}
+
+      <h2 className="mt-10 font-display text-lg font-bold tracking-tight">Stores</h2>
+      <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {stores.isLoading
+          ? Array.from({ length: 6 }).map((_, i) => (
+              <Skeleton key={i} className="h-56 rounded-2xl" />
+            ))
+          : results.map((store) => {
+              const availability = storeAvailability(store);
+              return (
+                <Link
+                  key={store.id}
+                  to="/store/$storeId"
+                  params={{ storeId: store.id }}
+                  className="group overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-0.5"
+                >
+                  <div className="relative h-32 bg-secondary">
+                    {store.banner_url ? (
+                      <img
+                        src={store.banner_url}
+                        alt={`${store.name} banner`}
+                        loading="lazy"
+                        className="size-full object-cover"
+                      />
+                    ) : (
+                      <div className="flex size-full items-center justify-center text-muted-foreground">
+                        <StoreIcon className="size-8" />
+                      </div>
+                    )}
+                    {store.is_featured ? (
+                      <span className="absolute left-3 top-3 rounded-full bg-accent px-3 py-1 text-[11px] font-bold text-accent-foreground">
+                        Featured
+                      </span>
+                    ) : null}
+                  </div>
+                  <div className="p-5">
+                    <div className="flex items-start justify-between gap-3">
+                      <h3 className="font-display text-base font-bold tracking-tight">
+                        {store.name}
+                      </h3>
+                      <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-muted-foreground">
+                        <Star className="size-3.5 fill-accent text-accent" />
+                        {Number(store.rating ?? 0).toFixed(1)}
+                      </span>
+                    </div>
+                    <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
+                      {store.description ?? "Local partner store on RushOrder PH."}
+                    </p>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      <span
+                        className={cn(
+                          "rounded-full px-2.5 py-1 text-[11px] font-bold uppercase tracking-[0.12em]",
+                          availability.open
+                            ? "bg-success/15 text-success"
+                            : "bg-muted text-muted-foreground",
+                        )}
+                      >
+                        {availability.label}
+                      </span>
+                      {availability.detail ? (
+                        <span className="text-xs text-muted-foreground">{availability.detail}</span>
+                      ) : null}
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
+      </div>
+
+      {!stores.isLoading && results.length === 0 ? (
+        <div className="mt-10 rounded-2xl border border-dashed border-border p-10 text-center">
+          <p className="text-sm text-muted-foreground">{emptyLabel}</p>
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+function CategoryChip({
+  active,
+  onClick,
+  children,
+}: {
+  active: boolean;
+  onClick: () => void;
+  children: React.ReactNode;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "rounded-full border px-4 py-2 text-sm font-semibold transition-colors",
+        active
+          ? "border-primary bg-primary-soft text-primary"
+          : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground",
+      )}
+    >
+      {children}
+    </button>
+  );
+}

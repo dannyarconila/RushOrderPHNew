@@ -1,0 +1,9 @@
+DROP TRIGGER IF EXISTS trg_seller_application_approval ON public.seller_applications;
+DROP TRIGGER IF EXISTS trg_rider_application_approval ON public.rider_applications;
+DROP TRIGGER IF EXISTS trg_seller_application_duplicate ON public.seller_applications;
+DROP TRIGGER IF EXISTS trg_rider_application_duplicate ON public.rider_applications;
+DROP TRIGGER IF EXISTS trg_seller_applications_updated_at ON public.seller_applications;
+DROP TRIGGER IF EXISTS trg_rider_applications_updated_at ON public.rider_applications;
+DROP TRIGGER IF EXISTS trg_stores_updated_at ON public.stores;
+DROP TRIGGER IF EXISTS trg_products_updated_at ON public.products;
+DROP TRIGGER IF EXISTS trg_orders_updated_at ON public.orders;
