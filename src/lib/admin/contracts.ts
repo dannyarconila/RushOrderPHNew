@@ -157,6 +157,7 @@ export type AdminMutation =
       id: string;
       status: string;
       notes?: string | null;
+      approvalBonus?: number;
     }
   | { action: "set_store_verification"; storeId: string; status: string; notes?: string | null }
   | { action: "set_account_status"; userId: string; status: string; note?: string | null }

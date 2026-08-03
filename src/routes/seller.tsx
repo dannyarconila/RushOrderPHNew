@@ -111,10 +111,6 @@ function SellerOverview() {
     },
   });
 
-  // Once approved, the store's live state is the only status shown — never
-  // "pending review".
-  const showApplication = Boolean(application) && application!.status !== "approved";
-
   return (
     <>
       <div className="grid gap-4 sm:grid-cols-3">
@@ -167,10 +163,10 @@ function SellerOverview() {
         </Panel>
       ) : null}
 
-      {showApplication ? (
+      {application ? (
         <Panel
           title="Application status"
-          description="Verification progress for your storefront"
+          description="The administrator's decision on your registration"
           className="mt-6"
         >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

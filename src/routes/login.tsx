@@ -66,10 +66,12 @@ function LoginPage() {
   }
 
   async function handleGoogle() {
+    const callback = new URL("/login", window.location.origin);
+    if (next) callback.searchParams.set("next", next);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: window.location.origin,
+        redirectTo: callback.toString(),
       },
     });
     if (error) {
@@ -133,7 +135,7 @@ function LoginPage() {
             </Button>
           </div>
           <p className="mt-2 text-center text-xs text-muted-foreground">
-            You can browse stores and products without an account.
+            Sign in is required across the RushOrder PH marketplace.
           </p>
         </div>
       </div>

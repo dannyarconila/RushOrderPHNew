@@ -172,6 +172,14 @@ export const adminMutateFn = createServerFn({ method: "POST" })
         const account = await requirePermission("applications");
         const table = data.kind === "seller" ? "seller_applications" : "rider_applications";
 
+        const { data: previousApplication, error: previousError } = await supabaseAdmin
+          .from(table)
+          .select("status,user_id")
+          .eq("id", data.id)
+          .maybeSingle();
+        if (previousError) throw new Error(previousError.message);
+        if (!previousApplication) throw new Error("Application not found.");
+
         // Update the application status and notes
         const { error: updateError } = await supabaseAdmin
           .from(table)
@@ -194,7 +202,7 @@ export const adminMutateFn = createServerFn({ method: "POST" })
         });
 
         // If approved, ensure the user has a wallet and credit the configurable welcome bonus.
-        if (data.status === "approved") {
+        if (data.status === "approved" && previousApplication.status !== "approved") {
           // Fetch the application to obtain the user_id
           const { data: appRow, error: appError } = await supabaseAdmin
             .from(table)
@@ -241,10 +249,14 @@ export const adminMutateFn = createServerFn({ method: "POST" })
             if (settingError) throw new Error(settingError.message);
 
             const rawWelcomeAmount = settingRow?.value;
-            const welcomeAmount =
+            const configuredAmount =
               typeof rawWelcomeAmount === "number"
                 ? rawWelcomeAmount
                 : Number(rawWelcomeAmount ?? 0) || 0;
+            const requestedAmount = Number(data.approvalBonus);
+            const welcomeAmount = Number.isFinite(requestedAmount)
+              ? Math.max(0, requestedAmount)
+              : configuredAmount;
 
             if (welcomeAmount > 0) {
               const newBalance = currentBalance + welcomeAmount;

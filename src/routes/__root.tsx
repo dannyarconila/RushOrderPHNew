@@ -3,6 +3,8 @@ import {
   Outlet,
   Link,
   createRootRouteWithContext,
+  useNavigate,
+  useRouterState,
   useRouter,
   HeadContent,
   Scripts,
@@ -11,7 +13,7 @@ import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
-import { AuthProvider } from "@/contexts/auth-context";
+import { AuthProvider, useAuth } from "@/contexts/auth-context";
 import { CartProvider } from "@/contexts/cart-context";
 import { Toaster } from "@/components/ui/sonner";
 import { supabase } from "@/integrations/supabase/client";
@@ -173,10 +175,42 @@ function RootComponent() {
         <RealtimeSync />
         <CartProvider>
           {/* Required: nested routes render here. Removing <Outlet /> breaks all child routes. */}
-          <Outlet />
+          <PublicAppAuthGate>
+            <Outlet />
+          </PublicAppAuthGate>
         </CartProvider>
         <Toaster position="top-center" richColors />
       </AuthProvider>
     </QueryClientProvider>
   );
+}
+
+/** Require one RushOrder PH identity across every customer/partner page. */
+function PublicAppAuthGate({ children }: { children: ReactNode }) {
+  const { user, loading } = useAuth();
+  const navigate = useNavigate();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const exempt =
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname.startsWith("/internal-admin") ||
+    pathname.startsWith("/.mcp") ||
+    pathname.startsWith("/.well-known");
+
+  useEffect(() => {
+    if (!loading && !user && !exempt) {
+      const next = `${window.location.pathname}${window.location.search}`;
+      navigate({ to: "/login", search: { next }, replace: true });
+    }
+  }, [loading, user, exempt, navigate]);
+
+  if (exempt) return <>{children}</>;
+  if (loading || !user) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <p className="text-sm text-muted-foreground">Checking your account…</p>
+      </div>
+    );
+  }
+  return <>{children}</>;
 }

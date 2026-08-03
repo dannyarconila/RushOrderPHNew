@@ -10,7 +10,7 @@ export const Route = createFileRoute("/marketplace")({
       {
         name: "description",
         content:
-          "Browse every RushOrder PH partner store — food, groceries, pharmacy and errands. No account needed to browse and search.",
+          "Browse every RushOrder PH partner store — food, groceries, pharmacy and errands with your RushOrder PH account.",
       },
       { property: "og:title", content: "RushOrder PH Marketplace" },
       {
@@ -30,7 +30,7 @@ function MarketplacePage() {
       <PageHero
         eyebrow="Marketplace"
         title="Shop every RushOrder partner in one place"
-        description="Browse stores, search products and compare prices freely — sign in only when you're ready to check out."
+        description="Browse stores, search products and compare prices using your RushOrder PH account."
       />
       <MarketplaceBrowser emptyLabel="No stores are open right now. Please check back shortly." />
     </PublicLayout>

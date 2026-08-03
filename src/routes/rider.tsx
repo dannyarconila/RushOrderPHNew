@@ -310,8 +310,12 @@ function RiderOverview() {
         </Panel>
       ) : null}
 
-      {application && application.status !== "approved" ? (
-        <Panel title="Application status" description="Your rider verification" className="mt-6">
+      {application ? (
+        <Panel
+          title="Application status"
+          description="The administrator's decision on your rider registration"
+          className="mt-6"
+        >
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <p className="text-sm font-semibold">Rider application</p>

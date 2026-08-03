@@ -18,14 +18,9 @@ const NAV = [
   { to: "/services", label: "Services" },
 ] as const;
 
-const PARTNER_NAV = [
-  { to: "/become-seller", label: "Become a Seller" },
-  { to: "/become-rider", label: "Become a Rider" },
-] as const;
-
 export function SiteHeader() {
   const [open, setOpen] = useState(false);
-  const { user, primaryRole, loading } = useAuth();
+  const { user, primaryRole, loading, hasRole } = useAuth();
   const pathname = useRouterState({ select: (s) => s.location.pathname });
 
   return (
@@ -98,7 +93,14 @@ export function SiteHeader() {
               </Link>
             ))}
             <div className="mt-2 border-t border-border pt-2">
-              {PARTNER_NAV.map((item) => (
+              {[
+                hasRole("seller")
+                  ? { to: "/seller", label: "My Store" }
+                  : { to: "/become-seller", label: "Become a Seller" },
+                hasRole("rider")
+                  ? { to: "/rider", label: "My Rider" }
+                  : { to: "/become-rider", label: "Become a Rider" },
+              ].map((item) => (
                 <Link
                   key={item.to}
                   to={item.to}

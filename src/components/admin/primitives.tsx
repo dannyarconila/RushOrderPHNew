@@ -154,6 +154,8 @@ export function ActionDialog({
   destructive,
   noteLabel,
   requireNote,
+  amountLabel,
+  defaultAmount,
   pending,
   onConfirm,
 }: {
@@ -165,15 +167,21 @@ export function ActionDialog({
   destructive?: boolean;
   noteLabel?: string;
   requireNote?: boolean;
+  amountLabel?: string;
+  defaultAmount?: number;
   pending?: boolean;
-  onConfirm: (note: string) => void;
+  onConfirm: (note: string, amount?: number) => void;
 }) {
   const [note, setNote] = useState("");
+  const [amount, setAmount] = useState(String(defaultAmount ?? 0));
   return (
     <Dialog
       open={open}
       onOpenChange={(next) => {
-        if (!next) setNote("");
+        if (!next) {
+          setNote("");
+          setAmount(String(defaultAmount ?? 0));
+        }
         onOpenChange(next);
       }}
     >
@@ -190,6 +198,20 @@ export function ActionDialog({
             <Textarea value={note} onChange={(e) => setNote(e.target.value)} rows={3} />
           </div>
         ) : null}
+        {amountLabel ? (
+          <div className="space-y-1.5">
+            <label className="text-xs font-bold uppercase tracking-[0.14em] text-muted-foreground">
+              {amountLabel}
+            </label>
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              value={amount}
+              onChange={(e) => setAmount(e.target.value)}
+            />
+          </div>
+        ) : null}
         <DialogFooter>
           <Button variant="ghost" onClick={() => onOpenChange(false)}>
             Cancel
@@ -197,7 +219,7 @@ export function ActionDialog({
           <Button
             variant={destructive ? "destructive" : "default"}
             disabled={pending || (requireNote && note.trim().length === 0)}
-            onClick={() => onConfirm(note.trim())}
+            onClick={() => onConfirm(note.trim(), amountLabel ? Number(amount) : undefined)}
           >
             {pending ? "Working…" : confirmLabel}
           </Button>

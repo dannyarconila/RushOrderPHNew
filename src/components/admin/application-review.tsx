@@ -128,7 +128,12 @@ export function ApplicationReview({ kind }: { kind: "seller" | "rider" }) {
   const active = kind === "seller" ? sellerQuery : riderQuery;
 
   const mutation = useMutation({
-    mutationFn: (input: { id: string; status: ApplicationStatus; notes: string | null }) =>
+    mutationFn: (input: {
+      id: string;
+      status: ApplicationStatus;
+      notes: string | null;
+      approvalBonus?: number;
+    }) =>
       kind === "seller" ? setSellerApplicationStatus(input) : setRiderApplicationStatus(input),
     onSuccess: () => {
       toast.success("Application updated — the applicant has been notified.");
@@ -250,10 +255,17 @@ export function ApplicationReview({ kind }: { kind: "seller" | "rider" }) {
         destructive={pending?.next === "rejected"}
         noteLabel="Review note"
         requireNote={pending?.next === "rejected"}
+        amountLabel={pending?.next === "approved" ? "Wallet approval bonus (PHP)" : undefined}
+        defaultAmount={50}
         pending={mutation.isPending}
-        onConfirm={(note) =>
+        onConfirm={(note, approvalBonus) =>
           pending &&
-          mutation.mutate({ id: pending.app.id, status: pending.next, notes: note || null })
+          mutation.mutate({
+            id: pending.app.id,
+            status: pending.next,
+            notes: note || null,
+            approvalBonus,
+          })
         }
       />
 

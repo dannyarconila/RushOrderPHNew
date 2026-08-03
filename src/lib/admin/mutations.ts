@@ -19,6 +19,7 @@ export async function setSellerApplicationStatus(input: {
   id: string;
   status: ApplicationStatus;
   notes?: string | null;
+  approvalBonus?: number;
 }) {
   await adminMutateFn({
     data: {
@@ -27,6 +28,7 @@ export async function setSellerApplicationStatus(input: {
       id: input.id,
       status: input.status,
       notes: input.notes,
+      approvalBonus: input.approvalBonus,
     },
   });
 }
@@ -35,6 +37,7 @@ export async function setRiderApplicationStatus(input: {
   id: string;
   status: ApplicationStatus;
   notes?: string | null;
+  approvalBonus?: number;
 }) {
   await adminMutateFn({
     data: {
@@ -43,6 +46,7 @@ export async function setRiderApplicationStatus(input: {
       id: input.id,
       status: input.status,
       notes: input.notes,
+      approvalBonus: input.approvalBonus,
     },
   });
 }
