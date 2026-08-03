@@ -7,7 +7,6 @@ import { Logo } from "@/components/brand/logo";
 import { TextField } from "@/components/forms/wizard";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
-import { lovable } from "@/integrations/lovable";
 import { supabase } from "@/integrations/supabase/client";
 import { ROLE_HOME } from "@/types";
 
@@ -67,11 +66,14 @@ function LoginPage() {
   }
 
   async function handleGoogle() {
-    const result = await lovable.auth.signInWithOAuth("google", {
-      redirect_uri: next ? `${window.location.origin}${next}` : window.location.origin,
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo: window.location.origin,
+      },
     });
-    if (result.error) {
-      toast.error("Google sign-in failed", { description: String(result.error) });
+    if (error) {
+      toast.error("Google sign-in failed", { description: error.message });
     }
   }
 
