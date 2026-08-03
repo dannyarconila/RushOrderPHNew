@@ -135,20 +135,22 @@ export async function sessionTimeoutMinutes(): Promise<number> {
 /* ------------------------------------------------------------------ */
 
 export async function findAccountByUsername(username: string): Promise<AdminAccount | null> {
-  const { data } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("admin_accounts")
     .select("*")
     .ilike("username", username.trim())
     .maybeSingle();
+  if (error) throw new Error(`Could not read administrator account: ${error.message}`);
   return (data as AdminAccount | null) ?? null;
 }
 
 export async function findAccountById(id: string): Promise<AdminAccount | null> {
-  const { data } = await supabaseAdmin
+  const { data, error } = await supabaseAdmin
     .from("admin_accounts")
     .select("*")
     .eq("id", id)
     .maybeSingle();
+  if (error) throw new Error(`Could not read administrator account: ${error.message}`);
   return (data as AdminAccount | null) ?? null;
 }
 
@@ -226,7 +228,7 @@ export async function audit(input: {
   entityId?: string | null;
   details?: Record<string, unknown>;
 }) {
-  await supabaseAdmin.from("admin_audit_logs").insert({
+  const { error } = await supabaseAdmin.from("admin_audit_logs").insert({
     admin_id: input.account?.id ?? null,
     admin_username: input.account?.username ?? null,
     action: input.action,
@@ -235,6 +237,7 @@ export async function audit(input: {
     details: (input.details ?? {}) as never,
     ip_address: clientIp(),
   });
+  if (error) throw new Error(`Could not write administrator audit log: ${error.message}`);
 }
 
 /* ------------------------------------------------------------------ */
@@ -261,13 +264,14 @@ export async function attemptLogin(username: string, password: string): Promise<
   if (!ok) {
     const attempts = account.failed_attempts + 1;
     const locked = attempts >= MAX_FAILED_ATTEMPTS;
-    await supabaseAdmin
+    const { error } = await supabaseAdmin
       .from("admin_accounts")
       .update({
         failed_attempts: locked ? 0 : attempts,
         locked_until: locked ? new Date(Date.now() + LOCK_MINUTES * 60_000).toISOString() : null,
       })
       .eq("id", account.id);
+    if (error) throw new Error(`Could not update administrator account: ${error.message}`);
     await audit({
       account,
       action: "admin_login_failed",
@@ -279,7 +283,7 @@ export async function attemptLogin(username: string, password: string): Promise<
   }
 
   const ip = clientIp();
-  await supabaseAdmin
+  const { error } = await supabaseAdmin
     .from("admin_accounts")
     .update({
       failed_attempts: 0,
@@ -288,6 +292,7 @@ export async function attemptLogin(username: string, password: string): Promise<
       last_login_ip: ip,
     })
     .eq("id", account.id);
+  if (error) throw new Error(`Could not update administrator login: ${error.message}`);
 
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const session = await useAdminSession();
