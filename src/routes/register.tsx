@@ -10,6 +10,8 @@ import { useAuth } from "@/contexts/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { ROLE_HOME } from "@/types";
 
+const APP_ORIGIN = import.meta.env.VITE_APP_ORIGIN || window.location.origin;
+
 export const Route = createFileRoute("/register")({
   head: () => ({
     meta: [
@@ -53,7 +55,7 @@ function RegisterPage() {
       email,
       password,
       options: {
-        emailRedirectTo: window.location.origin,
+        emailRedirectTo: APP_ORIGIN,
         data: { full_name: fullName, phone },
       },
     });
@@ -69,7 +71,7 @@ function RegisterPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: window.location.origin,
+        redirectTo: APP_ORIGIN,
       },
     });
     if (error) toast.error("Google sign-up failed", { description: error.message });

@@ -10,6 +10,8 @@ import { useAuth } from "@/contexts/auth-context";
 import { supabase } from "@/integrations/supabase/client";
 import { ROLE_HOME } from "@/types";
 
+const APP_ORIGIN = import.meta.env.VITE_APP_ORIGIN || window.location.origin;
+
 function safeNext(value: unknown): string | undefined {
   return typeof value === "string" && value.startsWith("/") && !value.startsWith("//")
     ? value
@@ -66,7 +68,7 @@ function LoginPage() {
   }
 
   async function handleGoogle() {
-    const callback = new URL("/login", window.location.origin);
+    const callback = new URL("/login", APP_ORIGIN);
     if (next) callback.searchParams.set("next", next);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
