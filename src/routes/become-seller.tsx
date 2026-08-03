@@ -48,6 +48,16 @@ const CATEGORIES = [
   "Services",
 ] as const;
 
+function mapStoreServiceType(category: string): "food" | "groceries" | "pharmacy" | "services" {
+  const value = category.trim().toLowerCase();
+  if (value.includes("grocer")) return "groceries";
+  if (value.includes("health") || value.includes("pharmacy") || value.includes("beauty")) {
+    return "pharmacy";
+  }
+  if (value.includes("food") || value.includes("beverage")) return "food";
+  return "services";
+}
+
 const STEPS_REGISTERED = [
   "Business type",
   "Business info",
@@ -122,14 +132,33 @@ function BecomeSellerPage() {
       toast.error("Please complete your store name and address");
       return;
     }
+
+    const ownerInfo = {
+      ...owner,
+      full_name: owner.owner_name,
+      name: owner.owner_name,
+      email: owner.owner_email,
+      phone: owner.owner_phone,
+    };
+
+    const normalizedAddress = {
+      ...address,
+      line1: address.street,
+    };
+
+    const storeInfo = {
+      ...store,
+      service_type: mapStoreServiceType(store.category),
+    };
+
     setSubmitting(true);
     const { error } = await supabase.from("seller_applications").insert({
       user_id: user.id,
       business_type: type as SellerBusinessType,
       business_info: business,
-      owner_info: owner,
-      address,
-      store_info: store,
+      owner_info: ownerInfo,
+      address: normalizedAddress,
+      store_info: storeInfo,
       documents,
     });
     setSubmitting(false);

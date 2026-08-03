@@ -7,8 +7,7 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { EmptyState, PageHeader, Panel, StatCard } from "@/components/dashboard/primitives";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
-import { supabase } from "@/integrations/supabase/client";
-import { cancelOrder } from "@/lib/orders";
+import { cancelOrder, myOrdersQuery } from "@/lib/orders";
 
 export const Route = createFileRoute("/customer")({
   head: () => ({
@@ -34,35 +33,23 @@ function CustomerDashboard() {
     if (!loading && !user) navigate({ to: "/login", search: { next: "/customer" }, replace: true });
   }, [loading, user, navigate]);
 
-  const { data: orders } = useQuery({
-    queryKey: ["customer-orders", user?.id],
-    enabled: Boolean(user),
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("orders")
-        .select("id, status, total, created_at")
-        .eq("customer_id", user!.id)
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false })
-        .limit(10);
-      if (error) throw error;
-      return data;
-    },
-  });
+  const { data: orders } = useQuery(myOrdersQuery(user?.id));
 
   const cancelMutation = useMutation({
     mutationFn: (orderId: string) => cancelOrder(orderId),
     onSuccess: () => {
       queryClient.invalidateQueries({
-        queryKey: ["customer-orders"],
+        queryKey: ["my-orders"],
       });
     },
   });
 
-  const active = (orders ?? []).filter(
+  const recent = (orders ?? []).slice(0, 10);
+
+  const active = recent.filter(
     (o) => !["delivered", "cancelled"].includes(o.status),
   ).length;
-  const spent = (orders ?? []).reduce((sum, o) => sum + Number(o.total ?? 0), 0);
+  const spent = recent.reduce((sum, o) => sum + Number(o.total ?? 0), 0);
 
   return (
     <DashboardLayout
@@ -93,7 +80,7 @@ function CustomerDashboard() {
         />
         <StatCard
           label="Orders placed"
-          value={String(orders?.length ?? 0)}
+          value={String(recent.length)}
           icon={PackageCheck}
           hint="Last 10 shown below"
         />
@@ -101,9 +88,9 @@ function CustomerDashboard() {
       </div>
 
       <Panel title="Recent orders" description="Your latest RushOrder PH activity" className="mt-6">
-        {orders && orders.length > 0 ? (
+        {recent.length > 0 ? (
           <ul className="divide-y divide-border">
-            {orders.map((order) => (
+            {recent.map((order) => (
               <li key={order.id} className="flex items-center justify-between py-3">
                 <Link
                   to="/order/$orderId"

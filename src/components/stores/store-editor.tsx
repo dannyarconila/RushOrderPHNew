@@ -33,8 +33,9 @@ interface AddressShape {
 function parseAddress(value: unknown): AddressShape {
   const raw = (value && typeof value === "object" ? value : {}) as Record<string, unknown>;
   const str = (key: string) => (typeof raw[key] === "string" ? (raw[key] as string) : "");
+  const line1 = str("line1") || str("street") || str("address") || str("building");
   return {
-    line1: str("line1"),
+    line1,
     barangay: str("barangay"),
     city: str("city"),
     province: str("province"),
