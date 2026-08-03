@@ -16,6 +16,7 @@ import { Route as BecomeSellerRouteImport } from './routes/become-seller'
 import { Route as CheckoutRouteImport } from './routes/checkout'
 import { Route as ContactRouteImport } from './routes/contact'
 import { Route as CustomerRouteImport } from './routes/customer'
+import { Route as ErrandsRouteImport } from './routes/errands'
 import { Route as FaqRouteImport } from './routes/faq'
 import { Route as FoodRouteImport } from './routes/food'
 import { Route as GroceriesRouteImport } from './routes/groceries'
@@ -90,6 +91,11 @@ const ContactRoute = ContactRouteImport.update({
 const CustomerRoute = CustomerRouteImport.update({
   id: '/customer',
   path: '/customer',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ErrandsRoute = ErrandsRouteImport.update({
+  id: '/errands',
+  path: '/errands',
   getParentRoute: () => rootRouteImport,
 } as any)
 const FaqRoute = FaqRouteImport.update({
@@ -308,6 +314,7 @@ export interface FileRoutesByFullPath {
   '/checkout': typeof CheckoutRoute
   '/contact': typeof ContactRoute
   '/customer': typeof CustomerRoute
+  '/errands': typeof ErrandsRoute
   '/faq': typeof FaqRoute
   '/food': typeof FoodRoute
   '/groceries': typeof GroceriesRoute
@@ -357,6 +364,7 @@ export interface FileRoutesByTo {
   '/checkout': typeof CheckoutRoute
   '/contact': typeof ContactRoute
   '/customer': typeof CustomerRoute
+  '/errands': typeof ErrandsRoute
   '/faq': typeof FaqRoute
   '/food': typeof FoodRoute
   '/groceries': typeof GroceriesRoute
@@ -406,6 +414,7 @@ export interface FileRoutesById {
   '/checkout': typeof CheckoutRoute
   '/contact': typeof ContactRoute
   '/customer': typeof CustomerRoute
+  '/errands': typeof ErrandsRoute
   '/faq': typeof FaqRoute
   '/food': typeof FoodRoute
   '/groceries': typeof GroceriesRoute
@@ -457,6 +466,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/contact'
     | '/customer'
+    | '/errands'
     | '/faq'
     | '/food'
     | '/groceries'
@@ -506,6 +516,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/contact'
     | '/customer'
+    | '/errands'
     | '/faq'
     | '/food'
     | '/groceries'
@@ -554,6 +565,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/contact'
     | '/customer'
+    | '/errands'
     | '/faq'
     | '/food'
     | '/groceries'
@@ -604,6 +616,7 @@ export interface RootRouteChildren {
   CheckoutRoute: typeof CheckoutRoute
   ContactRoute: typeof ContactRoute
   CustomerRoute: typeof CustomerRoute
+  ErrandsRoute: typeof ErrandsRoute
   FaqRoute: typeof FaqRoute
   FoodRoute: typeof FoodRoute
   GroceriesRoute: typeof GroceriesRoute
@@ -678,6 +691,13 @@ declare module '@tanstack/react-router' {
       path: '/customer'
       fullPath: '/customer'
       preLoaderRoute: typeof CustomerRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/errands': {
+      id: '/errands'
+      path: '/errands'
+      fullPath: '/errands'
+      preLoaderRoute: typeof ErrandsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/faq': {
@@ -1015,6 +1035,7 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutRoute: CheckoutRoute,
   ContactRoute: ContactRoute,
   CustomerRoute: CustomerRoute,
+  ErrandsRoute: ErrandsRoute,
   FaqRoute: FaqRoute,
   FoodRoute: FoodRoute,
   GroceriesRoute: GroceriesRoute,
