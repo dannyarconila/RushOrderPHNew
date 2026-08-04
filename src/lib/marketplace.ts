@@ -148,6 +148,23 @@ export function estimateDeliveryFee(distanceKm: number, settings: Record<string,
     const parsed = typeof raw === "number" ? raw : Number(raw);
     return Number.isFinite(parsed) ? parsed : fallback;
   };
+
+  // Canonical source: dispatch pricing keys managed in Internal Admin > Dispatch.
+  const hasDispatchPricing =
+    Object.prototype.hasOwnProperty.call(settings, "dispatch_fee_per_km") ||
+    Object.prototype.hasOwnProperty.call(settings, "dispatch_min_fee") ||
+    Object.prototype.hasOwnProperty.call(settings, "dispatch_max_fee");
+
+  if (hasDispatchPricing) {
+    const perKm = num("dispatch_fee_per_km", 0);
+    const minFee = num("dispatch_min_fee", 0);
+    const maxFee = num("dispatch_max_fee", Number.MAX_SAFE_INTEGER);
+    const raw = Math.round(Math.max(0, distanceKm) * Math.max(0, perKm) * 100) / 100;
+    const clamped = Math.max(minFee, Math.min(maxFee, raw));
+    return Math.round(clamped * 100) / 100;
+  }
+
+  // Backward-compatible fallback for legacy delivery_* keys.
   const base = num("delivery_base_fee", 0);
   const perKm = num("delivery_per_km_fee", 0);
   const freeKm = num("delivery_base_km", 0);
