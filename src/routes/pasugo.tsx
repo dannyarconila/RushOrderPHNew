@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Loader2, Navigation } from "lucide-react";
 import type { ReactNode } from "react";
@@ -96,12 +96,14 @@ function PasugoPage() {
           <div className="mt-5 rounded-2xl border border-primary/30 bg-primary-soft p-4">
             <p className="text-sm font-semibold text-primary">You have an active Pasugo booking.</p>
             <Button
+              asChild
               className="mt-3"
               size="sm"
               variant="outline"
-              onClick={() => navigate({ to: "/pasugo/$bookingId", params: { bookingId: latest.data!.id } })}
             >
-              Continue tracking
+              <Link to="/pasugo/$bookingId" params={{ bookingId: latest.data.id }}>
+                Continue tracking
+              </Link>
             </Button>
           </div>
         ) : null}
