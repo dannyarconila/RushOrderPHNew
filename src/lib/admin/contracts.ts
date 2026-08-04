@@ -106,6 +106,8 @@ export type AdminReadTable =
   | "wallet_topups"
   | "payment_methods"
   | "system_settings"
+  | "legal_documents"
+  | "legal_acceptance_logs"
   | "dispatch_jobs"
   | "dispatch_offers"
   | "rider_status";
@@ -124,6 +126,8 @@ export const READ_TABLE_PERMISSIONS: Record<AdminReadTable, AdminPermission[]> =
   wallet_topups: ["wallets", "payments"],
   payment_methods: ["payments", "wallets"],
   system_settings: ["settings", "payments", "wallets"],
+  legal_documents: ["settings"],
+  legal_acceptance_logs: ["settings", "reports"],
   dispatch_jobs: ["orders", "reports"],
   dispatch_offers: ["orders", "reports"],
   rider_status: ["orders", "members"],
@@ -165,6 +169,17 @@ export type AdminMutation =
   | { action: "notify"; userIds: string[]; title: string; body: string; kind?: string }
   | { action: "broadcast"; audiences: string[]; title: string; body: string }
   | { action: "save_payment_method"; input: Record<string, unknown> }
+  | {
+      action: "publish_legal_document";
+      slug: string;
+      title: string;
+      summary: string;
+      version: string;
+      content: string;
+      updatedBy: string;
+      publishedAt: string;
+      updatedAt: string;
+    }
   | { action: "delete_payment_method"; id: string }
   | { action: "approve_topup"; id: string; notes?: string | null }
   | { action: "reject_topup"; id: string; reason: string }

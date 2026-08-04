@@ -87,6 +87,31 @@ export async function upsertSetting(input: { key: string; value: unknown }) {
   await adminMutateFn({ data: { action: "upsert_setting", key: input.key, value: input.value } });
 }
 
+export async function publishLegalDocument(input: {
+  slug: string;
+  title: string;
+  summary: string;
+  version: string;
+  content: string;
+  updatedBy: string;
+  publishedAt: string;
+  updatedAt: string;
+}) {
+  await adminMutateFn({
+    data: {
+      action: "publish_legal_document",
+      slug: input.slug,
+      title: input.title,
+      summary: input.summary,
+      version: input.version,
+      content: input.content,
+      updatedBy: input.updatedBy,
+      publishedAt: input.publishedAt,
+      updatedAt: input.updatedAt,
+    },
+  });
+}
+
 export async function notifyUsers(input: {
   userIds: string[];
   title: string;

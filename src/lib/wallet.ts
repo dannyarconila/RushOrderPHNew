@@ -27,6 +27,10 @@ export type TopupRow = Tables["wallet_topups"]["Row"];
 export type WalletRow = Tables["wallets"]["Row"];
 export type WalletTxRow = Tables["wallet_transactions"]["Row"];
 
+interface WalletTransactionHideRow {
+  wallet_transaction_id: string;
+}
+
 export const TOPUP_STATUSES: TopupStatus[] = ["pending", "approved", "rejected", "cancelled"];
 
 export const MIN_TOPUP = 50;
@@ -143,10 +147,14 @@ export function minimumWalletBalanceQuery(role: "seller" | "rider") {
   });
 }
 
-export function myWalletTransactionsQuery(walletId: string | undefined, limit = 50) {
+export function myWalletTransactionsQuery(
+  walletId: string | undefined,
+  userId: string | undefined,
+  limit = 50,
+) {
   return queryOptions({
-    queryKey: ["wallet-transactions", walletId ?? null, limit],
-    enabled: Boolean(walletId),
+    queryKey: ["wallet-transactions", walletId ?? null, userId ?? null, limit],
+    enabled: Boolean(walletId && userId),
     queryFn: async (): Promise<WalletTxRow[]> => {
       const { data, error } = await supabase
         .from("wallet_transactions")
@@ -155,9 +163,28 @@ export function myWalletTransactionsQuery(walletId: string | undefined, limit = 
         .order("created_at", { ascending: false })
         .limit(limit);
       if (error) throw error;
-      return data ?? [];
+
+      const { data: hides, error: hideError } = await supabase
+        .from("wallet_transaction_hides" as never)
+        .select("wallet_transaction_id")
+        .eq("user_id", userId!);
+      if (hideError) throw hideError;
+
+      const hidden = new Set(
+        ((hides ?? []) as WalletTransactionHideRow[]).map((row) => row.wallet_transaction_id),
+      );
+      return (data ?? []).filter((tx) => !hidden.has(tx.id));
     },
   });
+}
+
+/** Owner-only hide for transaction history (audit record remains intact). */
+export async function hideWalletTransaction(input: { userId: string; transactionId: string }) {
+  const { error } = await supabase.from("wallet_transaction_hides" as never).insert({
+    user_id: input.userId,
+    wallet_transaction_id: input.transactionId,
+  } as never);
+  if (error) throw error;
 }
 
 export function myTopupsQuery(userId: string | undefined, walletType: WalletType) {

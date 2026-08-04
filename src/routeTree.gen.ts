@@ -21,6 +21,7 @@ import { Route as FaqRouteImport } from './routes/faq'
 import { Route as FoodRouteImport } from './routes/food'
 import { Route as GroceriesRouteImport } from './routes/groceries'
 import { Route as InternalAdminRouteImport } from './routes/internal-admin'
+import { Route as LegalRouteImport } from './routes/legal'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as MarketplaceRouteImport } from './routes/marketplace'
 import { Route as McpRouteImport } from './routes/mcp'
@@ -42,6 +43,7 @@ import { Route as InternalAdminAnnouncementsRouteImport } from './routes/interna
 import { Route as InternalAdminAuditRouteImport } from './routes/internal-admin.audit'
 import { Route as InternalAdminCustomersRouteImport } from './routes/internal-admin.customers'
 import { Route as InternalAdminDispatchRouteImport } from './routes/internal-admin.dispatch'
+import { Route as InternalAdminLegalRouteImport } from './routes/internal-admin.legal'
 import { Route as InternalAdminOrdersRouteImport } from './routes/internal-admin.orders'
 import { Route as InternalAdminPaymentMethodsRouteImport } from './routes/internal-admin.payment-methods'
 import { Route as InternalAdminReportsRouteImport } from './routes/internal-admin.reports'
@@ -53,6 +55,7 @@ import { Route as InternalAdminStoreApplicationsRouteImport } from './routes/int
 import { Route as InternalAdminTopupsRouteImport } from './routes/internal-admin.topups'
 import { Route as InternalAdminUsersRouteImport } from './routes/internal-admin.users'
 import { Route as InternalAdminWalletsRouteImport } from './routes/internal-admin.wallets'
+import { Route as LegalSlugRouteImport } from './routes/legal.$slug'
 import { Route as OrderOrderIdRouteImport } from './routes/order.$orderId'
 import { Route as StoreStoreIdRouteImport } from './routes/store.$storeId'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
@@ -116,6 +119,11 @@ const GroceriesRoute = GroceriesRouteImport.update({
 const InternalAdminRoute = InternalAdminRouteImport.update({
   id: '/internal-admin',
   path: '/internal-admin',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LegalRoute = LegalRouteImport.update({
+  id: '/legal',
+  path: '/legal',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -226,6 +234,11 @@ const InternalAdminDispatchRoute = InternalAdminDispatchRouteImport.update({
   path: '/dispatch',
   getParentRoute: () => InternalAdminRoute,
 } as any)
+const InternalAdminLegalRoute = InternalAdminLegalRouteImport.update({
+  id: '/legal',
+  path: '/legal',
+  getParentRoute: () => InternalAdminRoute,
+} as any)
 const InternalAdminOrdersRoute = InternalAdminOrdersRouteImport.update({
   id: '/orders',
   path: '/orders',
@@ -284,6 +297,11 @@ const InternalAdminWalletsRoute = InternalAdminWalletsRouteImport.update({
   path: '/wallets',
   getParentRoute: () => InternalAdminRoute,
 } as any)
+const LegalSlugRoute = LegalSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => LegalRoute,
+} as any)
 const OrderOrderIdRoute = OrderOrderIdRouteImport.update({
   id: '/order/$orderId',
   path: '/order/$orderId',
@@ -319,6 +337,7 @@ export interface FileRoutesByFullPath {
   '/food': typeof FoodRoute
   '/groceries': typeof GroceriesRoute
   '/internal-admin': typeof InternalAdminRouteWithChildren
+  '/legal': typeof LegalRouteWithChildren
   '/login': typeof LoginRoute
   '/marketplace': typeof MarketplaceRoute
   '/mcp': typeof McpRoute
@@ -339,6 +358,7 @@ export interface FileRoutesByFullPath {
   '/internal-admin/audit': typeof InternalAdminAuditRoute
   '/internal-admin/customers': typeof InternalAdminCustomersRoute
   '/internal-admin/dispatch': typeof InternalAdminDispatchRoute
+  '/internal-admin/legal': typeof InternalAdminLegalRoute
   '/internal-admin/orders': typeof InternalAdminOrdersRoute
   '/internal-admin/payment-methods': typeof InternalAdminPaymentMethodsRoute
   '/internal-admin/reports': typeof InternalAdminReportsRoute
@@ -350,6 +370,7 @@ export interface FileRoutesByFullPath {
   '/internal-admin/topups': typeof InternalAdminTopupsRoute
   '/internal-admin/users': typeof InternalAdminUsersRoute
   '/internal-admin/wallets': typeof InternalAdminWalletsRoute
+  '/legal/$slug': typeof LegalSlugRoute
   '/order/$orderId': typeof OrderOrderIdRoute
   '/store/$storeId': typeof StoreStoreIdRoute
   '/internal-admin/': typeof InternalAdminIndexRoute
@@ -368,6 +389,7 @@ export interface FileRoutesByTo {
   '/faq': typeof FaqRoute
   '/food': typeof FoodRoute
   '/groceries': typeof GroceriesRoute
+  '/legal': typeof LegalRouteWithChildren
   '/login': typeof LoginRoute
   '/marketplace': typeof MarketplaceRoute
   '/mcp': typeof McpRoute
@@ -388,6 +410,7 @@ export interface FileRoutesByTo {
   '/internal-admin/audit': typeof InternalAdminAuditRoute
   '/internal-admin/customers': typeof InternalAdminCustomersRoute
   '/internal-admin/dispatch': typeof InternalAdminDispatchRoute
+  '/internal-admin/legal': typeof InternalAdminLegalRoute
   '/internal-admin/orders': typeof InternalAdminOrdersRoute
   '/internal-admin/payment-methods': typeof InternalAdminPaymentMethodsRoute
   '/internal-admin/reports': typeof InternalAdminReportsRoute
@@ -399,6 +422,7 @@ export interface FileRoutesByTo {
   '/internal-admin/topups': typeof InternalAdminTopupsRoute
   '/internal-admin/users': typeof InternalAdminUsersRoute
   '/internal-admin/wallets': typeof InternalAdminWalletsRoute
+  '/legal/$slug': typeof LegalSlugRoute
   '/order/$orderId': typeof OrderOrderIdRoute
   '/store/$storeId': typeof StoreStoreIdRoute
   '/internal-admin': typeof InternalAdminIndexRoute
@@ -419,6 +443,7 @@ export interface FileRoutesById {
   '/food': typeof FoodRoute
   '/groceries': typeof GroceriesRoute
   '/internal-admin': typeof InternalAdminRouteWithChildren
+  '/legal': typeof LegalRouteWithChildren
   '/login': typeof LoginRoute
   '/marketplace': typeof MarketplaceRoute
   '/mcp': typeof McpRoute
@@ -439,6 +464,7 @@ export interface FileRoutesById {
   '/internal-admin/audit': typeof InternalAdminAuditRoute
   '/internal-admin/customers': typeof InternalAdminCustomersRoute
   '/internal-admin/dispatch': typeof InternalAdminDispatchRoute
+  '/internal-admin/legal': typeof InternalAdminLegalRoute
   '/internal-admin/orders': typeof InternalAdminOrdersRoute
   '/internal-admin/payment-methods': typeof InternalAdminPaymentMethodsRoute
   '/internal-admin/reports': typeof InternalAdminReportsRoute
@@ -450,6 +476,7 @@ export interface FileRoutesById {
   '/internal-admin/topups': typeof InternalAdminTopupsRoute
   '/internal-admin/users': typeof InternalAdminUsersRoute
   '/internal-admin/wallets': typeof InternalAdminWalletsRoute
+  '/legal/$slug': typeof LegalSlugRoute
   '/order/$orderId': typeof OrderOrderIdRoute
   '/store/$storeId': typeof StoreStoreIdRoute
   '/internal-admin/': typeof InternalAdminIndexRoute
@@ -471,6 +498,7 @@ export interface FileRouteTypes {
     | '/food'
     | '/groceries'
     | '/internal-admin'
+    | '/legal'
     | '/login'
     | '/marketplace'
     | '/mcp'
@@ -491,6 +519,7 @@ export interface FileRouteTypes {
     | '/internal-admin/audit'
     | '/internal-admin/customers'
     | '/internal-admin/dispatch'
+    | '/internal-admin/legal'
     | '/internal-admin/orders'
     | '/internal-admin/payment-methods'
     | '/internal-admin/reports'
@@ -502,6 +531,7 @@ export interface FileRouteTypes {
     | '/internal-admin/topups'
     | '/internal-admin/users'
     | '/internal-admin/wallets'
+    | '/legal/$slug'
     | '/order/$orderId'
     | '/store/$storeId'
     | '/internal-admin/'
@@ -520,6 +550,7 @@ export interface FileRouteTypes {
     | '/faq'
     | '/food'
     | '/groceries'
+    | '/legal'
     | '/login'
     | '/marketplace'
     | '/mcp'
@@ -540,6 +571,7 @@ export interface FileRouteTypes {
     | '/internal-admin/audit'
     | '/internal-admin/customers'
     | '/internal-admin/dispatch'
+    | '/internal-admin/legal'
     | '/internal-admin/orders'
     | '/internal-admin/payment-methods'
     | '/internal-admin/reports'
@@ -551,6 +583,7 @@ export interface FileRouteTypes {
     | '/internal-admin/topups'
     | '/internal-admin/users'
     | '/internal-admin/wallets'
+    | '/legal/$slug'
     | '/order/$orderId'
     | '/store/$storeId'
     | '/internal-admin'
@@ -570,6 +603,7 @@ export interface FileRouteTypes {
     | '/food'
     | '/groceries'
     | '/internal-admin'
+    | '/legal'
     | '/login'
     | '/marketplace'
     | '/mcp'
@@ -590,6 +624,7 @@ export interface FileRouteTypes {
     | '/internal-admin/audit'
     | '/internal-admin/customers'
     | '/internal-admin/dispatch'
+    | '/internal-admin/legal'
     | '/internal-admin/orders'
     | '/internal-admin/payment-methods'
     | '/internal-admin/reports'
@@ -601,6 +636,7 @@ export interface FileRouteTypes {
     | '/internal-admin/topups'
     | '/internal-admin/users'
     | '/internal-admin/wallets'
+    | '/legal/$slug'
     | '/order/$orderId'
     | '/store/$storeId'
     | '/internal-admin/'
@@ -621,6 +657,7 @@ export interface RootRouteChildren {
   FoodRoute: typeof FoodRoute
   GroceriesRoute: typeof GroceriesRoute
   InternalAdminRoute: typeof InternalAdminRouteWithChildren
+  LegalRoute: typeof LegalRouteWithChildren
   LoginRoute: typeof LoginRoute
   MarketplaceRoute: typeof MarketplaceRoute
   McpRoute: typeof McpRoute
@@ -726,6 +763,13 @@ declare module '@tanstack/react-router' {
       path: '/internal-admin'
       fullPath: '/internal-admin'
       preLoaderRoute: typeof InternalAdminRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/legal': {
+      id: '/legal'
+      path: '/legal'
+      fullPath: '/legal'
+      preLoaderRoute: typeof LegalRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -875,6 +919,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InternalAdminDispatchRouteImport
       parentRoute: typeof InternalAdminRoute
     }
+    '/internal-admin/legal': {
+      id: '/internal-admin/legal'
+      path: '/legal'
+      fullPath: '/internal-admin/legal'
+      preLoaderRoute: typeof InternalAdminLegalRouteImport
+      parentRoute: typeof InternalAdminRoute
+    }
     '/internal-admin/orders': {
       id: '/internal-admin/orders'
       path: '/orders'
@@ -952,6 +1003,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InternalAdminWalletsRouteImport
       parentRoute: typeof InternalAdminRoute
     }
+    '/legal/$slug': {
+      id: '/legal/$slug'
+      path: '/$slug'
+      fullPath: '/legal/$slug'
+      preLoaderRoute: typeof LegalSlugRouteImport
+      parentRoute: typeof LegalRoute
+    }
     '/order/$orderId': {
       id: '/order/$orderId'
       path: '/order/$orderId'
@@ -989,6 +1047,7 @@ interface InternalAdminRouteChildren {
   InternalAdminAuditRoute: typeof InternalAdminAuditRoute
   InternalAdminCustomersRoute: typeof InternalAdminCustomersRoute
   InternalAdminDispatchRoute: typeof InternalAdminDispatchRoute
+  InternalAdminLegalRoute: typeof InternalAdminLegalRoute
   InternalAdminOrdersRoute: typeof InternalAdminOrdersRoute
   InternalAdminPaymentMethodsRoute: typeof InternalAdminPaymentMethodsRoute
   InternalAdminReportsRoute: typeof InternalAdminReportsRoute
@@ -1009,6 +1068,7 @@ const InternalAdminRouteChildren: InternalAdminRouteChildren = {
   InternalAdminAuditRoute: InternalAdminAuditRoute,
   InternalAdminCustomersRoute: InternalAdminCustomersRoute,
   InternalAdminDispatchRoute: InternalAdminDispatchRoute,
+  InternalAdminLegalRoute: InternalAdminLegalRoute,
   InternalAdminOrdersRoute: InternalAdminOrdersRoute,
   InternalAdminPaymentMethodsRoute: InternalAdminPaymentMethodsRoute,
   InternalAdminReportsRoute: InternalAdminReportsRoute,
@@ -1027,6 +1087,16 @@ const InternalAdminRouteWithChildren = InternalAdminRoute._addFileChildren(
   InternalAdminRouteChildren,
 )
 
+interface LegalRouteChildren {
+  LegalSlugRoute: typeof LegalSlugRoute
+}
+
+const LegalRouteChildren: LegalRouteChildren = {
+  LegalSlugRoute: LegalSlugRoute,
+}
+
+const LegalRouteWithChildren = LegalRoute._addFileChildren(LegalRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AboutRoute: AboutRoute,
@@ -1040,6 +1110,7 @@ const rootRouteChildren: RootRouteChildren = {
   FoodRoute: FoodRoute,
   GroceriesRoute: GroceriesRoute,
   InternalAdminRoute: InternalAdminRouteWithChildren,
+  LegalRoute: LegalRouteWithChildren,
   LoginRoute: LoginRoute,
   MarketplaceRoute: MarketplaceRoute,
   McpRoute: McpRoute,

@@ -148,9 +148,9 @@ export function estimateDeliveryFee(distanceKm: number, settings: Record<string,
     const parsed = typeof raw === "number" ? raw : Number(raw);
     return Number.isFinite(parsed) ? parsed : fallback;
   };
-  const base = num("delivery_base_fee", 49);
-  const perKm = num("delivery_per_km_fee", 12);
-  const freeKm = num("delivery_base_km", 2);
+  const base = num("delivery_base_fee", 0);
+  const perKm = num("delivery_per_km_fee", 0);
+  const freeKm = num("delivery_base_km", 0);
   const extra = Math.max(0, distanceKm - freeKm);
   return Math.round((base + extra * perKm) * 100) / 100;
 }

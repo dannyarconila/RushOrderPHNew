@@ -75,7 +75,10 @@ export async function buildOverview(): Promise<AdminOverview> {
     .gte("created_at", startOfMonth.toISOString())
     .is("deleted_at", null);
 
-  const billable = (monthOrders ?? []).filter((o) => o.status !== "cancelled");
+  const billable = (monthOrders ?? []).filter(
+    (o) =>
+      o.status === "delivered" && !["failed", "expired", "refunded"].includes(o.payment_status),
+  );
   const todays = billable.filter((o) => new Date(o.created_at) >= startOfDay);
 
   const { data: wallets } = await supabaseAdmin
@@ -124,7 +127,10 @@ export async function buildReports(days: number): Promise<AdminReports> {
     .limit(1000);
   if (error) throw error;
 
-  const rows = (data ?? []).filter((o) => o.status !== "cancelled");
+  const rows = (data ?? []).filter(
+    (o) =>
+      o.status === "delivered" && !["failed", "expired", "refunded"].includes(o.payment_status),
+  );
 
   const bucket = (keyFn: (d: Date) => string, labelFn: (d: Date) => string) => {
     const map = new Map<string, SalesBucket>();

@@ -53,9 +53,9 @@ export function parseDispatchSettings(raw: Record<string, unknown>): DispatchSet
   return {
     radiusKm: numberOf(raw.dispatch_radius_km, 5),
     maxRadiusKm: numberOf(raw.dispatch_max_radius_km, 10),
-    feePerKm: numberOf(raw.dispatch_fee_per_km, 15),
-    minFee: numberOf(raw.dispatch_min_fee, 49),
-    maxFee: numberOf(raw.dispatch_max_fee, 300),
+    feePerKm: numberOf(raw.dispatch_fee_per_km, 0),
+    minFee: numberOf(raw.dispatch_min_fee, 0),
+    maxFee: numberOf(raw.dispatch_max_fee, 0),
     timeoutSeconds: numberOf(raw.dispatch_timeout_seconds, 30),
     retryIntervalSeconds: numberOf(raw.dispatch_retry_interval_seconds, 15),
     maxRetries: numberOf(raw.dispatch_max_retries, 5),

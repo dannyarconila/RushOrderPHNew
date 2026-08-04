@@ -469,6 +469,89 @@ export type Database = {
           },
         ];
       };
+      legal_acceptance_logs: {
+        Row: {
+          accepted_at: string;
+          audience: Database["public"]["Enums"]["app_role"];
+          created_at: string;
+          id: string;
+          metadata: Json;
+          privacy_version: string;
+          source: string;
+          terms_version: string;
+          user_id: string | null;
+        };
+        Insert: {
+          accepted_at?: string;
+          audience: Database["public"]["Enums"]["app_role"];
+          created_at?: string;
+          id?: string;
+          metadata?: Json;
+          privacy_version: string;
+          source?: string;
+          terms_version: string;
+          user_id?: string | null;
+        };
+        Update: {
+          accepted_at?: string;
+          audience?: Database["public"]["Enums"]["app_role"];
+          created_at?: string;
+          id?: string;
+          metadata?: Json;
+          privacy_version?: string;
+          source?: string;
+          terms_version?: string;
+          user_id?: string | null;
+        };
+        Relationships: [];
+      };
+      legal_documents: {
+        Row: {
+          content: string;
+          created_at: string;
+          is_published: boolean;
+          published_at: string;
+          slug: string;
+          summary: string | null;
+          title: string;
+          updated_at: string;
+          updated_by: string | null;
+          version: string;
+        };
+        Insert: {
+          content?: string;
+          created_at?: string;
+          is_published?: boolean;
+          published_at?: string;
+          slug: string;
+          summary?: string | null;
+          title: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          version?: string;
+        };
+        Update: {
+          content?: string;
+          created_at?: string;
+          is_published?: boolean;
+          published_at?: string;
+          slug?: string;
+          summary?: string | null;
+          title?: string;
+          updated_at?: string;
+          updated_by?: string | null;
+          version?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "legal_documents_updated_by_fkey";
+            columns: ["updated_by"];
+            isOneToOne: false;
+            referencedRelation: "admin_accounts";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       notifications: {
         Row: {
           body: string | null;
@@ -965,38 +1048,50 @@ export type Database = {
       profiles: {
         Row: {
           account_status: Database["public"]["Enums"]["account_status"];
+          accepted_terms: boolean;
+          accepted_terms_at: string | null;
           avatar_url: string | null;
           city: string | null;
           created_at: string;
           full_name: string | null;
           id: string;
+          privacy_version: string | null;
           phone: string | null;
           status_changed_at: string | null;
           status_note: string | null;
+          terms_version: string | null;
           updated_at: string;
         };
         Insert: {
           account_status?: Database["public"]["Enums"]["account_status"];
+          accepted_terms?: boolean;
+          accepted_terms_at?: string | null;
           avatar_url?: string | null;
           city?: string | null;
           created_at?: string;
           full_name?: string | null;
           id: string;
+          privacy_version?: string | null;
           phone?: string | null;
           status_changed_at?: string | null;
           status_note?: string | null;
+          terms_version?: string | null;
           updated_at?: string;
         };
         Update: {
           account_status?: Database["public"]["Enums"]["account_status"];
+          accepted_terms?: boolean;
+          accepted_terms_at?: string | null;
           avatar_url?: string | null;
           city?: string | null;
           created_at?: string;
           full_name?: string | null;
           id?: string;
+          privacy_version?: string | null;
           phone?: string | null;
           status_changed_at?: string | null;
           status_note?: string | null;
+          terms_version?: string | null;
           updated_at?: string;
         };
         Relationships: [];
@@ -1102,6 +1197,8 @@ export type Database = {
       };
       rider_applications: {
         Row: {
+          accepted_terms: boolean;
+          accepted_terms_at: string | null;
           address: Json;
           created_at: string;
           device_fingerprint: string | null;
@@ -1109,15 +1206,19 @@ export type Database = {
           emergency_contact: Json;
           id: string;
           ip_address: string | null;
+          privacy_version: string | null;
           personal_info: Json;
           review_notes: string | null;
           reviewed_at: string | null;
           status: Database["public"]["Enums"]["application_status"];
+          terms_version: string | null;
           updated_at: string;
           user_id: string;
           vehicle_info: Json;
         };
         Insert: {
+          accepted_terms?: boolean;
+          accepted_terms_at?: string | null;
           address?: Json;
           created_at?: string;
           device_fingerprint?: string | null;
@@ -1125,15 +1226,19 @@ export type Database = {
           emergency_contact?: Json;
           id?: string;
           ip_address?: string | null;
+          privacy_version?: string | null;
           personal_info?: Json;
           review_notes?: string | null;
           reviewed_at?: string | null;
           status?: Database["public"]["Enums"]["application_status"];
+          terms_version?: string | null;
           updated_at?: string;
           user_id: string;
           vehicle_info?: Json;
         };
         Update: {
+          accepted_terms?: boolean;
+          accepted_terms_at?: string | null;
           address?: Json;
           created_at?: string;
           device_fingerprint?: string | null;
@@ -1141,10 +1246,12 @@ export type Database = {
           emergency_contact?: Json;
           id?: string;
           ip_address?: string | null;
+          privacy_version?: string | null;
           personal_info?: Json;
           review_notes?: string | null;
           reviewed_at?: string | null;
           status?: Database["public"]["Enums"]["application_status"];
+          terms_version?: string | null;
           updated_at?: string;
           user_id?: string;
           vehicle_info?: Json;
@@ -1195,6 +1302,8 @@ export type Database = {
       };
       seller_applications: {
         Row: {
+          accepted_terms: boolean;
+          accepted_terms_at: string | null;
           address: Json;
           business_info: Json;
           business_type: Database["public"]["Enums"]["seller_business_type"];
@@ -1204,14 +1313,18 @@ export type Database = {
           id: string;
           ip_address: string | null;
           owner_info: Json;
+          privacy_version: string | null;
           review_notes: string | null;
           reviewed_at: string | null;
           status: Database["public"]["Enums"]["application_status"];
           store_info: Json;
+          terms_version: string | null;
           updated_at: string;
           user_id: string;
         };
         Insert: {
+          accepted_terms?: boolean;
+          accepted_terms_at?: string | null;
           address?: Json;
           business_info?: Json;
           business_type: Database["public"]["Enums"]["seller_business_type"];
@@ -1221,14 +1334,18 @@ export type Database = {
           id?: string;
           ip_address?: string | null;
           owner_info?: Json;
+          privacy_version?: string | null;
           review_notes?: string | null;
           reviewed_at?: string | null;
           status?: Database["public"]["Enums"]["application_status"];
           store_info?: Json;
+          terms_version?: string | null;
           updated_at?: string;
           user_id: string;
         };
         Update: {
+          accepted_terms?: boolean;
+          accepted_terms_at?: string | null;
           address?: Json;
           business_info?: Json;
           business_type?: Database["public"]["Enums"]["seller_business_type"];
@@ -1238,10 +1355,12 @@ export type Database = {
           id?: string;
           ip_address?: string | null;
           owner_info?: Json;
+          privacy_version?: string | null;
           review_notes?: string | null;
           reviewed_at?: string | null;
           status?: Database["public"]["Enums"]["application_status"];
           store_info?: Json;
+          terms_version?: string | null;
           updated_at?: string;
           user_id?: string;
         };

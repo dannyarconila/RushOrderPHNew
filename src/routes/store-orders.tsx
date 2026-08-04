@@ -129,7 +129,7 @@ function StoreOrdersPage() {
 
                     {order.status === "cancelled" ? (
                       <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-600">
-                        Cancelled by Customer
+                        Cancelled
                       </span>
                     ) : (
                       <>
@@ -161,6 +161,24 @@ function StoreOrdersPage() {
                             }
                           >
                             Decline
+                          </Button>
+                        ) : null}
+
+                        {(["confirmed", "preparing", "ready"] as OrderStatus[]).includes(
+                          order.status,
+                        ) ? (
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            disabled={advance.isPending}
+                            onClick={() =>
+                              advance.mutate({
+                                id: order.id,
+                                status: "cancelled",
+                              })
+                            }
+                          >
+                            Cancel order
                           </Button>
                         ) : null}
                       </>

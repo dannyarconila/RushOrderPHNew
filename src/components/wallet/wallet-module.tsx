@@ -11,6 +11,8 @@ import {
   ArrowUpRight,
   Clock,
   Copy,
+  Download,
+  EyeOff,
   Loader2,
   QrCode,
   ReceiptText,
@@ -38,6 +40,7 @@ import { BUCKETS } from "@/lib/storage";
 import {
   activePaymentMethodsQuery,
   cancelTopup,
+  hideWalletTransaction,
   MIN_TOPUP,
   myTopupsQuery,
   myWalletQuery,
@@ -53,10 +56,14 @@ const WITHDRAWAL_KINDS = ["withdrawal", "payout", "withdraw"];
 export function WalletModule({ walletType }: { walletType: WalletType }) {
   const { user } = useAuth();
   const [topupOpen, setTopupOpen] = useState(false);
+  const [txSearch, setTxSearch] = useState("");
+  const [txKind, setTxKind] = useState("all");
+  const [fromDate, setFromDate] = useState("");
+  const [toDate, setToDate] = useState("");
 
   const { data: wallet, isLoading: walletLoading } = useQuery(myWalletQuery(user?.id, walletType));
   const { data: transactions, isLoading: txLoading } = useQuery(
-    myWalletTransactionsQuery(wallet?.id, 100),
+    myWalletTransactionsQuery(wallet?.id, user?.id, 200),
   );
   const { data: topups, isLoading: topupsLoading } = useQuery(myTopupsQuery(user?.id, walletType));
 
@@ -69,6 +76,51 @@ export function WalletModule({ walletType }: { walletType: WalletType }) {
     () => (transactions ?? []).filter((t) => WITHDRAWAL_KINDS.includes(t.kind)),
     [transactions],
   );
+
+  const filteredTransactions = useMemo(() => {
+    const term = txSearch.trim().toLowerCase();
+    const from = fromDate ? new Date(`${fromDate}T00:00:00`) : null;
+    const to = toDate ? new Date(`${toDate}T23:59:59`) : null;
+
+    return (transactions ?? []).filter((tx) => {
+      if (txKind !== "all" && tx.kind !== txKind) return false;
+      const created = new Date(tx.created_at);
+      if (from && created < from) return false;
+      if (to && created > to) return false;
+      if (!term) return true;
+      return (
+        tx.kind.toLowerCase().includes(term) ||
+        (tx.description ?? "").toLowerCase().includes(term) ||
+        (tx.reference ?? "").toLowerCase().includes(term) ||
+        tx.id.toLowerCase().includes(term)
+      );
+    });
+  }, [transactions, txKind, txSearch, fromDate, toDate]);
+
+  function exportTransactionsCsv() {
+    const head = ["when", "type", "description", "reference", "amount", "balance_after", "status"];
+    const esc = (value: unknown) => `"${String(value ?? "").replace(/"/g, '""')}"`;
+    const rows = filteredTransactions.map((tx) =>
+      [
+        tx.created_at,
+        tx.kind,
+        tx.description ?? "",
+        tx.reference ?? "",
+        Number(tx.amount ?? 0).toFixed(2),
+        Number(tx.new_balance ?? 0).toFixed(2),
+        tx.status,
+      ]
+        .map(esc)
+        .join(","),
+    );
+    const blob = new Blob([[head.join(","), ...rows].join("\n")], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${walletType}-wallet-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  }
 
   return (
     <>
@@ -147,20 +199,50 @@ export function WalletModule({ walletType }: { walletType: WalletType }) {
 
       <Panel
         title="Transaction history"
-        description="Every movement in this wallet."
+        description="Every movement in this wallet, with filters and export."
         className="mt-6"
       >
+        <div className="mb-3 grid gap-2 sm:grid-cols-2 xl:grid-cols-5">
+          <Input
+            value={txSearch}
+            onChange={(e) => setTxSearch(e.target.value)}
+            placeholder="Search description, ref or ID"
+            className="xl:col-span-2"
+          />
+          <select
+            value={txKind}
+            onChange={(e) => setTxKind(e.target.value)}
+            className="h-10 rounded-md border border-input bg-background px-3 text-sm"
+          >
+            <option value="all">All types</option>
+            {[...new Set((transactions ?? []).map((tx) => tx.kind))].map((kind) => (
+              <option key={kind} value={kind}>
+                {kind.replace(/_/g, " ")}
+              </option>
+            ))}
+          </select>
+          <Input type="date" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+          <Input type="date" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+        </div>
         {txLoading ? (
           <p className="py-6 text-center text-sm text-muted-foreground">Loading transactions…</p>
-        ) : (transactions ?? []).length === 0 ? (
+        ) : filteredTransactions.length === 0 ? (
           <EmptyState
             icon={WalletIcon}
             title="No transactions yet"
             description="Top-ups, earnings and deductions will show up here."
           />
         ) : (
-          <AdminTable head={["When", "Type", "Description", "Amount", "Balance after", "Status"]}>
-            {(transactions ?? []).map((tx) => (
+          <>
+            <div className="mb-2 flex justify-end">
+              <Button size="sm" variant="outline" onClick={exportTransactionsCsv}>
+                <Download className="size-4" /> Export CSV
+              </Button>
+            </div>
+            <AdminTable
+              head={["When", "Type", "Description", "Amount", "Balance after", "Status", ""]}
+            >
+              {filteredTransactions.map((tx) => (
               <tr key={tx.id}>
                 <Td className="text-xs text-muted-foreground">{dateTime(tx.created_at)}</Td>
                 <Td className="text-xs capitalize">{tx.kind.replace(/_/g, " ")}</Td>
@@ -179,9 +261,13 @@ export function WalletModule({ walletType }: { walletType: WalletType }) {
                 <Td>
                   <Pill tone={statusTone(tx.status)}>{tx.status}</Pill>
                 </Td>
+                <Td>
+                  {user?.id ? <HideWalletTxButton userId={user.id} txId={tx.id} /> : null}
+                </Td>
               </tr>
-            ))}
-          </AdminTable>
+              ))}
+            </AdminTable>
+          </>
         )}
       </Panel>
 
@@ -236,6 +322,30 @@ function CancelTopupButton({ id }: { id: string }) {
       onClick={() => mutation.mutate()}
     >
       {mutation.isPending ? "Cancelling…" : "Cancel"}
+    </Button>
+  );
+}
+
+function HideWalletTxButton({ userId, txId }: { userId: string; txId: string }) {
+  const queryClient = useQueryClient();
+  const mutation = useMutation({
+    mutationFn: () => hideWalletTransaction({ userId, transactionId: txId }),
+    onSuccess: () => {
+      toast.success("Transaction hidden from your history");
+      void queryClient.invalidateQueries({ queryKey: ["wallet-transactions"] });
+    },
+    onError: (error: Error) => toast.error(error.message),
+  });
+
+  return (
+    <Button
+      size="sm"
+      variant="ghost"
+      disabled={mutation.isPending}
+      onClick={() => mutation.mutate()}
+    >
+      <EyeOff className="size-3.5" />
+      Hide
     </Button>
   );
 }

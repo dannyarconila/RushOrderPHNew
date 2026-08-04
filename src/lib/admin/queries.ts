@@ -27,6 +27,8 @@ export type ProfileRow = Tables["profiles"]["Row"];
 export type WalletRow = Tables["wallets"]["Row"];
 export type WalletTxRow = Tables["wallet_transactions"]["Row"];
 export type SettingRow = Tables["system_settings"]["Row"];
+export type LegalDocumentRow = Tables["legal_documents"]["Row"];
+export type LegalAcceptanceLogRow = Tables["legal_acceptance_logs"]["Row"];
 
 export const APPLICATION_STATUSES: ApplicationStatus[] = [
   "pending",
@@ -263,6 +265,30 @@ export function settingsQuery() {
   return queryOptions({
     queryKey: ["admin", "settings"],
     queryFn: () => read<SettingRow>({ table: "system_settings", order: [{ column: "key" }] }),
+  });
+}
+
+export function legalDocumentsQuery() {
+  return queryOptions({
+    queryKey: ["admin", "legal-documents"],
+    queryFn: () =>
+      read<LegalDocumentRow>({
+        table: "legal_documents",
+        order: [{ column: "title", ascending: true }],
+        limit: 200,
+      }),
+  });
+}
+
+export function legalAcceptanceLogsQuery(limit = 500) {
+  return queryOptions({
+    queryKey: ["admin", "legal-acceptance-logs", limit],
+    queryFn: () =>
+      read<LegalAcceptanceLogRow>({
+        table: "legal_acceptance_logs",
+        order: [{ column: "accepted_at", ascending: false }],
+        limit,
+      }),
   });
 }
 

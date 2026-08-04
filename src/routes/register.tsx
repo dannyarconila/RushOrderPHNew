@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -6,8 +7,10 @@ import { toast } from "sonner";
 import { Logo } from "@/components/brand/logo";
 import { TextField } from "@/components/forms/wizard";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/auth-context";
 import { supabase } from "@/integrations/supabase/client";
+import { legalVersionSnapshotQuery } from "@/lib/legal/public";
 import { ROLE_HOME } from "@/types";
 
 const APP_ORIGIN = import.meta.env.VITE_APP_ORIGIN || window.location.origin;
@@ -36,8 +39,10 @@ function RegisterPage() {
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
   const [busy, setBusy] = useState(false);
   const { user, primaryRole, loading } = useAuth();
+  const versions = useQuery(legalVersionSnapshotQuery());
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -46,17 +51,29 @@ function RegisterPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (!acceptedLegal) {
+      toast.error("Please accept the Terms & Conditions and Privacy Policy to continue.");
+      return;
+    }
     if (password.length < 6) {
       toast.error("Password must be at least 6 characters");
       return;
     }
+    const termsVersion = versions.data?.termsVersion ?? "1.0.0";
+    const privacyVersion = versions.data?.privacyVersion ?? "1.0.0";
     setBusy(true);
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
         emailRedirectTo: APP_ORIGIN,
-        data: { full_name: fullName, phone },
+        data: {
+          full_name: fullName,
+          phone,
+          accepted_terms: true,
+          terms_version: termsVersion,
+          privacy_version: privacyVersion,
+        },
       },
     });
     setBusy(false);
@@ -128,7 +145,21 @@ function RegisterPage() {
               placeholder="At least 6 characters"
               required
             />
-            <Button type="submit" size="lg" block disabled={busy}>
+            <label className="flex items-start gap-3 rounded-xl border border-border bg-card px-3 py-3 text-sm">
+              <Checkbox checked={acceptedLegal} onCheckedChange={(next) => setAcceptedLegal(Boolean(next))} />
+              <span>
+                I agree to the{" "}
+                <Link to="/legal/terms-conditions" className="font-semibold text-primary hover:underline">
+                  Terms & Conditions
+                </Link>{" "}
+                and{" "}
+                <Link to="/legal/privacy-policy" className="font-semibold text-primary hover:underline">
+                  Privacy Policy
+                </Link>
+                .
+              </span>
+            </label>
+            <Button type="submit" size="lg" block disabled={busy || !acceptedLegal}>
               {busy ? <Loader2 className="size-4 animate-spin" /> : null} Create account
             </Button>
           </form>

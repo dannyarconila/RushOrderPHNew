@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, Loader2, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -7,8 +8,10 @@ import { DocumentUpload } from "@/components/forms/document-upload";
 import { ReviewList, SelectField, Stepper, TextField } from "@/components/forms/wizard";
 import { PageHero, PublicLayout } from "@/components/site/public-layout";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/auth-context";
 import { supabase } from "@/integrations/supabase/client";
+import { legalVersionSnapshotQuery } from "@/lib/legal/public";
 
 export const Route = createFileRoute("/become-rider")({
   head: () => ({
@@ -35,8 +38,10 @@ const STEPS = ["Personal", "Address", "Vehicle", "Documents", "Emergency", "Revi
 function BecomeRiderPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const versions = useQuery(legalVersionSnapshotQuery());
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
 
   const [personal, setPersonal] = useState({ full_name: "", email: "", phone: "", birthdate: "" });
   const [address, setAddress] = useState({
@@ -70,6 +75,12 @@ function BecomeRiderPage() {
       toast.error("Please complete your name and vehicle type");
       return;
     }
+    if (!acceptedLegal) {
+      toast.error("Please accept the Rider Terms & Conditions and Privacy Policy.");
+      return;
+    }
+    const termsVersion = versions.data?.riderTermsVersion ?? "1.0.0";
+    const privacyVersion = versions.data?.privacyVersion ?? "1.0.0";
     setSubmitting(true);
     const { error } = await supabase.from("rider_applications").insert({
       user_id: user.id,
@@ -78,7 +89,11 @@ function BecomeRiderPage() {
       vehicle_info: vehicle,
       documents,
       emergency_contact: emergency,
-    });
+      accepted_terms: true,
+      accepted_terms_at: new Date().toISOString(),
+      terms_version: termsVersion,
+      privacy_version: privacyVersion,
+    } as never);
     setSubmitting(false);
     if (error) {
       toast.error("Could not submit application", { description: error.message });
@@ -254,6 +269,29 @@ function BecomeRiderPage() {
                   ["Documents uploaded", String(Object.keys(documents).length)],
                 ]}
               />
+              <label className="flex items-start gap-3 rounded-xl border border-border bg-card px-3 py-3 text-sm">
+                <Checkbox
+                  checked={acceptedLegal}
+                  onCheckedChange={(next) => setAcceptedLegal(Boolean(next))}
+                />
+                <span>
+                  I have read and agree to the{" "}
+                  <Link
+                    to="/legal/rider-terms-conditions"
+                    className="font-semibold text-primary hover:underline"
+                  >
+                    Rider Terms & Conditions
+                  </Link>{" "}
+                  and{" "}
+                  <Link
+                    to="/legal/privacy-policy"
+                    className="font-semibold text-primary hover:underline"
+                  >
+                    Privacy Policy
+                  </Link>
+                  .
+                </span>
+              </label>
             </div>
           ) : null}
 
@@ -266,7 +304,7 @@ function BecomeRiderPage() {
               <ArrowLeft className="size-4" /> Back
             </Button>
             {step === STEPS.length - 1 ? (
-              <Button onClick={submit} disabled={submitting}>
+              <Button onClick={submit} disabled={submitting || !acceptedLegal}>
                 {submitting ? <Loader2 className="size-4 animate-spin" /> : null} Submit application
               </Button>
             ) : (

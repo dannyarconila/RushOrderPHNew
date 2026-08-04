@@ -21,12 +21,21 @@ const COLUMNS = [
       { to: "/register", label: "Create an account" },
     ],
   },
+  {
+    title: "Legal",
+    links: [
+      { to: "/legal", label: "Legal Center" },
+      { to: "/legal/terms-conditions", label: "Terms & Conditions" },
+      { to: "/legal/privacy-policy", label: "Privacy Policy" },
+      { to: "/legal/trust-safety", label: "Trust & Safety" },
+    ],
+  },
 ] as const;
 
 export function SiteFooter() {
   return (
     <footer className="border-t border-border bg-ink text-ink-foreground">
-      <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr] lg:px-8">
+      <div className="mx-auto grid w-full max-w-7xl gap-10 px-4 py-14 sm:px-6 md:grid-cols-[1.4fr_1fr_1fr_1fr] lg:px-8">
         <div className="space-y-4">
           <Logo tone="invert" />
           <p className="max-w-sm text-sm leading-relaxed text-ink-foreground/70">

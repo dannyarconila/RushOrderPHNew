@@ -370,6 +370,80 @@ export const adminMutateFn = createServerFn({ method: "POST" })
         return { ok: true };
       }
 
+      case "publish_legal_document": {
+        const account = await requirePermission("settings");
+
+        const { error: docError } = await supabaseAdmin.from("legal_documents").upsert(
+          {
+            slug: data.slug,
+            title: data.title,
+            summary: data.summary,
+            content: data.content,
+            version: data.version,
+            is_published: true,
+            published_at: data.publishedAt,
+            updated_at: data.updatedAt,
+            updated_by: account.id,
+          },
+          { onConflict: "slug" },
+        );
+        if (docError) throw new Error(docError.message);
+
+        const payload = {
+          version: data.version,
+          publishedAt: data.publishedAt,
+          updatedAt: data.updatedAt,
+          updatedBy: data.updatedBy,
+          content: data.content,
+        };
+
+        const docKey = `legal_doc_${data.slug}`;
+        const { error: settingError } = await supabaseAdmin
+          .from("system_settings")
+          .upsert(
+            {
+              key: docKey,
+              value: payload as never,
+              description: `Legal document payload for ${data.slug}`,
+              is_public: true,
+            },
+            { onConflict: "key" },
+          );
+        if (settingError) throw new Error(settingError.message);
+
+        const versionSettingKeyBySlug: Record<string, string> = {
+          "terms-conditions": "legal_terms_version",
+          "privacy-policy": "legal_privacy_version",
+          "seller-terms-conditions": "legal_seller_terms_version",
+          "rider-terms-conditions": "legal_rider_terms_version",
+        };
+        const versionSettingKey = versionSettingKeyBySlug[data.slug];
+
+        if (versionSettingKey) {
+          const { error: versionError } = await supabaseAdmin
+            .from("system_settings")
+            .upsert(
+              {
+                key: versionSettingKey,
+                value: data.version as never,
+                description: `Current version for ${data.slug}`,
+                is_public: true,
+              },
+              { onConflict: "key" },
+            );
+          if (versionError) throw new Error(versionError.message);
+        }
+
+        await mod.audit({
+          account,
+          action: "legal_document_published",
+          entityType: "legal_documents",
+          entityId: data.slug,
+          details: { version: data.version },
+        });
+        return { ok: true };
+      }
+
       case "notify":
       case "broadcast": {
         const account = await requirePermission("announcements");

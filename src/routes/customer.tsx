@@ -49,7 +49,13 @@ function CustomerDashboard() {
   const active = recent.filter(
     (o) => !["delivered", "cancelled"].includes(o.status),
   ).length;
-  const spent = recent.reduce((sum, o) => sum + Number(o.total ?? 0), 0);
+  const spent = recent
+    .filter(
+      (o) =>
+        o.status === "delivered" &&
+        !["failed", "expired", "refunded"].includes(o.payment_status),
+    )
+    .reduce((sum, o) => sum + Number(o.total ?? 0), 0);
 
   return (
     <DashboardLayout
