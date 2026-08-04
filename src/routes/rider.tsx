@@ -108,8 +108,8 @@ function RiderOverview() {
 
   const { data: offer } = useQuery({
     ...pendingOfferQuery(user?.id),
-    enabled: Boolean(user) && online && !activeJob && !activePasugoJob,
-    refetchInterval: online && !activeJob && !activePasugoJob ? 5000 : false,
+    enabled: Boolean(user) && online && !activeJob,
+    refetchInterval: online && !activeJob ? 5000 : false,
   });
 
   const { data: pasugoOffer } = useQuery({
