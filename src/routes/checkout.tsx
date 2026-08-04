@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
 import { useCart } from "@/contexts/cart-context";
 import { EMPTY_ADDRESS, createAddress, formatAddress, myAddressesQuery } from "@/lib/addresses";
+import { dispatchSettingsQuery } from "@/lib/dispatch";
 import { peso, publicSettingsQuery, storeQuery } from "@/lib/marketplace";
 import { storeAvailability } from "@/lib/store-status";
 import { placeOrder, quoteOrder, type PaymentMethod } from "@/lib/orders";
@@ -48,6 +49,10 @@ function CheckoutPage() {
   const { lines, subtotal, storeId, storeName, clear } = useCart();
 
   const settings = useQuery(publicSettingsQuery());
+  const dispatchSettings = useQuery({
+    ...dispatchSettingsQuery(),
+    enabled: Boolean(user),
+  });
   const store = useQuery({ ...storeQuery(storeId ?? ""), enabled: Boolean(storeId) });
   const availability = store.data ? storeAvailability(store.data) : null;
   const storeClosed = Boolean(store.data) && availability?.open === false;
@@ -64,14 +69,28 @@ function CheckoutPage() {
 
   // Distance is estimated until live geocoding lands; keeps fee maths deterministic.
   const distanceKm = 3;
+  const feeSettings = useMemo(
+    () => ({
+      ...(settings.data ?? {}),
+      ...(dispatchSettings.data
+        ? {
+            dispatch_fee_per_km: dispatchSettings.data.feePerKm,
+            dispatch_min_fee: dispatchSettings.data.minFee,
+            dispatch_max_fee: dispatchSettings.data.maxFee,
+          }
+        : {}),
+    }),
+    [settings.data, dispatchSettings.data],
+  );
+
   const quote = useMemo(
     () =>
       quoteOrder({
         subtotal,
         distanceKm,
-        settings: settings.data ?? {},
+        settings: feeSettings,
       }),
-    [subtotal, settings.data],
+    [subtotal, feeSettings],
   );
 
   const saveAddress = useMutation({
