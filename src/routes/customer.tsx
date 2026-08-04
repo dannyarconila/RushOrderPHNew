@@ -8,6 +8,7 @@ import { EmptyState, PageHeader, Panel, StatCard } from "@/components/dashboard/
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
 import { cancelOrder, myOrdersQuery } from "@/lib/orders";
+import { customerPasugoBookingsQuery } from "@/lib/pasugo";
 
 export const Route = createFileRoute("/customer")({
   head: () => ({
@@ -34,6 +35,7 @@ function CustomerDashboard() {
   }, [loading, user, navigate]);
 
   const { data: orders } = useQuery(myOrdersQuery(user?.id));
+  const { data: pasugoBookings } = useQuery(customerPasugoBookingsQuery(user?.id, 5));
 
   const cancelMutation = useMutation({
     mutationFn: (orderId: string) => cancelOrder(orderId),
@@ -139,6 +141,50 @@ function CustomerDashboard() {
             action={
               <Button asChild>
                 <Link to="/">Start shopping</Link>
+              </Button>
+            }
+          />
+        )}
+      </Panel>
+
+      <Panel
+        title="Pasugo bookings"
+        description="Your recent standalone rider bookings"
+        className="mt-6"
+      >
+        {(pasugoBookings ?? []).length > 0 ? (
+          <ul className="divide-y divide-border">
+            {(pasugoBookings ?? []).map((booking) => (
+              <li key={booking.id} className="flex items-center justify-between py-3">
+                <Link to="/pasugo/$bookingId" params={{ bookingId: booking.id }} className="hover:underline">
+                  <p className="text-sm font-semibold">Booking #{booking.id.slice(0, 8)}</p>
+                  <p className="text-xs text-muted-foreground">
+                    {new Date(booking.created_at).toLocaleString("en-PH")}
+                  </p>
+                </Link>
+                <div className="text-right">
+                  <p className="text-xs capitalize text-muted-foreground">
+                    {booking.status.replace(/_/g, " ")}
+                  </p>
+                  {booking.status === "accepted" || booking.status === "rider_arriving" || booking.status === "picked_up" || booking.status === "on_the_way" ? (
+                    <Button asChild size="sm" variant="outline" className="mt-2">
+                      <Link to="/pasugo-chat/$bookingId" params={{ bookingId: booking.id }}>
+                        Open chat
+                      </Link>
+                    </Button>
+                  ) : null}
+                </div>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <EmptyState
+            icon={Bike}
+            title="No Pasugo bookings yet"
+            description="Standalone rider bookings will appear here for quick tracking."
+            action={
+              <Button asChild>
+                <Link to="/pasugo">Book a rider</Link>
               </Button>
             }
           />

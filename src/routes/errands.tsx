@@ -1,12 +1,10 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowRight, Bike, Clock3, Loader2, PackageCheck } from "lucide-react";
 import { useState } from "react";
-import { toast } from "sonner";
 
 import { PublicLayout } from "@/components/site/public-layout";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
-import { supabase } from "@/integrations/supabase/client";
 
 export const Route = createFileRoute("/errands")({
   head: () => ({
@@ -35,48 +33,8 @@ function ErrandsPage() {
 
     setBookingNow(true);
     try {
-      // If there's an active dispatch, continue tracking that order.
-      const { data: activeDispatch } = await supabase
-        .from("dispatch_jobs")
-        .select("order_id,status,orders!inner(customer_id)")
-        .eq("orders.customer_id", user.id)
-        .in("status", ["searching", "assigned", "picked_up"])
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      const activeOrderId = (activeDispatch as { order_id?: string } | null)?.order_id;
-      if (activeOrderId) {
-        navigate({ to: "/order/$orderId", params: { orderId: activeOrderId } });
-        return;
-      }
-
-      // Otherwise start dispatch for the latest ready order (same flow as seller Ready for pickup).
-      const { data: readyOrder } = await supabase
-        .from("orders")
-        .select("id")
-        .eq("customer_id", user.id)
-        .eq("status", "ready")
-        .order("updated_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
-
-      const readyOrderId = (readyOrder as { id?: string } | null)?.id;
-      if (!readyOrderId) {
-        toast.message("No ready order yet. Place an order in Marketplace first.");
-        navigate({ to: "/marketplace" });
-        return;
-      }
-
-      const { error } = await supabase.rpc("dispatch_start", { _order_id: readyOrderId });
-      if (error) throw error;
-
-      toast.success("Booking started. Finding a rider now.");
-      navigate({ to: "/order/$orderId", params: { orderId: readyOrderId } });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : "Could not start rider booking.";
-      toast.error("Booking failed", { description: message });
-      navigate({ to: "/marketplace" });
+      // Pasugo is standalone; open its dedicated booking flow.
+      navigate({ to: "/pasugo" });
     } finally {
       setBookingNow(false);
     }

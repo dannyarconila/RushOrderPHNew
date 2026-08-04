@@ -34,6 +34,10 @@ const INVALIDATIONS: Record<string, string[][]> = {
   payment_methods: [["payment-methods"], ["admin"]],
   rider_status: [["rider-status"], ["dispatch-offer"], ["dispatch-active-job"], ["admin"]],
   dispatch_offers: [["dispatch-offer"], ["dispatch-active-job"], ["dispatch-history"], ["admin"]],
+  pasugo_bookings: [["pasugo-booking"], ["pasugo-customer-latest"], ["pasugo-chat"], ["admin"]],
+  pasugo_dispatch_jobs: [["pasugo-job"], ["pasugo-active-job"], ["pasugo-offer"], ["admin"]],
+  pasugo_dispatch_offers: [["pasugo-offer"], ["pasugo-active-job"], ["admin"]],
+  pasugo_chat_messages: [["pasugo-chat"], ["pasugo-booking"]],
   system_settings: [
     ["public-settings"],
     ["dispatch-settings"],
