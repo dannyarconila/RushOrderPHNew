@@ -94,7 +94,7 @@ function CheckoutPage() {
     const storeLng = toNumber(store.data?.longitude ?? storeAddress?.longitude);
 
     if (storeLat == null || storeLng == null || addressLat == null || addressLng == null) {
-      return 3;
+      return 0;
     }
 
     return Math.max(0, Math.round(haversineKm(storeLat, storeLng, addressLat, addressLng) * 100) / 100);

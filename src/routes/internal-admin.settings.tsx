@@ -15,6 +15,7 @@ export const Route = createFileRoute("/internal-admin/settings")({
 
 function SettingsPage() {
   const { data: settings, isLoading } = useQuery(settingsQuery());
+  const byKey = new Map((settings ?? []).map((setting) => [setting.key, setting]));
 
   return (
     <>
@@ -23,7 +24,7 @@ function SettingsPage() {
         description="Commission rates, delivery fees and operational toggles used across the marketplace."
       />
 
-      <div className="grid gap-4 mb-6 md:grid-cols-3">
+      <div className="grid gap-4 mb-6 md:grid-cols-4">
         <SettingCard
           setting={{
             key: "minimum_seller_wallet_balance",
@@ -51,6 +52,16 @@ function SettingsPage() {
             is_public: false,
           }}
         />
+
+        <SettingCard
+          setting={{
+            key: "marketplace_customer_radius_km",
+            value: byKey.get("marketplace_customer_radius_km")?.value ?? 15,
+            description:
+              "Maximum distance in kilometers for showing stores in customer marketplace results.",
+            is_public: true,
+          }}
+        />
       </div>
 
       {isLoading ? (
@@ -64,6 +75,7 @@ function SettingsPage() {
                   "minimum_seller_wallet_balance",
                   "minimum_rider_wallet_balance",
                   "welcome_wallet_bonus",
+                  "marketplace_customer_radius_km",
                 ].includes(setting.key),
             )
             .map((setting) => (

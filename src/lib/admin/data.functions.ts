@@ -355,10 +355,32 @@ export const adminMutateFn = createServerFn({ method: "POST" })
 
       case "upsert_setting": {
         const account = await requirePermission("settings");
+        const seededSettingDefaults: Record<
+          string,
+          { description: string; is_public: boolean }
+        > = {
+          marketplace_customer_radius_km: {
+            description:
+              "Maximum distance in kilometers for showing stores in customer marketplace results.",
+            is_public: true,
+          },
+        };
+
+        const defaults = seededSettingDefaults[data.key] ?? null;
+        const payload = {
+          key: data.key,
+          value: data.value as never,
+          ...(defaults
+            ? {
+                description: defaults.description,
+                is_public: defaults.is_public,
+              }
+            : {}),
+        };
+
         const { error } = await supabaseAdmin
           .from("system_settings")
-          .update({ value: data.value as never })
-          .eq("key", data.key);
+          .upsert(payload as never, { onConflict: "key" });
         if (error) throw new Error(error.message);
         await mod.audit({
           account,
