@@ -17,10 +17,12 @@ export function PageHero({
   eyebrow,
   title,
   description,
+  children,
 }: {
   eyebrow: string;
   title: string;
   description: string;
+  children?: ReactNode;
 }) {
   return (
     <section className="surface-hero text-ink-foreground">
@@ -30,6 +32,7 @@ export function PageHero({
         <p className="mt-4 max-w-2xl text-base leading-relaxed text-ink-foreground/75">
           {description}
         </p>
+        {children ? <div className="mt-7">{children}</div> : null}
       </div>
     </section>
   );

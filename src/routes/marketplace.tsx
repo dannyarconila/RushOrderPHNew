@@ -1,7 +1,8 @@
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 
 import { MarketplaceBrowser } from "@/components/marketplace/marketplace-browser";
 import { PageHero, PublicLayout } from "@/components/site/public-layout";
+import { Button } from "@/components/ui/button";
 
 export const Route = createFileRoute("/marketplace")({
   head: () => ({
@@ -31,7 +32,11 @@ function MarketplacePage() {
         eyebrow="Marketplace"
         title="Shop every RushOrder partner in one place"
         description="Browse stores, search products and compare prices using your RushOrder PH account."
-      />
+      >
+        <Button asChild variant="outline" className="border-ink-foreground/30 bg-transparent">
+          <Link to="/errands">Run Errands/Pasugo</Link>
+        </Button>
+      </PageHero>
       <MarketplaceBrowser emptyLabel="No stores are open right now. Please check back shortly." />
     </PublicLayout>
   );

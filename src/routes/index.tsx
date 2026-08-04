@@ -114,7 +114,7 @@ function LandingPage() {
                 variant="outline"
                 className="border-ink-foreground/25 bg-transparent text-ink-foreground hover:bg-ink-foreground/10"
               >
-                <Link to="/become-seller">Run Errands/Pasugo</Link>
+                <Link to="/errands">Run Errands/Pasugo</Link>
               </Button>
             </div>
             <div className="mt-10 flex flex-wrap gap-6 text-sm text-ink-foreground/70">
