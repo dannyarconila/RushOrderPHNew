@@ -52,6 +52,7 @@ const INVALIDATIONS: Record<string, string[][]> = {
   ],
   dispatch_jobs: [["dispatch-job"], ["dispatch-active-job"], ["dispatch-history"], ["admin"]],
   deliveries: [["dispatch-job"], ["dispatch-active-job"], ["admin"]],
+  dispatch_chat_messages: [["booking-chat"], ["dispatch-job"], ["dispatch-active-job"]],
 };
 
 export function RealtimeSync() {

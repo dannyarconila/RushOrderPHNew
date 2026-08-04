@@ -264,6 +264,14 @@ function DispatchPanel({ orderId }: { orderId: string }) {
         {Number(job.distance_km).toFixed(1)} km · delivery {peso(Number(job.delivery_fee))}
       </p>
 
+      {(job.status === "assigned" || job.status === "picked_up" || job.status === "delivered") ? (
+        <Button asChild variant="outline" className="mt-4">
+          <Link to="/booking-chat/$orderId" params={{ orderId }}>
+            Chat with rider
+          </Link>
+        </Button>
+      ) : null}
+
       <div className="mt-4 overflow-hidden rounded-xl border">
         <LiveDeliveryMap dispatchJob={job} riderLocation={riderLocation} />
       </div>

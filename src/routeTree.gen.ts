@@ -37,6 +37,7 @@ import { Route as ServicesRouteImport } from './routes/services'
 import { Route as StoreOrdersRouteImport } from './routes/store-orders'
 import { Route as Char91DotmcpChar93ListToolsRouteImport } from './routes/[.mcp]/list-tools'
 import { Route as Char91DotwellKnownChar93OauthProtectedResourceRouteImport } from './routes/[.well-known]/oauth-protected-resource'
+import { Route as BookingChatOrderIdRouteImport } from './routes/booking-chat.$orderId'
 import { Route as InternalAdminIndexRouteImport } from './routes/internal-admin.index'
 import { Route as InternalAdminAccountRouteImport } from './routes/internal-admin.account'
 import { Route as InternalAdminAnnouncementsRouteImport } from './routes/internal-admin.announcements'
@@ -203,6 +204,11 @@ const Char91DotwellKnownChar93OauthProtectedResourceRoute =
     path: '/.well-known/oauth-protected-resource',
     getParentRoute: () => rootRouteImport,
   } as any)
+const BookingChatOrderIdRoute = BookingChatOrderIdRouteImport.update({
+  id: '/booking-chat/$orderId',
+  path: '/booking-chat/$orderId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const InternalAdminIndexRoute = InternalAdminIndexRouteImport.update({
   id: '/',
   path: '/',
@@ -353,6 +359,7 @@ export interface FileRoutesByFullPath {
   '/store-orders': typeof StoreOrdersRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/booking-chat/$orderId': typeof BookingChatOrderIdRoute
   '/internal-admin/account': typeof InternalAdminAccountRoute
   '/internal-admin/announcements': typeof InternalAdminAnnouncementsRoute
   '/internal-admin/audit': typeof InternalAdminAuditRoute
@@ -405,6 +412,7 @@ export interface FileRoutesByTo {
   '/store-orders': typeof StoreOrdersRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/booking-chat/$orderId': typeof BookingChatOrderIdRoute
   '/internal-admin/account': typeof InternalAdminAccountRoute
   '/internal-admin/announcements': typeof InternalAdminAnnouncementsRoute
   '/internal-admin/audit': typeof InternalAdminAuditRoute
@@ -459,6 +467,7 @@ export interface FileRoutesById {
   '/store-orders': typeof StoreOrdersRoute
   '/.mcp/list-tools': typeof Char91DotmcpChar93ListToolsRoute
   '/.well-known/oauth-protected-resource': typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  '/booking-chat/$orderId': typeof BookingChatOrderIdRoute
   '/internal-admin/account': typeof InternalAdminAccountRoute
   '/internal-admin/announcements': typeof InternalAdminAnnouncementsRoute
   '/internal-admin/audit': typeof InternalAdminAuditRoute
@@ -514,6 +523,7 @@ export interface FileRouteTypes {
     | '/store-orders'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/booking-chat/$orderId'
     | '/internal-admin/account'
     | '/internal-admin/announcements'
     | '/internal-admin/audit'
@@ -566,6 +576,7 @@ export interface FileRouteTypes {
     | '/store-orders'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/booking-chat/$orderId'
     | '/internal-admin/account'
     | '/internal-admin/announcements'
     | '/internal-admin/audit'
@@ -619,6 +630,7 @@ export interface FileRouteTypes {
     | '/store-orders'
     | '/.mcp/list-tools'
     | '/.well-known/oauth-protected-resource'
+    | '/booking-chat/$orderId'
     | '/internal-admin/account'
     | '/internal-admin/announcements'
     | '/internal-admin/audit'
@@ -673,6 +685,7 @@ export interface RootRouteChildren {
   StoreOrdersRoute: typeof StoreOrdersRoute
   Char91DotmcpChar93ListToolsRoute: typeof Char91DotmcpChar93ListToolsRoute
   Char91DotwellKnownChar93OauthProtectedResourceRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRoute
+  BookingChatOrderIdRoute: typeof BookingChatOrderIdRoute
   OrderOrderIdRoute: typeof OrderOrderIdRoute
   StoreStoreIdRoute: typeof StoreStoreIdRoute
   DotlovableOauthConsentRoute: typeof DotlovableOauthConsentRoute
@@ -875,6 +888,13 @@ declare module '@tanstack/react-router' {
       path: '/.well-known/oauth-protected-resource'
       fullPath: '/.well-known/oauth-protected-resource'
       preLoaderRoute: typeof Char91DotwellKnownChar93OauthProtectedResourceRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/booking-chat/$orderId': {
+      id: '/booking-chat/$orderId'
+      path: '/booking-chat/$orderId'
+      fullPath: '/booking-chat/$orderId'
+      preLoaderRoute: typeof BookingChatOrderIdRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/internal-admin/': {
@@ -1127,6 +1147,7 @@ const rootRouteChildren: RootRouteChildren = {
   Char91DotmcpChar93ListToolsRoute: Char91DotmcpChar93ListToolsRoute,
   Char91DotwellKnownChar93OauthProtectedResourceRoute:
     Char91DotwellKnownChar93OauthProtectedResourceRoute,
+  BookingChatOrderIdRoute: BookingChatOrderIdRoute,
   OrderOrderIdRoute: OrderOrderIdRoute,
   StoreStoreIdRoute: StoreStoreIdRoute,
   DotlovableOauthConsentRoute: DotlovableOauthConsentRoute,

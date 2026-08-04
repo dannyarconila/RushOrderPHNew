@@ -1,4 +1,4 @@
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Bike,
@@ -305,6 +305,11 @@ function RiderOverview() {
                   Complete delivery
                 </Button>
               )}
+              <Button asChild variant="outline">
+                <Link to="/booking-chat/$orderId" params={{ orderId: activeJob.order_id }}>
+                  Chat customer
+                </Link>
+              </Button>
             </div>
           </div>
         </Panel>
