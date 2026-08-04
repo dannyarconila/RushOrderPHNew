@@ -74,6 +74,8 @@ export function StoreEditor({ store, userId }: { store: ManagedStore; userId: st
   const isVerified = store.verification_status === "verified";
   const availability = storeAvailability(store);
   const walletBalanceLow = minimumBalance != null && (wallet?.balance ?? 0) < minimumBalance;
+  const storeForcedOffline = Boolean(store.wallet_hold) && !store.is_online;
+  const showWalletMinimumNotice = storeForcedOffline || walletBalanceLow;
 
   const save = useMutation({
     mutationFn: async () => {
@@ -163,12 +165,14 @@ export function StoreEditor({ store, userId }: { store: ManagedStore; userId: st
             <Switch
               checked={store.is_online}
               disabled={
-                !isVerified || toggleOnline.isPending || (walletBalanceLow && !store.is_online)
+                !isVerified ||
+                toggleOnline.isPending ||
+                ((walletBalanceLow || storeForcedOffline) && !store.is_online)
               }
               onCheckedChange={(next) => toggleOnline.mutate(next)}
               aria-label="Accepting orders"
             />
-            {walletBalanceLow ? (
+            {showWalletMinimumNotice ? (
               <p className="text-right text-xs text-destructive">
                 {minimumBalance != null
                   ? `Your wallet balance must be at least ${peso(minimumBalance)} to keep the store open.`

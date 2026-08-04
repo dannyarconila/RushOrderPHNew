@@ -96,6 +96,9 @@ function SellerOverview() {
   const { data: stores } = useQuery(myStoresQuery(user?.id));
   const store = stores?.[0] ?? null;
   const availability = store ? storeAvailability(store) : null;
+  const storeForcedOffline = Boolean(store?.wallet_hold) && !store?.is_online;
+  const showWalletMinimumNotice =
+    storeForcedOffline || (minimumBalance != null && (wallet?.balance ?? 0) < minimumBalance);
 
   const { data: application } = useQuery({
     queryKey: ["seller-application", user?.id],
@@ -143,10 +146,11 @@ function SellerOverview() {
               <p className="text-xs text-muted-foreground">
                 {availability?.detail ?? "Set your opening hours in My stores."}
               </p>
-              {minimumBalance != null && (wallet?.balance ?? 0) < minimumBalance ? (
+              {showWalletMinimumNotice ? (
                 <p className="mt-2 text-sm text-destructive">
-                  Your wallet balance is below the required minimum of {peso(minimumBalance)}. Top
-                  up to keep your storefront live.
+                  {minimumBalance != null
+                    ? `Your wallet balance is below the required minimum of ${peso(minimumBalance)}. Top up to keep your storefront live.`
+                    : "Your store is temporarily offline because your wallet balance is below the required minimum. Top up to resume receiving orders."}
                 </p>
               ) : null}
             </div>
