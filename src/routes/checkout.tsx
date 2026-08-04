@@ -42,6 +42,21 @@ const PAYMENT_OPTIONS: { value: PaymentMethod; label: string; hint: string }[] =
   { value: "gcash", label: "GCash", hint: "Pay online after placing the order." },
 ];
 
+const toNumber = (value: unknown): number | null => {
+  const num = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(num) ? num : null;
+};
+
+const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 6371 * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+};
+
 function CheckoutPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
@@ -67,8 +82,23 @@ function CheckoutPage() {
   const selectedAddress =
     (addresses.data ?? []).find((a) => a.id === addressId) ?? (addresses.data ?? [])[0] ?? null;
 
-  // Distance is estimated until live geocoding lands; keeps fee maths deterministic.
-  const distanceKm = 3;
+  const distanceKm = useMemo(() => {
+    const addressLat = toNumber(selectedAddress?.latitude);
+    const addressLng = toNumber(selectedAddress?.longitude);
+
+    const storeAddress =
+      store.data?.address && typeof store.data.address === "object"
+        ? (store.data.address as Record<string, unknown>)
+        : null;
+    const storeLat = toNumber(store.data?.latitude ?? storeAddress?.latitude);
+    const storeLng = toNumber(store.data?.longitude ?? storeAddress?.longitude);
+
+    if (storeLat == null || storeLng == null || addressLat == null || addressLng == null) {
+      return 3;
+    }
+
+    return Math.max(0, Math.round(haversineKm(storeLat, storeLng, addressLat, addressLng) * 100) / 100);
+  }, [store.data, selectedAddress]);
   const feeSettings = useMemo(
     () => ({
       ...(settings.data ?? {}),

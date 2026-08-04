@@ -6,10 +6,13 @@ import { useMemo, useState } from "react";
 import { StorageImage } from "@/components/media/storage-image";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useAuth } from "@/contexts/auth-context";
+import { myAddressesQuery } from "@/lib/addresses";
 import {
   categoriesQuery,
   firstImage,
   peso,
+  publicSettingsQuery,
   productSearchQuery,
   storesQuery,
   type ServiceType,
@@ -18,6 +21,21 @@ import { storeAvailability } from "@/lib/store-status";
 import { BUCKETS } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 
+const toNumber = (value: unknown): number | null => {
+  const parsed = typeof value === "number" ? value : Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLon = toRad(lon2 - lon1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+  return 6371 * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
+};
+
 export function MarketplaceBrowser({
   serviceType,
   emptyLabel = "No stores are open in this lane yet. Check back shortly.",
@@ -25,15 +43,43 @@ export function MarketplaceBrowser({
   serviceType?: ServiceType;
   emptyLabel?: string;
 }) {
+  const { user } = useAuth();
   const [term, setTerm] = useState("");
   const [category, setCategory] = useState<string | null>(null);
 
   const stores = useQuery(storesQuery(serviceType));
+  const settings = useQuery(publicSettingsQuery());
+  const addresses = useQuery(myAddressesQuery(user?.id));
   const categories = useQuery(categoriesQuery(serviceType));
   const products = useQuery(productSearchQuery(term, serviceType));
 
-  const results = useMemo(() => {
+  const radiusKm = useMemo(() => {
+    const raw = settings.data?.marketplace_customer_radius_km;
+    const parsed = typeof raw === "number" ? raw : Number(raw);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
+  }, [settings.data]);
+
+  const customerCoords = useMemo(() => {
+    const preferred = (addresses.data ?? [])[0] ?? null;
+    const lat = toNumber(preferred?.latitude);
+    const lng = toNumber(preferred?.longitude);
+    if (lat == null || lng == null) return null;
+    return { lat, lng };
+  }, [addresses.data]);
+
+  const visibleStores = useMemo(() => {
     const list = stores.data ?? [];
+    if (!radiusKm || !customerCoords) return list;
+    return list.filter((store) => {
+      const storeLat = toNumber(store.latitude);
+      const storeLng = toNumber(store.longitude);
+      if (storeLat == null || storeLng == null) return false;
+      return haversineKm(customerCoords.lat, customerCoords.lng, storeLat, storeLng) <= radiusKm;
+    });
+  }, [stores.data, customerCoords, radiusKm]);
+
+  const results = useMemo(() => {
+    const list = visibleStores;
     const needle = term.trim().toLowerCase();
     return list.filter((s) => {
       const matchesTerm =
@@ -43,7 +89,12 @@ export function MarketplaceBrowser({
       const matchesCategory = !category || s.category_id === category;
       return matchesTerm && matchesCategory;
     });
-  }, [stores.data, term, category]);
+  }, [visibleStores, term, category]);
+
+  const filteredProducts = useMemo(() => {
+    const allowedStores = new Set(visibleStores.map((store) => store.id));
+    return (products.data ?? []).filter((product) => allowedStores.has(product.store_id));
+  }, [products.data, visibleStores]);
 
   return (
     <div className="mx-auto w-full max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
@@ -86,13 +137,13 @@ export function MarketplaceBrowser({
                 <Skeleton key={i} className="h-28 rounded-2xl" />
               ))}
             </div>
-          ) : (products.data ?? []).length === 0 ? (
+          ) : filteredProducts.length === 0 ? (
             <p className="mt-3 text-sm text-muted-foreground">
               No products matched “{term.trim()}”.
             </p>
           ) : (
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {(products.data ?? []).map((p) => (
+              {filteredProducts.map((p) => (
                 <Link
                   key={p.id}
                   to="/store/$storeId"
