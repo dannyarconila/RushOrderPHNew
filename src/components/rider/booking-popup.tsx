@@ -6,6 +6,7 @@
  * `dispatch_accept` lock, so a lost race simply closes the card.
  */
 import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useNavigate } from "@tanstack/react-router";
 import { Bike, Clock, MapPin, Navigation } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -17,6 +18,7 @@ import { acceptDispatch, declineDispatch, secondsLeft, type OfferWithJob } from 
 export function BookingPopup({ data, onClose }: { data: OfferWithJob; onClose: () => void }) {
   const { offer, job } = data;
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [remaining, setRemaining] = useState(() => secondsLeft(offer.expires_at));
 
   useEffect(() => {
@@ -41,7 +43,10 @@ export function BookingPopup({ data, onClose }: { data: OfferWithJob; onClose: (
   const accept = useMutation({
     mutationFn: () => acceptDispatch(job.id),
     onSuccess: (result) => {
-      if (result.ok) toast.success("Delivery assigned to you");
+      if (result.ok) {
+        toast.success("Delivery assigned to you");
+        navigate({ to: "/booking-chat/$orderId", params: { orderId: job.order_id } });
+      }
       else toast.info("Another rider accepted this booking first");
       refresh();
       onClose();

@@ -1,6 +1,8 @@
 import { queryOptions } from "@tanstack/react-query";
 
 import { supabase } from "@/integrations/supabase/client";
+import { claimNumber } from "@/lib/orders";
+import { estimateDeliveryFee } from "@/lib/marketplace";
 
 export type PasugoStatus =
   | "requested"
@@ -84,32 +86,220 @@ export interface CreatePasugoInput {
   notes?: string;
 }
 
-export async function createPasugoBooking(input: CreatePasugoInput): Promise<string> {
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
+  const toRad = (deg: number) => (deg * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  const c = 2 * Math.asin(Math.sqrt(a));
+  return Math.round(6371 * c * 100) / 100;
+}
+
+async function loadDispatchSettings() {
+  const { data, error } = await supabase.rpc("dispatch_settings");
+  if (error) throw error;
+  return (data ?? {}) as Record<string, unknown>;
+}
+
+async function loadRiderDeliveryFee() {
   const { data, error } = await supabase
-    .from("pasugo_bookings" as never)
+    .from("system_settings")
+    .select("value")
+    .eq("key", "rider_delivery_fee")
+    .maybeSingle();
+  if (error) throw error;
+  const raw = data?.value;
+  const num = typeof raw === "number" ? raw : Number(raw);
+  return Number.isFinite(num) ? Math.max(0, num) : 0;
+}
+
+function splitLineAddress(line: string) {
+  const [line1, barangay, city, province] = line
+    .split(",")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  return {
+    line1: line1 ?? line,
+    barangay: barangay ?? null,
+    city: city ?? null,
+    province: province ?? null,
+  };
+}
+
+export async function createPasugoBooking(input: CreatePasugoInput): Promise<string> {
+  const pickupLat = input.pickupLat ?? null;
+  const pickupLng = input.pickupLng ?? null;
+  const dropoffLat = input.dropoffLat ?? null;
+  const dropoffLng = input.dropoffLng ?? null;
+
+  const distanceKm =
+    pickupLat != null && pickupLng != null && dropoffLat != null && dropoffLng != null
+      ? haversineKm(pickupLat, pickupLng, dropoffLat, dropoffLng)
+      : 0;
+
+  const settings = await loadDispatchSettings();
+  const riderDeliveryFee = await loadRiderDeliveryFee();
+  const deliveryFee = estimateDeliveryFee(distanceKm, settings);
+
+  const slug = `pasugo-pickup-${input.userId.slice(0, 8)}`;
+  const pickupParts = splitLineAddress(input.pickupAddress.trim());
+  const dropoffParts = splitLineAddress(input.dropoffAddress.trim());
+
+  const { data: existingStore, error: existingStoreError } = await supabase
+    .from("stores")
+    .select("id")
+    .eq("owner_id", input.userId)
+    .eq("slug", slug)
+    .maybeSingle();
+  if (existingStoreError) throw existingStoreError;
+
+  let storeId = existingStore?.id ?? null;
+  if (!storeId) {
+    const { data: createdStore, error: createStoreError } = await supabase
+      .from("stores")
+      .insert({
+        owner_id: input.userId,
+        name: "Pasugo Pickup",
+        slug,
+        description: "Virtual pickup point for standalone Pasugo bookings.",
+        service_type: "services",
+        is_active: true,
+        is_online: false,
+        is_approved: false,
+        address: {
+          line1: pickupParts.line1,
+          barangay: pickupParts.barangay,
+          city: pickupParts.city,
+          province: pickupParts.province,
+        },
+        latitude: pickupLat,
+        longitude: pickupLng,
+      })
+      .select("id")
+      .single();
+    if (createStoreError) throw createStoreError;
+    storeId = createdStore.id;
+  } else {
+    const { error: updateStoreError } = await supabase
+      .from("stores")
+      .update({
+        address: {
+          line1: pickupParts.line1,
+          barangay: pickupParts.barangay,
+          city: pickupParts.city,
+          province: pickupParts.province,
+        },
+        latitude: pickupLat,
+        longitude: pickupLng,
+      })
+      .eq("id", storeId)
+      .eq("owner_id", input.userId);
+    if (updateStoreError) throw updateStoreError;
+  }
+
+  const { data: address, error: addressError } = await supabase
+    .from("addresses")
     .insert({
-      customer_id: input.userId,
-      customer_name: input.customerName.trim() || null,
-      customer_phone: input.customerPhone.trim() || null,
-      pickup_address: input.pickupAddress.trim(),
-      dropoff_address: input.dropoffAddress.trim(),
-      pickup_lat: input.pickupLat ?? null,
-      pickup_lng: input.pickupLng ?? null,
-      dropoff_lat: input.dropoffLat ?? null,
-      dropoff_lng: input.dropoffLng ?? null,
-      notes: input.notes?.trim() || null,
-      status: "requested",
-    } as never)
+      user_id: input.userId,
+      label: "Pasugo drop-off",
+      recipient_name: input.customerName.trim() || null,
+      phone: input.customerPhone.trim() || null,
+      line1: dropoffParts.line1,
+      barangay: dropoffParts.barangay,
+      city: dropoffParts.city,
+      province: dropoffParts.province,
+      latitude: dropoffLat,
+      longitude: dropoffLng,
+      is_default: false,
+    })
     .select("id")
     .single();
+  if (addressError) throw addressError;
 
-  if (error) throw error;
+  const notes = [
+    `[PASUGO] ${input.notes?.trim() || "Standalone rider booking"}`,
+    `Pickup: ${input.pickupAddress.trim()}`,
+    `Drop-off: ${input.dropoffAddress.trim()}`,
+  ].join("\n");
 
-  const bookingId = (data as { id: string }).id;
-  const { error: startErr } = await supabase.rpc("pasugo_start", { _booking_id: bookingId });
+  const { data: order, error: orderError } = await supabase
+    .from("orders")
+    .insert({
+      customer_id: input.userId,
+      store_id: storeId,
+      address_id: address.id,
+      status: "ready",
+      payment_method: "cod",
+      payment_status: "pending",
+      subtotal: 0,
+      delivery_fee: deliveryFee,
+      surge_fee: 0,
+      tax: 0,
+      total: deliveryFee,
+      seller_commission: 0,
+      rider_commission: riderDeliveryFee,
+      distance_km: distanceKm,
+      claim_number: claimNumber(),
+      notes,
+    })
+    .select("id")
+    .single();
+  if (orderError) throw orderError;
+
+  const orderId = order.id as string;
+  const { error: startErr } = await supabase.rpc("dispatch_start", { _order_id: orderId });
   if (startErr) throw startErr;
 
-  return bookingId;
+  return orderId;
+}
+
+export type PasugoOrderRow = {
+  id: string;
+  status: "pending" | "confirmed" | "preparing" | "ready" | "picked_up" | "delivered" | "cancelled";
+  created_at: string;
+  claim_number: string | null;
+  total: number;
+};
+
+export function customerLatestPasugoOrderQuery(userId: string | undefined) {
+  return queryOptions({
+    queryKey: ["pasugo-order-latest", userId ?? null],
+    enabled: Boolean(userId),
+    queryFn: async (): Promise<PasugoOrderRow | null> => {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("id,status,created_at,claim_number,total")
+        .eq("customer_id", userId!)
+        .ilike("notes", "[PASUGO]%")
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return (data ?? null) as PasugoOrderRow | null;
+    },
+  });
+}
+
+export function customerPasugoOrdersQuery(userId: string | undefined, limit = 5) {
+  return queryOptions({
+    queryKey: ["pasugo-order-list", userId ?? null, limit],
+    enabled: Boolean(userId),
+    queryFn: async (): Promise<PasugoOrderRow[]> => {
+      const { data, error } = await supabase
+        .from("orders")
+        .select("id,status,created_at,claim_number,total")
+        .eq("customer_id", userId!)
+        .ilike("notes", "[PASUGO]%")
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data ?? []) as PasugoOrderRow[];
+    },
+  });
 }
 
 export function pasugoBookingQuery(bookingId: string) {

@@ -10,7 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/auth-context";
 import { myAddressesQuery } from "@/lib/addresses";
-import { createPasugoBooking, customerLatestPasugoQuery } from "@/lib/pasugo";
+import { createPasugoBooking, customerLatestPasugoOrderQuery } from "@/lib/pasugo";
 
 export const Route = createFileRoute("/pasugo")({
   head: () => ({
@@ -30,7 +30,7 @@ function PasugoPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const addresses = useQuery(myAddressesQuery(user?.id));
-  const latest = useQuery(customerLatestPasugoQuery(user?.id));
+  const latest = useQuery(customerLatestPasugoOrderQuery(user?.id));
 
   const defaultAddress = addresses.data?.[0];
 
@@ -72,9 +72,9 @@ function PasugoPage() {
         notes,
       });
     },
-    onSuccess: (bookingId) => {
+    onSuccess: (orderId) => {
       toast.success("Finding nearby riders now");
-      navigate({ to: "/pasugo/$bookingId", params: { bookingId } });
+      navigate({ to: "/order/$orderId", params: { orderId } });
     },
     onError: (error: Error) => toast.error("Could not create booking", { description: error.message }),
   });
@@ -92,7 +92,7 @@ function PasugoPage() {
           This booking is independent from marketplace orders. We will immediately search nearby riders.
         </p>
 
-        {latest.data && ["finding_rider", "accepted", "rider_arriving", "picked_up", "on_the_way"].includes(latest.data.status) ? (
+        {latest.data && ["ready", "picked_up"].includes(latest.data.status) ? (
           <div className="mt-5 rounded-2xl border border-primary/30 bg-primary-soft p-4">
             <p className="text-sm font-semibold text-primary">You have an active Pasugo booking.</p>
             <Button
@@ -101,7 +101,7 @@ function PasugoPage() {
               size="sm"
               variant="outline"
             >
-              <Link to="/pasugo/$bookingId" params={{ bookingId: latest.data.id }}>
+              <Link to="/order/$orderId" params={{ orderId: latest.data.id }}>
                 Continue tracking
               </Link>
             </Button>
