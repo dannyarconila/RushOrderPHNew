@@ -8,7 +8,7 @@ import { EmptyState, PageHeader, Panel, StatCard } from "@/components/dashboard/
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
 import { cancelOrder, myOrdersQuery } from "@/lib/orders";
-import { customerPasugoOrdersQuery } from "@/lib/pasugo";
+import { customerPasugoBookingsQuery } from "@/lib/pasugo";
 
 export const Route = createFileRoute("/customer")({
   head: () => ({
@@ -35,7 +35,7 @@ function CustomerDashboard() {
   }, [loading, user, navigate]);
 
   const { data: orders } = useQuery(myOrdersQuery(user?.id));
-  const { data: pasugoOrders } = useQuery(customerPasugoOrdersQuery(user?.id, 5));
+  const { data: pasugoBookings } = useQuery(customerPasugoBookingsQuery(user?.id, 5));
 
   const cancelMutation = useMutation({
     mutationFn: (orderId: string) => cancelOrder(orderId),
@@ -152,25 +152,23 @@ function CustomerDashboard() {
         description="Your recent standalone rider bookings"
         className="mt-6"
       >
-        {(pasugoOrders ?? []).length > 0 ? (
+        {(pasugoBookings ?? []).length > 0 ? (
           <ul className="divide-y divide-border">
-            {(pasugoOrders ?? []).map((order) => (
-              <li key={order.id} className="flex items-center justify-between py-3">
-                <Link to="/order/$orderId" params={{ orderId: order.id }} className="hover:underline">
-                  <p className="text-sm font-semibold">
-                    {order.claim_number ? order.claim_number : `Booking #${order.id.slice(0, 8)}`}
-                  </p>
+            {(pasugoBookings ?? []).map((booking) => (
+              <li key={booking.id} className="flex items-center justify-between py-3">
+                <Link to="/pasugo/$bookingId" params={{ bookingId: booking.id }} className="hover:underline">
+                  <p className="text-sm font-semibold">Booking #{booking.id.slice(0, 8)}</p>
                   <p className="text-xs text-muted-foreground">
-                    {new Date(order.created_at).toLocaleString("en-PH")}
+                    {new Date(booking.created_at).toLocaleString("en-PH")}
                   </p>
                 </Link>
                 <div className="text-right">
                   <p className="text-xs capitalize text-muted-foreground">
-                    {order.status.replace(/_/g, " ")}
+                    {booking.status.replace(/_/g, " ")}
                   </p>
-                  {order.status === "ready" || order.status === "picked_up" ? (
+                  {booking.status === "accepted" || booking.status === "rider_arriving" || booking.status === "picked_up" || booking.status === "on_the_way" ? (
                     <Button asChild size="sm" variant="outline" className="mt-2">
-                      <Link to="/booking-chat/$orderId" params={{ orderId: order.id }}>
+                      <Link to="/pasugo-chat/$bookingId" params={{ bookingId: booking.id }}>
                         Open chat
                       </Link>
                     </Button>
