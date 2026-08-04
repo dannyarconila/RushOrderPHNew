@@ -121,6 +121,17 @@ function StoreOrdersPage() {
                       {new Date(order.created_at).toLocaleString("en-PH")} ·{" "}
                       {ORDER_LABELS[order.status]} · {order.payment_method.toUpperCase()}
                     </p>
+                    {(order.order_items ?? []).length > 0 ? (
+                      <p className="mt-1 text-xs text-muted-foreground">
+                        {(order.order_items ?? [])
+                          .map((item) =>
+                            item.quantity > 1
+                              ? `${item.quantity} x ${item.product_name}`
+                              : item.product_name,
+                          )
+                          .join(", ")}
+                      </p>
+                    ) : null}
                   </div>
                   <div className="flex items-center gap-3">
                     <span className="font-display text-lg font-extrabold">
