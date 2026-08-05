@@ -1,40 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { queryOptions } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import { MemberDirectory } from "@/components/admin/member-directory";
 import { DetailGrid, Section, Td, peso } from "@/components/admin/primitives";
 import { PageHeader } from "@/components/dashboard/primitives";
-import { adminReadFn } from "@/lib/admin/data.functions";
 import { adminOrdersQuery, walletsQuery } from "@/lib/admin/queries";
-
-type PasugoDispatchJobRow = {
-  id: string;
-  booking_id: string;
-  status: string;
-  assigned_rider_id: string | null;
-  delivery_fee: number;
-  created_at: string;
-  delivered_at: string | null;
-};
-
-function adminPasugoDispatchJobsQuery() {
-  return queryOptions({
-    queryKey: ["admin", "riders", "pasugo-dispatch-jobs"],
-    queryFn: async (): Promise<PasugoDispatchJobRow[]> => {
-      const result = await adminReadFn({
-        data: {
-          table: "pasugo_dispatch_jobs",
-          columns: "id,booking_id,status,assigned_rider_id,delivery_fee,created_at,delivered_at",
-          order: [{ column: "created_at", ascending: false }],
-          limit: 1000,
-        },
-      });
-      return (result.rows ?? []) as PasugoDispatchJobRow[];
-    },
-  });
-}
 
 export const Route = createFileRoute("/internal-admin/riders")({
   component: RidersPage,
@@ -43,7 +14,6 @@ export const Route = createFileRoute("/internal-admin/riders")({
 function RidersPage() {
   const { data: wallets } = useQuery(walletsQuery());
   const { data: orders } = useQuery(adminOrdersQuery("all", 1000));
-  const { data: pasugoJobs } = useQuery(adminPasugoDispatchJobsQuery());
 
   const stats = useMemo(() => {
     const map = new Map<string, { deliveries: number; earnings: number }>();
@@ -64,30 +34,31 @@ function RidersPage() {
       string,
       { active: number; completed: number; grossFare: number; latestStatus: string | null }
     >();
-    for (const job of pasugoJobs ?? []) {
-      if (!job.assigned_rider_id) continue;
+    for (const order of orders ?? []) {
+      if (!order.rider_id) continue;
+      if (!order.claim_number?.startsWith("RO-") || !String(order.stores?.name ?? "").includes("Pasugo")) continue;
       const entry =
-        map.get(job.assigned_rider_id) ?? {
+        map.get(order.rider_id) ?? {
           active: 0,
           completed: 0,
           grossFare: 0,
           latestStatus: null,
         };
 
-      if (job.status === "assigned" || job.status === "picked_up") {
+      if (order.status === "ready" || order.status === "picked_up") {
         entry.active += 1;
       }
-      if (job.status === "delivered") {
+      if (order.status === "delivered") {
         entry.completed += 1;
-        entry.grossFare += Number(job.delivery_fee ?? 0);
+        entry.grossFare += Number(order.delivery_fee ?? 0);
       }
       if (!entry.latestStatus) {
-        entry.latestStatus = job.status;
+        entry.latestStatus = order.status;
       }
-      map.set(job.assigned_rider_id, entry);
+      map.set(order.rider_id, entry);
     }
     return map;
-  }, [pasugoJobs]);
+  }, [orders]);
 
   const walletFor = (userId: string) =>
     (wallets ?? []).find((w) => w.user_id === userId && w.wallet_type === "rider");
