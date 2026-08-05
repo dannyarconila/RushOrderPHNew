@@ -55,6 +55,7 @@ export const Route = createFileRoute("/rider")({
 function RiderDashboard() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const search = Route.useSearch() as Record<string, unknown>;
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/login", search: { next: "/rider" }, replace: true });
@@ -74,13 +75,13 @@ function RiderDashboard() {
         description="Go online to receive live booking requests near you."
       />
       <RoleGate kind="rider">
-        <RiderOverview />
+        <RiderOverview debugDispatch={search.debugDispatch === "1" || search.debugDispatch === true} />
       </RoleGate>
     </DashboardLayout>
   );
 }
 
-function RiderOverview() {
+function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
@@ -260,6 +261,41 @@ function RiderOverview() {
           hint="Weekly payouts"
         />
       </div>
+
+      {debugDispatch ? (
+        <Panel
+          title="Dispatch diagnostics"
+          description="Temporary live state for shared rider dispatch debugging."
+          className="mt-6"
+        >
+          <dl className="grid gap-3 text-sm sm:grid-cols-2">
+            <div className="rounded-xl border border-border bg-muted/30 p-3">
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">Online</dt>
+              <dd className="mt-1 font-semibold">{String(online)}</dd>
+            </div>
+            <div className="rounded-xl border border-border bg-muted/30 p-3">
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">Available</dt>
+              <dd className="mt-1 font-semibold">{String(status?.is_available ?? null)}</dd>
+            </div>
+            <div className="rounded-xl border border-border bg-muted/30 p-3">
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">Active job</dt>
+              <dd className="mt-1 font-semibold">{activeJob?.id ?? "none"}</dd>
+            </div>
+            <div className="rounded-xl border border-border bg-muted/30 p-3">
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">Pending offer</dt>
+              <dd className="mt-1 font-semibold">{offer?.offer.id ?? "none"}</dd>
+            </div>
+            <div className="rounded-xl border border-border bg-muted/30 p-3">
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">Offer type</dt>
+              <dd className="mt-1 font-semibold">{offer?.job.dispatch_type ?? "n/a"}</dd>
+            </div>
+            <div className="rounded-xl border border-border bg-muted/30 p-3">
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">Show popup</dt>
+              <dd className="mt-1 font-semibold">{String(Boolean(showOffer))}</dd>
+            </div>
+          </dl>
+        </Panel>
+      ) : null}
 
       {activeJob ? (
         <Panel
