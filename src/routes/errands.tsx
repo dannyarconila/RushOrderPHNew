@@ -1,10 +1,17 @@
-import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowRight, Bike, Clock3, Loader2, PackageCheck } from "lucide-react";
 import { useState } from "react";
 
 import { PublicLayout } from "@/components/site/public-layout";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/auth-context";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 export const Route = createFileRoute("/errands")({
   head: () => ({
@@ -21,24 +28,7 @@ export const Route = createFileRoute("/errands")({
 });
 
 function ErrandsPage() {
-  const navigate = useNavigate();
-  const { user } = useAuth();
-  const [bookingNow, setBookingNow] = useState(false);
-
-  const handleBookRiderNow = async () => {
-    if (!user) {
-      navigate({ to: "/login", search: { next: "/errands" }, replace: true });
-      return;
-    }
-
-    setBookingNow(true);
-    try {
-      // Pasugo is standalone; open its dedicated booking flow.
-      navigate({ to: "/pasugo" });
-    } finally {
-      setBookingNow(false);
-    }
-  };
+  const [comingSoonOpen, setComingSoonOpen] = useState(false);
 
   return (
     <PublicLayout>
@@ -56,16 +46,10 @@ function ErrandsPage() {
           </p>
 
           <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-            <Button size="lg" onClick={() => void handleBookRiderNow()} disabled={bookingNow}>
-              {bookingNow ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" /> Finding rider...
-                </>
-              ) : (
-                <>
-                  Book a rider now <ArrowRight className="size-4" />
-                </>
-              )}
+            <Button size="lg" onClick={() => setComingSoonOpen(true)}>
+              <>
+                Book a rider now <ArrowRight className="size-4" />
+              </>
             </Button>
             <Button asChild size="lg" variant="outline">
               <Link to="/marketplace">Browse stores first</Link>
@@ -102,6 +86,33 @@ function ErrandsPage() {
             </p>
           </article>
         </section>
+
+        <Dialog open={comingSoonOpen} onOpenChange={setComingSoonOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle className="text-2xl">🚴 Pasugo Coming Soon</DialogTitle>
+              <DialogDescription className="pt-2 text-sm leading-relaxed">
+                Our standalone Pasugo (Errands) service is currently under development.
+                <br />
+                <br />
+                We are working on real-time rider matching, live tracking, and in-app chat to
+                provide the best experience.
+                <br />
+                <br />
+                This feature will be available in a future update.
+                <br />
+                <br />
+                Thank you for supporting RushOrder PH.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-3 sm:gap-2">
+              <Button onClick={() => setComingSoonOpen(false)}>OK</Button>
+              <Button variant="outline" onClick={() => setComingSoonOpen(false)}>
+                Close
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </main>
     </PublicLayout>
   );
