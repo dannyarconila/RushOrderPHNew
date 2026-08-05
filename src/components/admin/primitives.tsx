@@ -17,9 +17,6 @@ import { Textarea } from "@/components/ui/textarea";
 import { BUCKETS, signedUrlQuery } from "@/lib/storage";
 import { cn } from "@/lib/utils";
 
-export const peso = (value: number | string | null | undefined) =>
-  `₱${Number(value ?? 0).toLocaleString("en-PH", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
-
 export const shortDate = (value: string | null | undefined) =>
   value
     ? new Date(value).toLocaleDateString("en-PH", {

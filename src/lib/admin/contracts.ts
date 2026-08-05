@@ -110,7 +110,11 @@ export type AdminReadTable =
   | "legal_acceptance_logs"
   | "dispatch_jobs"
   | "dispatch_offers"
-  | "rider_status";
+  | "rider_status"
+  | "pasugo_bookings"
+  | "pasugo_dispatch_jobs"
+  | "pasugo_dispatch_offers"
+  | "pasugo_chat_messages";
 
 /** Which permissions unlock a table read. */
 export const READ_TABLE_PERMISSIONS: Record<AdminReadTable, AdminPermission[]> = {
@@ -131,6 +135,10 @@ export const READ_TABLE_PERMISSIONS: Record<AdminReadTable, AdminPermission[]> =
   dispatch_jobs: ["orders", "reports"],
   dispatch_offers: ["orders", "reports"],
   rider_status: ["orders", "members"],
+  pasugo_bookings: ["orders", "reports", "members"],
+  pasugo_dispatch_jobs: ["orders", "reports", "members"],
+  pasugo_dispatch_offers: ["orders", "reports"],
+  pasugo_chat_messages: ["orders", "members"],
 };
 
 export interface AdminReadFilter {

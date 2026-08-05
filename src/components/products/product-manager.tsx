@@ -9,7 +9,7 @@ import { TextAreaField, TextField } from "@/components/forms/wizard";
 import { StorageImage } from "@/components/media/storage-image";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { peso } from "@/lib/marketplace";
+import { peso } from "@/lib/currency";
 import {
   EMPTY_PRODUCT,
   archiveProduct,

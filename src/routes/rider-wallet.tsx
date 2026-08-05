@@ -6,7 +6,7 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { PageHeader } from "@/components/dashboard/primitives";
 import { RoleGate } from "@/components/dashboard/role-gate";
 import { WalletModule } from "@/components/wallet/wallet-module";
-import { useAuth } from "@/contexts/auth-context";
+import { useAuth } from "@/contexts/use-auth";
 
 export const Route = createFileRoute("/rider-wallet")({
   head: () => ({

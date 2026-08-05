@@ -11,11 +11,11 @@ import {
   SearchBox,
   Td,
   dateTime,
-  peso,
   shortId,
   statusTone,
 } from "@/components/admin/primitives";
 import { EmptyState, PageHeader, Panel, StatCard } from "@/components/dashboard/primitives";
+import { peso } from "@/lib/currency";
 import { walletLedgerQuery, walletsQuery } from "@/lib/admin/queries";
 
 export const Route = createFileRoute("/internal-admin/wallets")({

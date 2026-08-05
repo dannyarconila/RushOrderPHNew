@@ -11,12 +11,12 @@ import {
   SearchBox,
   Td,
   dateTime,
-  peso,
   shortId,
   statusTone,
 } from "@/components/admin/primitives";
 import { EmptyState, PageHeader, Panel } from "@/components/dashboard/primitives";
 import { Button } from "@/components/ui/button";
+import { peso } from "@/lib/currency";
 import {
   ORDER_STATUS_FILTERS,
   adminOrdersQuery,

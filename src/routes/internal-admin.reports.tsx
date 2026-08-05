@@ -7,11 +7,11 @@ import {
   FilterBar,
   FilterChip,
   Td,
-  peso,
   shortId,
 } from "@/components/admin/primitives";
 import { PageHeader, Panel, StatCard } from "@/components/dashboard/primitives";
 import { adminReportsQuery, type SalesBucket } from "@/lib/admin/queries";
+import { peso } from "@/lib/currency";
 import { BarChart3, Receipt, TrendingUp } from "lucide-react";
 
 export const Route = createFileRoute("/internal-admin/reports")({

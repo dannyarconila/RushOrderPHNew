@@ -15,7 +15,7 @@ import {
 import { PageHero, PublicLayout } from "@/components/site/public-layout";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useAuth } from "@/contexts/auth-context";
+import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { legalVersionSnapshotQuery } from "@/lib/legal/public";
 import type { SellerBusinessType } from "@/types";
@@ -423,14 +423,16 @@ function BecomeSellerPage() {
                 <span>
                   I have read and agree to the{" "}
                   <Link
-                    to="/legal/seller-terms-conditions"
+                    to="/legal/$slug"
+                    params={{ slug: "seller-terms-conditions" }}
                     className="font-semibold text-primary hover:underline"
                   >
                     Seller Terms & Conditions
                   </Link>{" "}
                   and{" "}
                   <Link
-                    to="/legal/privacy-policy"
+                    to="/legal/$slug"
+                    params={{ slug: "privacy-policy" }}
                     className="font-semibold text-primary hover:underline"
                   >
                     Privacy Policy

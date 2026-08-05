@@ -2,8 +2,8 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Bike, ClipboardList, ShoppingBag, Store, Users, Wallet } from "lucide-react";
 
-import { peso } from "@/components/admin/primitives";
 import { PageHeader, Panel, StatCard } from "@/components/dashboard/primitives";
+import { peso } from "@/lib/currency";
 import { Button } from "@/components/ui/button";
 import { adminOverviewQuery } from "@/lib/admin/queries";
 

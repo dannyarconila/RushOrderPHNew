@@ -21,7 +21,8 @@ import {
 import { useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 
-import { peso, dateTime, Pill, statusTone, AdminTable, Td } from "@/components/admin/primitives";
+import { dateTime, Pill, statusTone, AdminTable, Td } from "@/components/admin/primitives";
+import { peso } from "@/lib/currency";
 import { EmptyState, Panel, StatCard } from "@/components/dashboard/primitives";
 import { StorageImage } from "@/components/media/storage-image";
 import { Button } from "@/components/ui/button";
@@ -34,7 +35,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { useAuth } from "@/contexts/auth-context";
+import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { BUCKETS } from "@/lib/storage";
 import {

@@ -5,7 +5,7 @@ import { useState } from "react";
 import { CartSheet } from "@/components/cart/cart-sheet";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/auth-context";
+import { useAuth } from "@/contexts/use-auth";
 import { getDashboardRoute } from "@/lib/dashboard-route";
 import { cn } from "@/lib/utils";
 

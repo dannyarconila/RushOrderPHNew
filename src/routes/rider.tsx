@@ -12,15 +12,15 @@ import {
 import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import { peso } from "@/components/admin/primitives";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { PageHeader, Panel, StatCard, StatusBadge } from "@/components/dashboard/primitives";
 import { RoleGate } from "@/components/dashboard/role-gate";
 import { BookingPopup } from "@/components/rider/booking-popup";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { useAuth } from "@/contexts/auth-context";
+import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { peso } from "@/lib/currency";
 import {
   activeJobQuery,
   advanceDispatch,

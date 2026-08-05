@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
-import { peso } from "@/lib/marketplace";
+import { peso } from "@/lib/currency";
 import { acceptPasugoDispatch, declinePasugoDispatch, type PasugoOfferWithJob } from "@/lib/pasugo";
 import { secondsLeft } from "@/lib/dispatch";
 

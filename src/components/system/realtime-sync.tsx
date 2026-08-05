@@ -9,7 +9,7 @@
 import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
 
-import { useAuth } from "@/contexts/auth-context";
+import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 
 /** Query key prefixes to refresh per table. */

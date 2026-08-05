@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { PublicLayout } from "@/components/site/public-layout";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
-import { peso } from "@/lib/marketplace";
+import { peso } from "@/lib/currency";
 import {
   orderDispatchQuery,
   retryDispatch,

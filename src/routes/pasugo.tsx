@@ -8,7 +8,7 @@ import { toast } from "sonner";
 import { PublicLayout } from "@/components/site/public-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAuth } from "@/contexts/auth-context";
+import { useAuth } from "@/contexts/use-auth";
 import { myAddressesQuery } from "@/lib/addresses";
 import { createPasugoBooking, customerLatestPasugoOrderQuery } from "@/lib/pasugo";
 

@@ -8,7 +8,7 @@ import { Field, SelectField, TextAreaField, TextField } from "@/components/forms
 import { Panel } from "@/components/dashboard/primitives";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
-import { peso } from "@/lib/marketplace";
+import { peso } from "@/lib/currency";
 import { supabase } from "@/integrations/supabase/client";
 import { BUCKETS } from "@/lib/storage";
 import { storeAvailability } from "@/lib/store-status";

@@ -13,7 +13,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { useCart } from "@/contexts/cart-context";
-import { peso } from "@/lib/marketplace";
+import { peso } from "@/lib/currency";
 import { BUCKETS } from "@/lib/storage";
 
 /** Header cart button plus the slide-over basket. */

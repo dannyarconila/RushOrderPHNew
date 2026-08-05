@@ -6,7 +6,7 @@ import { useEffect, useState } from "react";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { EmptyState, PageHeader } from "@/components/dashboard/primitives";
 import { ProductManager } from "@/components/products/product-manager";
-import { useAuth } from "@/contexts/auth-context";
+import { useAuth } from "@/contexts/use-auth";
 import { myStoresQuery } from "@/lib/stores";
 import { cn } from "@/lib/utils";
 

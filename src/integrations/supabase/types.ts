@@ -582,6 +582,232 @@ export type Database = {
         };
         Relationships: [];
       };
+      pasugo_bookings: {
+        Row: {
+          assigned_rider_id: string | null;
+          created_at: string;
+          customer_id: string;
+          customer_name: string | null;
+          customer_phone: string | null;
+          dropoff_address: string;
+          dropoff_lat: number | null;
+          dropoff_lng: number | null;
+          estimated_distance_km: number;
+          estimated_fare: number;
+          id: string;
+          notes: string | null;
+          pickup_address: string;
+          pickup_lat: number | null;
+          pickup_lng: number | null;
+          rider_fee_deducted_at: string | null;
+          rider_fee_per_booking: number | null;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          assigned_rider_id?: string | null;
+          created_at?: string;
+          customer_id: string;
+          customer_name?: string | null;
+          customer_phone?: string | null;
+          dropoff_address: string;
+          dropoff_lat?: number | null;
+          dropoff_lng?: number | null;
+          estimated_distance_km?: number;
+          estimated_fare?: number;
+          id?: string;
+          notes?: string | null;
+          pickup_address: string;
+          pickup_lat?: number | null;
+          pickup_lng?: number | null;
+          rider_fee_deducted_at?: string | null;
+          rider_fee_per_booking?: number | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          assigned_rider_id?: string | null;
+          created_at?: string;
+          customer_id?: string;
+          customer_name?: string | null;
+          customer_phone?: string | null;
+          dropoff_address?: string;
+          dropoff_lat?: number | null;
+          dropoff_lng?: number | null;
+          estimated_distance_km?: number;
+          estimated_fare?: number;
+          id?: string;
+          notes?: string | null;
+          pickup_address?: string;
+          pickup_lat?: number | null;
+          pickup_lng?: number | null;
+          rider_fee_deducted_at?: string | null;
+          rider_fee_per_booking?: number | null;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      pasugo_chat_messages: {
+        Row: {
+          booking_id: string;
+          created_at: string;
+          id: string;
+          message: string;
+          recipient_id: string;
+          sender_id: string;
+        };
+        Insert: {
+          booking_id: string;
+          created_at?: string;
+          id?: string;
+          message: string;
+          recipient_id: string;
+          sender_id: string;
+        };
+        Update: {
+          booking_id?: string;
+          created_at?: string;
+          id?: string;
+          message?: string;
+          recipient_id?: string;
+          sender_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "pasugo_chat_messages_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "pasugo_bookings";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      pasugo_dispatch_jobs: {
+        Row: {
+          assigned_at: string | null;
+          assigned_rider_id: string | null;
+          attempt: number;
+          booking_id: string;
+          created_at: string;
+          delivered_at: string | null;
+          delivery_fee: number;
+          distance_km: number;
+          dropoff_address: string | null;
+          dropoff_lat: number | null;
+          dropoff_lng: number | null;
+          expires_at: string | null;
+          id: string;
+          max_attempts: number;
+          pickup_address: string | null;
+          pickup_lat: number | null;
+          pickup_lng: number | null;
+          radius_km: number;
+          status: string;
+          updated_at: string;
+        };
+        Insert: {
+          assigned_at?: string | null;
+          assigned_rider_id?: string | null;
+          attempt?: number;
+          booking_id: string;
+          created_at?: string;
+          delivered_at?: string | null;
+          delivery_fee?: number;
+          distance_km?: number;
+          dropoff_address?: string | null;
+          dropoff_lat?: number | null;
+          dropoff_lng?: number | null;
+          expires_at?: string | null;
+          id?: string;
+          max_attempts?: number;
+          pickup_address?: string | null;
+          pickup_lat?: number | null;
+          pickup_lng?: number | null;
+          radius_km?: number;
+          status?: string;
+          updated_at?: string;
+        };
+        Update: {
+          assigned_at?: string | null;
+          assigned_rider_id?: string | null;
+          attempt?: number;
+          booking_id?: string;
+          created_at?: string;
+          delivered_at?: string | null;
+          delivery_fee?: number;
+          distance_km?: number;
+          dropoff_address?: string | null;
+          dropoff_lat?: number | null;
+          dropoff_lng?: number | null;
+          expires_at?: string | null;
+          id?: string;
+          max_attempts?: number;
+          pickup_address?: string | null;
+          pickup_lat?: number | null;
+          pickup_lng?: number | null;
+          radius_km?: number;
+          status?: string;
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "pasugo_dispatch_jobs_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "pasugo_bookings";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      pasugo_dispatch_offers: {
+        Row: {
+          booking_id: string;
+          created_at: string;
+          distance_km: number | null;
+          expires_at: string;
+          id: string;
+          job_id: string;
+          rider_id: string;
+          status: string;
+        };
+        Insert: {
+          booking_id: string;
+          created_at?: string;
+          distance_km?: number | null;
+          expires_at: string;
+          id?: string;
+          job_id: string;
+          rider_id: string;
+          status?: string;
+        };
+        Update: {
+          booking_id?: string;
+          created_at?: string;
+          distance_km?: number | null;
+          expires_at?: string;
+          id?: string;
+          job_id?: string;
+          rider_id?: string;
+          status?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "pasugo_dispatch_offers_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "pasugo_bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "pasugo_dispatch_offers_job_id_fkey";
+            columns: ["job_id"];
+            isOneToOne: false;
+            referencedRelation: "pasugo_dispatch_jobs";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       order_items: {
         Row: {
           created_at: string;
@@ -1747,6 +1973,18 @@ export type Database = {
       dispatch_settings: { Args: never; Returns: Json };
       dispatch_start: { Args: { _order_id: string }; Returns: string };
       minimum_wallet_balance_for_role: { Args: { _role: string }; Returns: number };
+      pasugo_available_riders_count: { Args: { _job_id: string }; Returns: number };
+      pasugo_cancel: { Args: { _booking_id: string }; Returns: boolean };
+      pasugo_dispatch_accept: {
+        Args: { _job_id: string };
+        Returns: { booking_id: string | null; ok: boolean; reason: string | null };
+      };
+      pasugo_dispatch_advance: {
+        Args: { _job_id: string; _step: string };
+        Returns: boolean;
+      };
+      pasugo_dispatch_decline: { Args: { _job_id: string }; Returns: boolean };
+      pasugo_dispatch_retry: { Args: { _job_id: string }; Returns: boolean };
       store_set_online: { Args: { _store_id: string; _online: boolean }; Returns: boolean };
       has_role: {
         Args: {

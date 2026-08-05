@@ -9,7 +9,7 @@ import { PageHeader, Panel, StatCard } from "@/components/dashboard/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { LEGAL_DOCUMENTS } from "@/lib/legal/catalog";
+import { LEGAL_DOCUMENTS, type LegalSlug } from "@/lib/legal/catalog";
 import { publishLegalDocument } from "@/lib/admin/mutations";
 import { legalAcceptanceLogsQuery, legalDocumentsQuery } from "@/lib/admin/queries";
 import { ShieldCheck, ScrollText, Users } from "lucide-react";
@@ -81,7 +81,7 @@ function InternalAdminLegalPage() {
     onError: (error: Error) => toast.error(error.message),
   });
 
-  function selectDoc(slug: string) {
+  function selectDoc(slug: LegalSlug) {
     setSelectedSlug(slug);
     const tmpl = LEGAL_DOCUMENTS.find((doc) => doc.slug === slug);
     const row = (docsQuery.data ?? []).find((doc) => doc.slug === slug);

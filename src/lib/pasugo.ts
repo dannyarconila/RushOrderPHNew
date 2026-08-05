@@ -307,7 +307,7 @@ export function pasugoBookingQuery(bookingId: string) {
     queryKey: ["pasugo-booking", bookingId],
     queryFn: async (): Promise<PasugoBooking | null> => {
       const { data, error } = await supabase
-        .from("pasugo_bookings" as never)
+        .from("pasugo_bookings")
         .select("*")
         .eq("id", bookingId)
         .maybeSingle();
@@ -322,7 +322,7 @@ export function pasugoJobQuery(bookingId: string) {
     queryKey: ["pasugo-job", bookingId],
     queryFn: async (): Promise<PasugoDispatchJob | null> => {
       const { data, error } = await supabase
-        .from("pasugo_dispatch_jobs" as never)
+        .from("pasugo_dispatch_jobs")
         .select("*")
         .eq("booking_id", bookingId)
         .maybeSingle();
@@ -338,7 +338,7 @@ export function riderPendingPasugoOfferQuery(riderId: string | undefined) {
     enabled: Boolean(riderId),
     queryFn: async (): Promise<PasugoOfferWithJob | null> => {
       const { data, error } = await supabase
-        .from("pasugo_dispatch_offers" as never)
+        .from("pasugo_dispatch_offers")
         .select("*,pasugo_dispatch_jobs(*),pasugo_bookings(*)")
         .eq("rider_id", riderId!)
         .eq("status", "pending")
@@ -386,7 +386,7 @@ export function activePasugoJobForRiderQuery(riderId: string | undefined) {
     enabled: Boolean(riderId),
     queryFn: async (): Promise<PasugoDispatchJob | null> => {
       const { data, error } = await supabase
-        .from("pasugo_dispatch_jobs" as never)
+        .from("pasugo_dispatch_jobs")
         .select("*")
         .eq("assigned_rider_id", riderId!)
         .in("status", ["assigned", "picked_up"])
@@ -401,10 +401,10 @@ export function activePasugoJobForRiderQuery(riderId: string | undefined) {
 
 export async function acceptPasugoDispatch(
   jobId: string,
-): Promise<{ ok: boolean; booking_id?: string; reason?: string }> {
+): Promise<{ ok: boolean; booking_id?: string | null; reason?: string | null }> {
   const { data, error } = await supabase.rpc("pasugo_dispatch_accept", { _job_id: jobId });
   if (error) throw error;
-  return (data ?? { ok: false }) as { ok: boolean; booking_id?: string; reason?: string };
+  return data ?? { ok: false };
 }
 
 export async function declinePasugoDispatch(jobId: string) {
@@ -436,7 +436,7 @@ export function customerLatestPasugoQuery(userId: string | undefined) {
     enabled: Boolean(userId),
     queryFn: async (): Promise<PasugoBooking | null> => {
       const { data, error } = await supabase
-        .from("pasugo_bookings" as never)
+        .from("pasugo_bookings")
         .select("*")
         .eq("customer_id", userId!)
         .order("created_at", { ascending: false })
@@ -454,7 +454,7 @@ export function customerPasugoBookingsQuery(userId: string | undefined, limit = 
     enabled: Boolean(userId),
     queryFn: async (): Promise<PasugoBooking[]> => {
       const { data, error } = await supabase
-        .from("pasugo_bookings" as never)
+        .from("pasugo_bookings")
         .select("*")
         .eq("customer_id", userId!)
         .order("created_at", { ascending: false })

@@ -10,11 +10,11 @@ import {
   Pill,
   Section,
   Td,
-  peso,
   statusTone,
 } from "@/components/admin/primitives";
 import { PageHeader } from "@/components/dashboard/primitives";
 import { Button } from "@/components/ui/button";
+import { peso } from "@/lib/currency";
 import { setAccountStatus } from "@/lib/admin/mutations";
 import { storesByOwnerQuery, walletsQuery } from "@/lib/admin/queries";
 export const Route = createFileRoute("/internal-admin/sellers")({

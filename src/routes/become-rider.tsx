@@ -9,7 +9,7 @@ import { ReviewList, SelectField, Stepper, TextField } from "@/components/forms/
 import { PageHero, PublicLayout } from "@/components/site/public-layout";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { useAuth } from "@/contexts/auth-context";
+import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { legalVersionSnapshotQuery } from "@/lib/legal/public";
 
@@ -277,14 +277,16 @@ function BecomeRiderPage() {
                 <span>
                   I have read and agree to the{" "}
                   <Link
-                    to="/legal/rider-terms-conditions"
+                    to="/legal/$slug"
+                    params={{ slug: "rider-terms-conditions" }}
                     className="font-semibold text-primary hover:underline"
                   >
                     Rider Terms & Conditions
                   </Link>{" "}
                   and{" "}
                   <Link
-                    to="/legal/privacy-policy"
+                    to="/legal/$slug"
+                    params={{ slug: "privacy-policy" }}
                     className="font-semibold text-primary hover:underline"
                   >
                     Privacy Policy

@@ -637,7 +637,9 @@ export const adminMutateFn = createServerFn({ method: "POST" })
 
         // Enforce wallet-driven online/offline state after an admin adjustment.
         try {
-          await enforceWalletState(data.userId, data.walletType);
+          if (data.walletType === "seller" || data.walletType === "rider") {
+            await enforceWalletState(data.userId, data.walletType);
+          }
         } catch (e) {
           console.error("enforce-after-adjust", e);
         }

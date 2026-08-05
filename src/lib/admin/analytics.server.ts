@@ -71,7 +71,7 @@ export async function buildOverview(): Promise<AdminOverview> {
 
   const { data: monthOrders } = await supabaseAdmin
     .from("orders")
-    .select("created_at,total,seller_commission,rider_commission,status")
+    .select("created_at,total,seller_commission,rider_commission,status,payment_status")
     .gte("created_at", startOfMonth.toISOString())
     .is("deleted_at", null);
 
@@ -119,7 +119,7 @@ export async function buildReports(days: number): Promise<AdminReports> {
   const { data, error } = await supabaseAdmin
     .from("orders")
     .select(
-      "id,created_at,status,total,seller_commission,rider_commission,store_id,rider_id,stores(name)",
+      "id,created_at,status,payment_status,total,seller_commission,rider_commission,store_id,rider_id,stores(name)",
     )
     .gte("created_at", since)
     .is("deleted_at", null)

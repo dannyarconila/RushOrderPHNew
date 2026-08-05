@@ -7,9 +7,9 @@ import { toast } from "sonner";
 import { LiveDeliveryMap } from "@/components/maps";
 import { PublicLayout } from "@/components/site/public-layout";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/auth-context";
+import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
-import { peso } from "@/lib/marketplace";
+import { peso } from "@/lib/currency";
 import {
   cancelPasugoBooking,
   pasugoBookingQuery,
@@ -81,7 +81,8 @@ function PasugoTrackingPage() {
   useEffect(() => {
     if (!job.data || job.data.status !== "searching") return;
     const tick = () => {
-      if (secondsLeft(job.data?.expires_at) === 0) {
+      if (!job.data) return;
+      if (secondsLeft(job.data.expires_at) === 0) {
         void retryPasugoDispatch(job.data.id).catch(() => undefined);
       }
     };

@@ -7,7 +7,7 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { EmptyState, PageHeader } from "@/components/dashboard/primitives";
 import { StoreEditor } from "@/components/stores/store-editor";
 import { VerificationBadge } from "@/components/stores/verification-badge";
-import { useAuth } from "@/contexts/auth-context";
+import { useAuth } from "@/contexts/use-auth";
 import { myStoresQuery } from "@/lib/stores";
 import { cn } from "@/lib/utils";
 

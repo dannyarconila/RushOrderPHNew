@@ -1,6 +1,7 @@
 import { Link } from "@tanstack/react-router";
 
 import { Logo } from "@/components/brand/logo";
+import type { LegalSlug } from "@/lib/legal/catalog";
 
 const COLUMNS = [
   {
@@ -25,9 +26,9 @@ const COLUMNS = [
     title: "Legal",
     links: [
       { to: "/legal", label: "Legal Center" },
-      { to: "/legal/terms-conditions", label: "Terms & Conditions" },
-      { to: "/legal/privacy-policy", label: "Privacy Policy" },
-      { to: "/legal/trust-safety", label: "Trust & Safety" },
+      { to: "/legal/$slug", params: { slug: "terms-conditions" as LegalSlug }, label: "Terms & Conditions" },
+      { to: "/legal/$slug", params: { slug: "privacy-policy" as LegalSlug }, label: "Privacy Policy" },
+      { to: "/legal/$slug", params: { slug: "trust-safety" as LegalSlug }, label: "Trust & Safety" },
     ],
   },
 ] as const;
@@ -55,12 +56,22 @@ export function SiteFooter() {
             <ul className="space-y-2">
               {col.links.map((link) => (
                 <li key={link.label}>
-                  <Link
-                    to={link.to}
-                    className="text-sm text-ink-foreground/75 transition-colors hover:text-ink-foreground"
-                  >
-                    {link.label}
-                  </Link>
+                  {link.to === "/legal/$slug" ? (
+                    <Link
+                      to={link.to}
+                      params={link.params}
+                      className="text-sm text-ink-foreground/75 transition-colors hover:text-ink-foreground"
+                    >
+                      {link.label}
+                    </Link>
+                  ) : (
+                    <Link
+                      to={link.to}
+                      className="text-sm text-ink-foreground/75 transition-colors hover:text-ink-foreground"
+                    >
+                      {link.label}
+                    </Link>
+                  )}
                 </li>
               ))}
             </ul>

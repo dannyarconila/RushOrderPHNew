@@ -12,7 +12,7 @@ import type { ReactNode } from "react";
 
 import { EmptyState } from "@/components/dashboard/primitives";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/auth-context";
+import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 
 type Kind = "seller" | "rider";

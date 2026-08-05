@@ -13,7 +13,6 @@ import {
   SearchBox,
   Td,
   dateTime,
-  peso,
   shortId,
   statusTone,
 } from "@/components/admin/primitives";
@@ -21,6 +20,7 @@ import { EmptyState, PageHeader, Panel, StatCard } from "@/components/dashboard/
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { StorageImage } from "@/components/media/storage-image";
+import { peso } from "@/lib/currency";
 import { BUCKETS, signedUrlQuery } from "@/lib/storage";
 import { membersByRoleQuery } from "@/lib/admin/queries";
 import {

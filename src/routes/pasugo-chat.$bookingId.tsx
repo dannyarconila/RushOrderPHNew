@@ -7,7 +7,7 @@ import { toast } from "sonner";
 import { PublicLayout } from "@/components/site/public-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAuth } from "@/contexts/auth-context";
+import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { pasugoBookingQuery } from "@/lib/pasugo";
 
@@ -53,7 +53,7 @@ function PasugoChatPage() {
     enabled: Boolean(user),
     queryFn: async (): Promise<PasugoChatMessage[]> => {
       const { data, error } = await supabase
-        .from("pasugo_chat_messages" as never)
+        .from("pasugo_chat_messages")
         .select("id,booking_id,sender_id,recipient_id,message,created_at")
         .eq("booking_id", bookingId)
         .order("created_at", { ascending: true });
@@ -98,12 +98,12 @@ function PasugoChatPage() {
       if (!user) throw new Error("Sign in required.");
       if (!recipientId) throw new Error("Chat becomes available once a rider is assigned.");
 
-      const { error } = await supabase.from("pasugo_chat_messages" as never).insert({
+      const { error } = await supabase.from("pasugo_chat_messages").insert({
         booking_id: bookingId,
         sender_id: user.id,
         recipient_id: recipientId,
         message,
-      } as never);
+      });
       if (error) throw error;
 
       setDraft("");

@@ -7,11 +7,12 @@ import { toast } from "sonner";
 import { TextAreaField, TextField } from "@/components/forms/wizard";
 import { PublicLayout } from "@/components/site/public-layout";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/auth-context";
+import { useAuth } from "@/contexts/use-auth";
 import { useCart } from "@/contexts/cart-context";
 import { EMPTY_ADDRESS, createAddress, formatAddress, myAddressesQuery } from "@/lib/addresses";
+import { peso } from "@/lib/currency";
 import { dispatchSettingsQuery } from "@/lib/dispatch";
-import { peso, publicSettingsQuery, storeQuery } from "@/lib/marketplace";
+import { publicSettingsQuery, storeQuery } from "@/lib/marketplace";
 import { storeAvailability } from "@/lib/store-status";
 import { placeOrder, quoteOrder, type PaymentMethod } from "@/lib/orders";
 import { cn } from "@/lib/utils";
@@ -123,7 +124,7 @@ function CheckoutPage() {
         distanceKm,
         settings: feeSettings,
       }),
-    [subtotal, feeSettings],
+    [subtotal, distanceKm, feeSettings],
   );
 
   const saveAddress = useMutation({

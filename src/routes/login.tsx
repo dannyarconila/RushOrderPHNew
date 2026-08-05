@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import { Logo } from "@/components/brand/logo";
 import { TextField } from "@/components/forms/wizard";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/auth-context";
+import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { getDashboardRoute } from "@/lib/dashboard-route";
 

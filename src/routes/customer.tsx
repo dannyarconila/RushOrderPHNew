@@ -24,9 +24,10 @@ import { toast } from "sonner";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { EmptyState, PageHeader, Panel, StatCard } from "@/components/dashboard/primitives";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/auth-context";
+import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { myAddressesQuery, type AddressRow, formatAddress } from "@/lib/addresses";
+import { peso } from "@/lib/currency";
 import { cancelOrder, myOrdersQuery } from "@/lib/orders";
 import { cn } from "@/lib/utils";
 
@@ -284,7 +285,7 @@ function CustomerDashboard() {
         >
           {(addresses ?? []).length > 0 ? (
             <ul className="space-y-3">
-              {addresses.map((address: AddressRow) => (
+              {(addresses ?? []).map((address: AddressRow) => (
                 <li key={address.id} className="rounded-xl border border-border p-4">
                   <div className="flex items-start justify-between gap-3">
                     <div>

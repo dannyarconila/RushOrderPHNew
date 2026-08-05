@@ -7,9 +7,9 @@ import { toast } from "sonner";
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { EmptyState, PageHeader, Panel } from "@/components/dashboard/primitives";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/contexts/auth-context";
+import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
-import { peso } from "@/lib/marketplace";
+import { peso } from "@/lib/currency";
 import { ORDER_LABELS, storeOrdersQuery, updateOrderStatus, type OrderStatus } from "@/lib/orders";
 import { myStoresQuery } from "@/lib/stores";
 

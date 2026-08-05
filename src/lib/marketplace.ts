@@ -130,14 +130,6 @@ export function publicSettingsQuery() {
   });
 }
 
-export function peso(amount: number) {
-  return new Intl.NumberFormat("en-PH", {
-    style: "currency",
-    currency: "PHP",
-    maximumFractionDigits: 2,
-  }).format(amount);
-}
-
 export function firstImage(images: unknown): string | null {
   if (Array.isArray(images) && typeof images[0] === "string") return images[0];
   return null;

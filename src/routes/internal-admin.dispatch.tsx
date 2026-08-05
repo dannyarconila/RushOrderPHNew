@@ -10,7 +10,6 @@ import {
   Pill,
   Td,
   dateTime,
-  peso,
   shortId,
   statusTone,
 } from "@/components/admin/primitives";
@@ -18,6 +17,7 @@ import { EmptyState, PageHeader, Panel } from "@/components/dashboard/primitives
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { adminReadFn } from "@/lib/admin/data.functions";
+import { peso } from "@/lib/currency";
 import { upsertSetting } from "@/lib/admin/mutations";
 import type { Database } from "@/integrations/supabase/types";
 import { DISPATCH_SETTING_KEYS } from "@/lib/dispatch";

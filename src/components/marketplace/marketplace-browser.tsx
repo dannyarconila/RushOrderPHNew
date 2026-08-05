@@ -6,12 +6,12 @@ import { useMemo, useState } from "react";
 import { StorageImage } from "@/components/media/storage-image";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAuth } from "@/contexts/auth-context";
+import { useAuth } from "@/contexts/use-auth";
 import { myAddressesQuery } from "@/lib/addresses";
+import { peso } from "@/lib/currency";
 import {
   categoriesQuery,
   firstImage,
-  peso,
   publicSettingsQuery,
   productSearchQuery,
   storesQuery,
@@ -191,7 +191,6 @@ export function MarketplaceBrowser({
                         bucket={BUCKETS.storeBanners}
                         path={store.banner_url}
                         alt={`${store.name} banner`}
-                        loading="lazy"
                         className="size-full object-cover"
                       />
                     ) : (

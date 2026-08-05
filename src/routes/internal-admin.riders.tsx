@@ -4,9 +4,10 @@ import { queryOptions } from "@tanstack/react-query";
 import { useMemo } from "react";
 
 import { MemberDirectory } from "@/components/admin/member-directory";
-import { DetailGrid, Section, Td, peso } from "@/components/admin/primitives";
+import { DetailGrid, Section, Td } from "@/components/admin/primitives";
 import { PageHeader } from "@/components/dashboard/primitives";
 import { adminReadFn } from "@/lib/admin/data.functions";
+import { peso } from "@/lib/currency";
 import { adminOrdersQuery, walletsQuery } from "@/lib/admin/queries";
 
 type PasugoDispatchJobRow = {
