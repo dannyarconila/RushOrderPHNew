@@ -10,8 +10,8 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/auth-context";
 import { supabase } from "@/integrations/supabase/client";
+import { getDashboardRoute } from "@/lib/dashboard-route";
 import { legalVersionSnapshotQuery } from "@/lib/legal/public";
-import { ROLE_HOME } from "@/types";
 
 const APP_ORIGIN = import.meta.env.VITE_APP_ORIGIN || window.location.origin;
 
@@ -46,7 +46,7 @@ function RegisterPage() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    if (!loading && user) navigate({ to: ROLE_HOME[primaryRole], replace: true });
+    if (!loading && user) navigate({ to: getDashboardRoute(primaryRole), replace: true });
   }, [loading, user, primaryRole, navigate]);
 
   async function handleSubmit(e: React.FormEvent) {

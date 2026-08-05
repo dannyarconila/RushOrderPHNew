@@ -6,8 +6,8 @@ import { CartSheet } from "@/components/cart/cart-sheet";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
+import { getDashboardRoute } from "@/lib/dashboard-route";
 import { cn } from "@/lib/utils";
-import { ROLE_HOME } from "@/types";
 
 const NAV = [
   { to: "/", label: "Home" },
@@ -49,7 +49,7 @@ export function SiteHeader() {
           <CartSheet />
           {loading ? null : user ? (
             <Button asChild size="sm">
-              <Link to={ROLE_HOME[primaryRole]}>My dashboard</Link>
+              <Link to={getDashboardRoute(primaryRole)}>My dashboard</Link>
             </Button>
           ) : (
             <>
@@ -114,7 +114,7 @@ export function SiteHeader() {
             <div className="mt-2 flex flex-col gap-2">
               {user ? (
                 <Button asChild block onClick={() => setOpen(false)}>
-                  <Link to={ROLE_HOME[primaryRole]}>My dashboard</Link>
+                  <Link to={getDashboardRoute(primaryRole)}>My dashboard</Link>
                 </Button>
               ) : (
                 <>

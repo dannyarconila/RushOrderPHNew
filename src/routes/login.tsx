@@ -8,7 +8,7 @@ import { TextField } from "@/components/forms/wizard";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/auth-context";
 import { supabase } from "@/integrations/supabase/client";
-import { ROLE_HOME } from "@/types";
+import { getDashboardRoute } from "@/lib/dashboard-route";
 
 const APP_ORIGIN = import.meta.env.VITE_APP_ORIGIN || window.location.origin;
 
@@ -52,7 +52,7 @@ function LoginPage() {
       navigate({ href: next, replace: true });
       return;
     }
-    navigate({ to: ROLE_HOME[primaryRole], replace: true });
+    navigate({ to: getDashboardRoute(primaryRole), replace: true });
   }, [loading, user, primaryRole, navigate, next]);
 
   async function handleSubmit(e: React.FormEvent) {
