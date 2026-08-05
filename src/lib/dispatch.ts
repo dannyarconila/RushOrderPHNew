@@ -12,7 +12,10 @@ import type { Database } from "@/integrations/supabase/types";
 
 type Tables = Database["public"]["Tables"];
 
-export type DispatchJob = Tables["dispatch_jobs"]["Row"];
+export type DispatchJob = Tables["dispatch_jobs"]["Row"] & {
+  dispatch_type?: "marketplace" | "pasugo";
+  customer_notes?: string | null;
+};
 export type DispatchOffer = Tables["dispatch_offers"]["Row"];
 export type RiderStatus = Tables["rider_status"]["Row"];
 
@@ -208,7 +211,7 @@ export function activeJobQuery(riderId: string | undefined) {
         .limit(1)
         .maybeSingle();
       if (error) throw error;
-      return data;
+      return (data ?? null) as DispatchJob | null;
     },
   });
 }
@@ -243,7 +246,7 @@ export function orderDispatchQuery(orderId: string) {
         .eq("order_id", orderId)
         .maybeSingle();
       if (error) throw error;
-      return data;
+      return (data ?? null) as DispatchJob | null;
     },
   });
 }

@@ -44,6 +44,7 @@ function OrderTrackingPage() {
   const queryClient = useQueryClient();
   const order = useQuery(orderQuery(orderId));
   const items = useQuery(orderItemsQuery(orderId));
+  const isPasugo = Boolean(order.data?.notes?.startsWith("[PASUGO]"));
 
   // Live status updates while the customer keeps the page open.
   useEffect(() => {
@@ -94,7 +95,9 @@ function OrderTrackingPage() {
     <PublicLayout>
       <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
-          Claim {order.data.claim_number ?? order.data.id.slice(0, 8)}
+          {isPasugo
+            ? `Pasugo booking ${order.data.claim_number ?? order.data.id.slice(0, 8)}`
+            : `Claim ${order.data.claim_number ?? order.data.id.slice(0, 8)}`}
         </p>
         <h1 className="mt-2 font-display text-2xl font-extrabold tracking-tight sm:text-3xl">
           {ORDER_LABELS[current]}
@@ -136,20 +139,29 @@ function OrderTrackingPage() {
 
         <section className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
           <h2 className="flex items-center gap-2 font-display text-base font-bold">
-            <Package className="size-4 text-primary" /> Order details
+            <Package className="size-4 text-primary" /> {isPasugo ? "Booking details" : "Order details"}
           </h2>
-          <ul className="mt-4 flex flex-col gap-2 text-sm">
-            {(items.data ?? []).map((item) => (
-              <li key={item.id} className="flex justify-between gap-3">
-                <span className="min-w-0 truncate text-muted-foreground">
-                  {item.quantity} × {item.product_name}
-                </span>
-                <span className="font-semibold">
-                  {peso(Number(item.unit_price) * item.quantity)}
-                </span>
-              </li>
-            ))}
-          </ul>
+          {isPasugo ? (
+            <p className="mt-4 text-sm text-muted-foreground">
+              {order.data.notes
+                ?.split("\n")
+                .filter((line) => !line.startsWith("[PASUGO]"))
+                .join(" · ") || "Standalone rider booking"}
+            </p>
+          ) : (
+            <ul className="mt-4 flex flex-col gap-2 text-sm">
+              {(items.data ?? []).map((item) => (
+                <li key={item.id} className="flex justify-between gap-3">
+                  <span className="min-w-0 truncate text-muted-foreground">
+                    {item.quantity} × {item.product_name}
+                  </span>
+                  <span className="font-semibold">
+                    {peso(Number(item.unit_price) * item.quantity)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
           <dl className="mt-4 space-y-1.5 border-t border-border pt-4 text-sm">
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Subtotal</dt>
@@ -235,34 +247,45 @@ function DispatchPanel({ orderId }: { orderId: string }) {
 
   const searching = job.status === "searching";
   const failed = job.status === "failed";
+  const isPasugo = job.dispatch_type === "pasugo";
 
   return (
     <section className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
       <h2 className="flex items-center gap-2 font-display text-base font-bold">
-        <Bike className="size-4 text-primary" /> Rider
+        <Bike className="size-4 text-primary" /> {isPasugo ? "Pasugo rider" : "Rider"}
       </h2>
       {searching ? (
         <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="size-4 animate-spin" />
-          Finding a rider near the store (attempt {job.attempt} of {job.max_attempts}, within{" "}
+          {isPasugo ? "Finding a rider for your booking" : "Finding a rider near the store"} (attempt {job.attempt} of {job.max_attempts}, within{" "}
           {Number(job.radius_km).toFixed(0)} km)…
         </p>
       ) : failed ? (
         <p className="mt-3 text-sm text-destructive">
-          No rider was available. The store will re-dispatch your order shortly.
+          {isPasugo
+            ? "No rider was available for your booking yet. We will keep retrying based on dispatch settings."
+            : "No rider was available. The store will re-dispatch your order shortly."}
         </p>
       ) : (
         <p className="mt-3 text-sm text-muted-foreground">
           {job.status === "delivered"
             ? "Delivered by your rider."
             : job.status === "picked_up"
-              ? "Your rider has your order and is on the way."
-              : "A rider is assigned and heading to the store."}
+              ? isPasugo
+                ? "Your rider is on the way to the destination."
+                : "Your rider has your order and is on the way."
+              : isPasugo
+                ? "A rider is assigned and heading to the pickup point."
+                : "A rider is assigned and heading to the store."}
         </p>
       )}
       <p className="mt-2 text-xs text-muted-foreground">
-        {Number(job.distance_km).toFixed(1)} km · delivery {peso(Number(job.delivery_fee))}
+        {Number(job.distance_km).toFixed(1)} km · {isPasugo ? "estimated fare" : "delivery"} {peso(Number(job.delivery_fee))}
       </p>
+
+      {isPasugo && job.customer_notes ? (
+        <p className="mt-2 text-xs text-muted-foreground">Notes: {job.customer_notes}</p>
+      ) : null}
 
       {(job.status === "assigned" || job.status === "picked_up" || job.status === "delivered") ? (
         <Button asChild variant="outline" className="mt-4">

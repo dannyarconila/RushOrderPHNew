@@ -20,6 +20,7 @@ export function BookingPopup({ data, onClose }: { data: OfferWithJob; onClose: (
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [remaining, setRemaining] = useState(() => secondsLeft(offer.expires_at));
+  const isPasugo = job.dispatch_type === "pasugo";
 
   useEffect(() => {
     setRemaining(secondsLeft(offer.expires_at));
@@ -71,7 +72,7 @@ export function BookingPopup({ data, onClose }: { data: OfferWithJob; onClose: (
       <div className="w-full max-w-md overflow-hidden rounded-3xl border border-border bg-card shadow-2xl">
         <div className="flex items-center justify-between gap-3 bg-primary px-5 py-4 text-primary-foreground">
           <span className="flex items-center gap-2 font-display text-lg font-extrabold">
-            <Bike className="size-5" /> New booking
+            <Bike className="size-5" /> {isPasugo ? "Incoming Pasugo Order!" : "Incoming Delivery Order"}
           </span>
           <span className="flex items-center gap-1 text-sm font-bold tabular-nums">
             <Clock className="size-4" /> {remaining}s
@@ -86,10 +87,13 @@ export function BookingPopup({ data, onClose }: { data: OfferWithJob; onClose: (
         </div>
 
         <div className="space-y-4 p-5">
+          {isPasugo ? (
+            <p className="text-sm text-muted-foreground">Would you like to accept this booking?</p>
+          ) : null}
           <div className="flex items-baseline justify-between gap-3">
             <div>
               <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                Delivery earnings
+                {isPasugo ? "Estimated fare" : "Delivery earnings"}
               </p>
               <p className="font-display text-3xl font-extrabold">
                 {peso(Number(job.delivery_fee))}
@@ -104,11 +108,23 @@ export function BookingPopup({ data, onClose }: { data: OfferWithJob; onClose: (
             <Row
               icon={MapPin}
               label="Pick up"
-              title={job.store_name ?? "Store"}
+              title={isPasugo ? "Pickup Address" : job.store_name ?? "Store"}
               detail={job.pickup_address}
             />
-            <Row icon={Navigation} label="Drop off" title="Customer" detail={job.dropoff_address} />
+            <Row
+              icon={Navigation}
+              label="Drop off"
+              title={isPasugo ? "Destination" : "Customer"}
+              detail={job.dropoff_address}
+            />
           </div>
+
+          {isPasugo && job.customer_notes ? (
+            <div className="rounded-2xl border border-border bg-muted/30 p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">Customer notes</p>
+              <p className="mt-1 text-sm">{job.customer_notes}</p>
+            </div>
+          ) : null}
 
           <div className="flex gap-3">
             <Button

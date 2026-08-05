@@ -17,7 +17,6 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { PageHeader, Panel, StatCard, StatusBadge } from "@/components/dashboard/primitives";
 import { RoleGate } from "@/components/dashboard/role-gate";
 import { BookingPopup } from "@/components/rider/booking-popup";
-import { PasugoBookingPopup } from "@/components/rider/pasugo-booking-popup";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/auth-context";
@@ -26,6 +25,7 @@ import {
   activeJobQuery,
   advanceDispatch,
   currentPosition,
+  type DispatchJob,
   pendingOfferQuery,
   riderHistoryQuery,
   riderStatusQuery,
@@ -33,13 +33,6 @@ import {
   watchRiderLocation,
   stopWatchingLocation,
 } from "@/lib/dispatch";
-import {
-  activePasugoJobForRiderQuery,
-  advancePasugoDispatch,
-  pasugoBookingQuery,
-  riderPendingPasugoOfferQuery,
-  type PasugoDispatchJob,
-} from "@/lib/pasugo";
 import { minimumWalletBalanceQuery, myWalletQuery } from "@/lib/wallet";
 
 export const Route = createFileRoute("/rider")({
@@ -92,30 +85,18 @@ function RiderOverview() {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [dismissedOffer, setDismissedOffer] = useState<string | null>(null);
-  const [dismissedPasugoOffer, setDismissedPasugoOffer] = useState<string | null>(null);
 
   const { data: wallet } = useQuery(myWalletQuery(user?.id, "rider"));
   const { data: minimumBalance } = useQuery(minimumWalletBalanceQuery("rider"));
   const { data: status } = useQuery(riderStatusQuery(user?.id));
   const { data: history } = useQuery(riderHistoryQuery(user?.id));
   const { data: activeJob } = useQuery(activeJobQuery(user?.id));
-  const { data: activePasugoJob } = useQuery(activePasugoJobForRiderQuery(user?.id));
-  const { data: activePasugoBooking } = useQuery({
-    ...pasugoBookingQuery(activePasugoJob?.booking_id ?? ""),
-    enabled: Boolean(activePasugoJob?.booking_id),
-  });
   const online = Boolean(status?.is_online);
 
   const { data: offer } = useQuery({
     ...pendingOfferQuery(user?.id),
     enabled: Boolean(user) && online && !activeJob,
     refetchInterval: online && !activeJob ? 5000 : false,
-  });
-
-  const { data: pasugoOffer } = useQuery({
-    ...riderPendingPasugoOfferQuery(user?.id),
-    enabled: Boolean(user) && online && !activeJob && !activePasugoJob,
-    refetchInterval: online && !activeJob && !activePasugoJob ? 5000 : false,
   });
 
   const { data: application } = useQuery({
@@ -136,8 +117,6 @@ function RiderOverview() {
     void queryClient.invalidateQueries({ queryKey: ["dispatch-offer"] });
     void queryClient.invalidateQueries({ queryKey: ["dispatch-active-job"] });
     void queryClient.invalidateQueries({ queryKey: ["dispatch-history"] });
-    void queryClient.invalidateQueries({ queryKey: ["pasugo-offer"] });
-    void queryClient.invalidateQueries({ queryKey: ["pasugo-active-job"] });
     void queryClient.invalidateQueries({ queryKey: ["rider-status"] });
   }, [queryClient]);
 
@@ -162,26 +141,6 @@ function RiderOverview() {
           event: "*",
           schema: "public",
           table: "dispatch_jobs",
-          filter: `assigned_rider_id=eq.${user.id}`,
-        },
-        refreshDispatch,
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "pasugo_dispatch_offers",
-          filter: `rider_id=eq.${user.id}`,
-        },
-        refreshDispatch,
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "*",
-          schema: "public",
-          table: "pasugo_dispatch_jobs",
           filter: `assigned_rider_id=eq.${user.id}`,
         },
         refreshDispatch,
@@ -240,25 +199,6 @@ function RiderOverview() {
   ).length;
 
   const showOffer = offer && offer.offer.id !== dismissedOffer && !activeJob;
-  const showPasugoOffer = pasugoOffer && pasugoOffer.offer.id !== dismissedPasugoOffer && !activeJob && !activePasugoJob;
-
-  const advancePasugo = useMutation({
-    mutationFn: ({ jobId, step }: { jobId: string; step: "arrived" | "picked_up" | "delivered" | "completed" }) =>
-      advancePasugoDispatch(jobId, step),
-    onSuccess: (_data, variables) => {
-      const labelMap: Record<string, string> = {
-        arrived: "Marked as arrived",
-        picked_up: "Marked as picked up",
-        delivered: "Marked as delivered",
-        completed: "Booking completed",
-      };
-      toast.success(labelMap[variables.step] ?? "Pasugo booking updated");
-      refreshDispatch();
-      void queryClient.invalidateQueries({ queryKey: ["pasugo-booking"] });
-    },
-    onError: (error: Error) =>
-      toast.error("Could not update Pasugo booking", { description: error.message }),
-  });
 
   return (
     <>
@@ -323,8 +263,12 @@ function RiderOverview() {
 
       {activeJob ? (
         <Panel
-          title="Active delivery"
-          description="Follow the steps to complete this trip."
+          title={activeJob.dispatch_type === "pasugo" ? "Active Pasugo booking" : "Active delivery"}
+          description={
+            activeJob.dispatch_type === "pasugo"
+              ? "Shared rider dispatch workflow for standalone booking."
+              : "Follow the steps to complete this trip."
+          }
           className="mt-6"
         >
           <div className="space-y-4">
@@ -334,23 +278,35 @@ function RiderOverview() {
               </p>
               <p className="text-sm text-muted-foreground">
                 {Number(activeJob.distance_km).toFixed(1)} km ·{" "}
-                {activeJob.status === "picked_up" ? "On the way to customer" : "Head to the store"}
+                {activeJob.status === "picked_up"
+                  ? activeJob.dispatch_type === "pasugo"
+                    ? "On the way to destination"
+                    : "On the way to customer"
+                  : activeJob.dispatch_type === "pasugo"
+                    ? "Head to pickup"
+                    : "Head to the store"}
               </p>
             </div>
             <div className="grid gap-3 sm:grid-cols-2">
               <Leg
                 icon={MapPin}
                 label="Pick up"
-                title={activeJob.store_name ?? "Store"}
+                title={activeJob.dispatch_type === "pasugo" ? "Pickup" : activeJob.store_name ?? "Store"}
                 detail={activeJob.pickup_address}
               />
               <Leg
                 icon={Navigation}
                 label="Drop off"
-                title="Customer"
+                title={activeJob.dispatch_type === "pasugo" ? "Destination" : "Customer"}
                 detail={activeJob.dropoff_address}
               />
             </div>
+            {activeJob.dispatch_type === "pasugo" && activeJob.customer_notes ? (
+              <div className="rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm">
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Customer notes</p>
+                <p className="mt-1">{activeJob.customer_notes}</p>
+              </div>
+            ) : null}
             <div className="flex flex-wrap gap-3">
               {activeJob.status === "assigned" ? (
                 <Button
@@ -374,27 +330,6 @@ function RiderOverview() {
               </Button>
             </div>
           </div>
-        </Panel>
-      ) : null}
-
-      {activePasugoJob ? (
-        <Panel
-          title="Active Pasugo booking"
-          description="Standalone errand booking currently assigned to you."
-          className="mt-6"
-        >
-          <PasugoActivePanel
-            job={activePasugoJob}
-            riderFeePerBooking={activePasugoBooking?.rider_fee_per_booking ?? null}
-            busy={advancePasugo.isPending}
-            onStep={(step) => advancePasugo.mutate({ jobId: activePasugoJob.id, step })}
-            onOpenChat={() =>
-              navigate({
-                to: "/pasugo-chat/$bookingId",
-                params: { bookingId: activePasugoJob.booking_id },
-              })
-            }
-          />
         </Panel>
       ) : null}
 
@@ -422,73 +357,7 @@ function RiderOverview() {
       {showOffer ? (
         <BookingPopup data={offer} onClose={() => setDismissedOffer(offer.offer.id)} />
       ) : null}
-
-      {showPasugoOffer ? (
-        <PasugoBookingPopup
-          data={pasugoOffer}
-          onClose={() => setDismissedPasugoOffer(pasugoOffer.offer.id)}
-        />
-      ) : null}
     </>
-  );
-}
-
-function PasugoActivePanel({
-  job,
-  riderFeePerBooking,
-  busy,
-  onStep,
-  onOpenChat,
-}: {
-  job: PasugoDispatchJob;
-  riderFeePerBooking: number | null;
-  busy: boolean;
-  onStep: (step: "arrived" | "picked_up" | "delivered" | "completed") => void;
-  onOpenChat: () => void;
-}) {
-  return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <p className="font-display text-2xl font-extrabold">{peso(Number(job.delivery_fee))}</p>
-        <p className="text-sm text-muted-foreground">
-          {Number(job.distance_km).toFixed(1)} km · {job.status === "picked_up" ? "Heading to destination" : "Go to pickup"}
-        </p>
-      </div>
-
-      <div className="grid gap-3 sm:grid-cols-2">
-        <Leg icon={MapPin} label="Pick up" title="Pickup" detail={job.pickup_address} />
-        <Leg icon={Navigation} label="Drop off" title="Destination" detail={job.dropoff_address} />
-      </div>
-
-      <div className="rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">Rider platform fee</p>
-        <p className="mt-1 font-semibold">
-          {riderFeePerBooking != null
-            ? peso(Number(riderFeePerBooking))
-            : "Pending (deducted after successful delivery)"}
-        </p>
-      </div>
-
-      <div className="flex flex-wrap gap-3">
-        {job.status === "assigned" ? (
-          <>
-            <Button disabled={busy} onClick={() => onStep("arrived")}>Mark arrived</Button>
-            <Button disabled={busy} onClick={() => onStep("picked_up")}>Mark picked up</Button>
-          </>
-        ) : null}
-
-        {job.status === "picked_up" ? (
-          <>
-            <Button disabled={busy} onClick={() => onStep("delivered")}>Mark delivered</Button>
-            <Button disabled={busy} onClick={() => onStep("completed")}>Complete booking</Button>
-          </>
-        ) : null}
-
-        <Button variant="outline" onClick={onOpenChat}>
-          Chat customer
-        </Button>
-      </div>
-    </div>
   );
 }
 
