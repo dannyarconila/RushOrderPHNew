@@ -8,7 +8,20 @@ import type { Database } from "@/integrations/supabase/types";
  * forwarded so every query runs under the signed-in user's RLS policies.
  */
 export function supabaseForUser(ctx: ToolContext) {
-  return createClient<Database>(process.env.SUPABASE_URL!, process.env.SUPABASE_PUBLISHABLE_KEY!, {
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const supabaseKey =
+    process.env.SUPABASE_PUBLISHABLE_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error(
+      "Missing Supabase env for MCP client. Set SUPABASE_URL plus SUPABASE_PUBLISHABLE_KEY (or SUPABASE_ANON_KEY).",
+    );
+  }
+
+  return createClient<Database>(supabaseUrl, supabaseKey, {
     global: { headers: { Authorization: `Bearer ${ctx.getToken()}` } },
     auth: { persistSession: false, autoRefreshToken: false },
   });
