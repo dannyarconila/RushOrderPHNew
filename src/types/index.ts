@@ -43,5 +43,5 @@ export const ROLE_HOME: Record<AppRole, string> = {
   customer: "/customer",
   seller: "/seller",
   rider: "/rider",
-  admin: "/customer",
+  admin: "/internal-admin",
 };

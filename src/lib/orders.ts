@@ -136,7 +136,7 @@ export async function placeOrder(input: PlaceOrderInput): Promise<string> {
 }
 
 const ORDER_FIELDS =
-  "id,customer_id,store_id,status,payment_method,payment_status,subtotal,delivery_fee,surge_fee,tax,total,distance_km,claim_number,notes,created_at,updated_at,order_items(product_name,quantity)";
+  "id,customer_id,rider_id,store_id,status,payment_method,payment_status,subtotal,delivery_fee,surge_fee,tax,total,distance_km,claim_number,notes,created_at,updated_at,stores(name),order_items(product_name,quantity)";
 
 export interface OrderItemPreview {
   product_name: string;
@@ -147,6 +147,7 @@ export type OrderRow = Pick<
   Database["public"]["Tables"]["orders"]["Row"],
   | "id"
   | "customer_id"
+  | "rider_id"
   | "store_id"
   | "status"
   | "payment_method"
@@ -162,6 +163,7 @@ export type OrderRow = Pick<
   | "created_at"
   | "updated_at"
 > & {
+  stores?: { name: string } | null;
   order_items?: OrderItemPreview[] | null;
 };
 
