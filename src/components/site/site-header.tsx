@@ -47,6 +47,16 @@ export function SiteHeader() {
 
         <div className="hidden items-center gap-2 md:flex">
           <CartSheet />
+          {hasRole("seller") ? (
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/seller">My Store</Link>
+            </Button>
+          ) : null}
+          {hasRole("rider") ? (
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/rider">My Rider</Link>
+            </Button>
+          ) : null}
           {loading ? null : user ? (
             <Button asChild size="sm">
               <Link to={getDashboardRoute(primaryRole)}>My dashboard</Link>
