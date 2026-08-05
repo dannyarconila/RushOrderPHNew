@@ -38,8 +38,12 @@ function PasugoPage() {
   const [customerPhone, setCustomerPhone] = useState(defaultAddress?.phone ?? "");
   const [pickupAddress, setPickupAddress] = useState(defaultAddress?.line1 ?? "");
   const [dropoffAddress, setDropoffAddress] = useState("");
-  const [pickupLat, setPickupLat] = useState(defaultAddress?.latitude ? String(defaultAddress.latitude) : "");
-  const [pickupLng, setPickupLng] = useState(defaultAddress?.longitude ? String(defaultAddress.longitude) : "");
+  const [pickupLat, setPickupLat] = useState(
+    defaultAddress?.latitude ? String(defaultAddress.latitude) : "",
+  );
+  const [pickupLng, setPickupLng] = useState(
+    defaultAddress?.longitude ? String(defaultAddress.longitude) : "",
+  );
   const [dropoffLat, setDropoffLat] = useState("");
   const [dropoffLng, setDropoffLng] = useState("");
   const [notes, setNotes] = useState("");
@@ -76,7 +80,8 @@ function PasugoPage() {
       toast.success("Finding nearby riders now");
       navigate({ to: "/order/$orderId", params: { orderId } });
     },
-    onError: (error: Error) => toast.error("Could not create booking", { description: error.message }),
+    onError: (error: Error) =>
+      toast.error("Could not create booking", { description: error.message }),
   });
 
   return (
@@ -89,18 +94,14 @@ function PasugoPage() {
           Book a rider (standalone)
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          This booking is independent from marketplace orders. We will immediately search nearby riders.
+          This booking is independent from marketplace orders. We will immediately search nearby
+          riders.
         </p>
 
         {latest.data && ["ready", "picked_up"].includes(latest.data.status) ? (
           <div className="mt-5 rounded-2xl border border-primary/30 bg-primary-soft p-4">
             <p className="text-sm font-semibold text-primary">You have an active Pasugo booking.</p>
-            <Button
-              asChild
-              className="mt-3"
-              size="sm"
-              variant="outline"
-            >
+            <Button asChild className="mt-3" size="sm" variant="outline">
               <Link to="/order/$orderId" params={{ orderId: latest.data.id }}>
                 Continue tracking
               </Link>
@@ -111,28 +112,60 @@ function PasugoPage() {
         <section className="mt-6 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-soft)] sm:p-6">
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Customer name">
-              <Input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Optional" />
+              <Input
+                value={customerName}
+                onChange={(e) => setCustomerName(e.target.value)}
+                placeholder="Optional"
+              />
             </Field>
             <Field label="Customer phone">
-              <Input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value)} placeholder="09XX XXX XXXX" />
+              <Input
+                value={customerPhone}
+                onChange={(e) => setCustomerPhone(e.target.value)}
+                placeholder="09XX XXX XXXX"
+              />
             </Field>
             <Field label="Pickup address">
-              <Input value={pickupAddress} onChange={(e) => setPickupAddress(e.target.value)} placeholder="Street / landmark" />
+              <Input
+                value={pickupAddress}
+                onChange={(e) => setPickupAddress(e.target.value)}
+                placeholder="Street / landmark"
+              />
             </Field>
             <Field label="Drop-off address">
-              <Input value={dropoffAddress} onChange={(e) => setDropoffAddress(e.target.value)} placeholder="Street / landmark" />
+              <Input
+                value={dropoffAddress}
+                onChange={(e) => setDropoffAddress(e.target.value)}
+                placeholder="Street / landmark"
+              />
             </Field>
             <Field label="Pickup latitude">
-              <Input value={pickupLat} onChange={(e) => setPickupLat(e.target.value)} placeholder="Optional" />
+              <Input
+                value={pickupLat}
+                onChange={(e) => setPickupLat(e.target.value)}
+                placeholder="Optional"
+              />
             </Field>
             <Field label="Pickup longitude">
-              <Input value={pickupLng} onChange={(e) => setPickupLng(e.target.value)} placeholder="Optional" />
+              <Input
+                value={pickupLng}
+                onChange={(e) => setPickupLng(e.target.value)}
+                placeholder="Optional"
+              />
             </Field>
             <Field label="Destination latitude">
-              <Input value={dropoffLat} onChange={(e) => setDropoffLat(e.target.value)} placeholder="Optional" />
+              <Input
+                value={dropoffLat}
+                onChange={(e) => setDropoffLat(e.target.value)}
+                placeholder="Optional"
+              />
             </Field>
             <Field label="Destination longitude">
-              <Input value={dropoffLng} onChange={(e) => setDropoffLng(e.target.value)} placeholder="Optional" />
+              <Input
+                value={dropoffLng}
+                onChange={(e) => setDropoffLng(e.target.value)}
+                placeholder="Optional"
+              />
             </Field>
           </div>
           <Field label="Notes / instructions" className="mt-4">
@@ -173,7 +206,9 @@ function Field({
 }) {
   return (
     <label className={`flex flex-col gap-1.5 ${className ?? ""}`}>
-      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{label}</span>
+      <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+        {label}
+      </span>
       {children}
     </label>
   );

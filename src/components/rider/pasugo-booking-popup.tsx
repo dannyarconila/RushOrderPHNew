@@ -6,11 +6,7 @@ import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { peso } from "@/lib/marketplace";
-import {
-  acceptPasugoDispatch,
-  declinePasugoDispatch,
-  type PasugoOfferWithJob,
-} from "@/lib/pasugo";
+import { acceptPasugoDispatch, declinePasugoDispatch, type PasugoOfferWithJob } from "@/lib/pasugo";
 import { secondsLeft } from "@/lib/dispatch";
 
 export function PasugoBookingPopup({
@@ -95,21 +91,40 @@ export function PasugoBookingPopup({
         <div className="space-y-4 p-5">
           <div className="flex items-baseline justify-between gap-3">
             <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Estimated fare</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Estimated fare
+              </p>
               <p className="font-display text-3xl font-extrabold">
                 {peso(Number(job.delivery_fee))}
               </p>
             </div>
-            <p className="text-sm text-muted-foreground">{Number(job.distance_km).toFixed(1)} km trip</p>
+            <p className="text-sm text-muted-foreground">
+              {Number(job.distance_km).toFixed(1)} km trip
+            </p>
           </div>
 
           <div className="space-y-3 rounded-2xl bg-muted/50 p-4">
-            <Row icon={MapPin} label="Pick up" title={booking.customer_name ?? "Customer"} detail={job.pickup_address} />
-            <Row icon={Navigation} label="Drop off" title="Destination" detail={job.dropoff_address} />
+            <Row
+              icon={MapPin}
+              label="Pick up"
+              title={booking.customer_name ?? "Customer"}
+              detail={job.pickup_address}
+            />
+            <Row
+              icon={Navigation}
+              label="Drop off"
+              title="Destination"
+              detail={job.dropoff_address}
+            />
           </div>
 
           <div className="flex gap-3">
-            <Button variant="outline" className="flex-1" disabled={busy} onClick={() => decline.mutate()}>
+            <Button
+              variant="outline"
+              className="flex-1"
+              disabled={busy}
+              onClick={() => decline.mutate()}
+            >
               Decline
             </Button>
             <Button className="flex-1" disabled={busy} onClick={() => accept.mutate()}>

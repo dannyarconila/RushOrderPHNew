@@ -140,7 +140,9 @@ function DispatchPage() {
   const searching = list.filter((job) => job.status === "searching");
   const live = list.filter((job) => job.status === "assigned" || job.status === "picked_up");
   const pasugoSearching = pasugoList.filter((job) => job.status === "searching");
-  const pasugoLive = pasugoList.filter((job) => job.status === "assigned" || job.status === "picked_up");
+  const pasugoLive = pasugoList.filter(
+    (job) => job.status === "assigned" || job.status === "picked_up",
+  );
   const online = (riders ?? []).filter((rider) => rider.is_online);
 
   return (

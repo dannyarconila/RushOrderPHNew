@@ -113,7 +113,9 @@ export function WalletModule({ walletType }: { walletType: WalletType }) {
         .map(esc)
         .join(","),
     );
-    const blob = new Blob([[head.join(","), ...rows].join("\n")], { type: "text/csv;charset=utf-8" });
+    const blob = new Blob([[head.join(","), ...rows].join("\n")], {
+      type: "text/csv;charset=utf-8",
+    });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
@@ -243,28 +245,26 @@ export function WalletModule({ walletType }: { walletType: WalletType }) {
               head={["When", "Type", "Description", "Amount", "Balance after", "Status", ""]}
             >
               {filteredTransactions.map((tx) => (
-              <tr key={tx.id}>
-                <Td className="text-xs text-muted-foreground">{dateTime(tx.created_at)}</Td>
-                <Td className="text-xs capitalize">{tx.kind.replace(/_/g, " ")}</Td>
-                <Td className="text-xs text-muted-foreground">
-                  {tx.description ?? tx.reference ?? "—"}
-                </Td>
-                <Td
-                  className={cn(
-                    "text-sm font-semibold",
-                    Number(tx.amount) < 0 && "text-destructive",
-                  )}
-                >
-                  {peso(tx.amount)}
-                </Td>
-                <Td className="text-sm">{peso(tx.new_balance)}</Td>
-                <Td>
-                  <Pill tone={statusTone(tx.status)}>{tx.status}</Pill>
-                </Td>
-                <Td>
-                  {user?.id ? <HideWalletTxButton userId={user.id} txId={tx.id} /> : null}
-                </Td>
-              </tr>
+                <tr key={tx.id}>
+                  <Td className="text-xs text-muted-foreground">{dateTime(tx.created_at)}</Td>
+                  <Td className="text-xs capitalize">{tx.kind.replace(/_/g, " ")}</Td>
+                  <Td className="text-xs text-muted-foreground">
+                    {tx.description ?? tx.reference ?? "—"}
+                  </Td>
+                  <Td
+                    className={cn(
+                      "text-sm font-semibold",
+                      Number(tx.amount) < 0 && "text-destructive",
+                    )}
+                  >
+                    {peso(tx.amount)}
+                  </Td>
+                  <Td className="text-sm">{peso(tx.new_balance)}</Td>
+                  <Td>
+                    <Pill tone={statusTone(tx.status)}>{tx.status}</Pill>
+                  </Td>
+                  <Td>{user?.id ? <HideWalletTxButton userId={user.id} txId={tx.id} /> : null}</Td>
+                </tr>
               ))}
             </AdminTable>
           </>

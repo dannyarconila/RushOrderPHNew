@@ -35,7 +35,10 @@ export function LegalDocumentView({ doc }: { doc: LegalDocumentResolved }) {
               </a>
             ))}
           </nav>
-          <Link to="/legal" className="mt-4 inline-flex text-xs font-semibold text-primary hover:underline">
+          <Link
+            to="/legal"
+            className="mt-4 inline-flex text-xs font-semibold text-primary hover:underline"
+          >
             Back to Legal Center
           </Link>
         </aside>

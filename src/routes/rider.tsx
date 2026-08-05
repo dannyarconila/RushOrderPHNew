@@ -75,7 +75,9 @@ function RiderDashboard() {
         description="Go online to receive live booking requests near you."
       />
       <RoleGate kind="rider">
-        <RiderOverview debugDispatch={search.debugDispatch === "1" || search.debugDispatch === true} />
+        <RiderOverview
+          debugDispatch={search.debugDispatch === "1" || search.debugDispatch === true}
+        />
       </RoleGate>
     </DashboardLayout>
   );
@@ -282,7 +284,9 @@ function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
               <dd className="mt-1 font-semibold">{activeJob?.id ?? "none"}</dd>
             </div>
             <div className="rounded-xl border border-border bg-muted/30 p-3">
-              <dt className="text-xs uppercase tracking-wide text-muted-foreground">Pending offer</dt>
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">
+                Pending offer
+              </dt>
               <dd className="mt-1 font-semibold">{offer?.offer.id ?? "none"}</dd>
             </div>
             <div className="rounded-xl border border-border bg-muted/30 p-3">
@@ -327,7 +331,11 @@ function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
               <Leg
                 icon={MapPin}
                 label="Pick up"
-                title={activeJob.dispatch_type === "pasugo" ? "Pickup" : activeJob.store_name ?? "Store"}
+                title={
+                  activeJob.dispatch_type === "pasugo"
+                    ? "Pickup"
+                    : (activeJob.store_name ?? "Store")
+                }
                 detail={activeJob.pickup_address}
               />
               <Leg
@@ -339,7 +347,9 @@ function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
             </div>
             {activeJob.dispatch_type === "pasugo" && activeJob.customer_notes ? (
               <div className="rounded-xl border border-border bg-muted/40 px-4 py-3 text-sm">
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">Customer notes</p>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Customer notes
+                </p>
                 <p className="mt-1">{activeJob.customer_notes}</p>
               </div>
             ) : null}

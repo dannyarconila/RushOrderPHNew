@@ -139,7 +139,8 @@ function OrderTrackingPage() {
 
         <section className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
           <h2 className="flex items-center gap-2 font-display text-base font-bold">
-            <Package className="size-4 text-primary" /> {isPasugo ? "Booking details" : "Order details"}
+            <Package className="size-4 text-primary" />{" "}
+            {isPasugo ? "Booking details" : "Order details"}
           </h2>
           {isPasugo ? (
             <p className="mt-4 text-sm text-muted-foreground">
@@ -257,8 +258,9 @@ function DispatchPanel({ orderId }: { orderId: string }) {
       {searching ? (
         <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
           <Loader2 className="size-4 animate-spin" />
-          {isPasugo ? "Finding a rider for your booking" : "Finding a rider near the store"} (attempt {job.attempt} of {job.max_attempts}, within{" "}
-          {Number(job.radius_km).toFixed(0)} km)…
+          {isPasugo ? "Finding a rider for your booking" : "Finding a rider near the store"}{" "}
+          (attempt {job.attempt} of {job.max_attempts}, within {Number(job.radius_km).toFixed(0)}{" "}
+          km)…
         </p>
       ) : failed ? (
         <p className="mt-3 text-sm text-destructive">
@@ -280,14 +282,15 @@ function DispatchPanel({ orderId }: { orderId: string }) {
         </p>
       )}
       <p className="mt-2 text-xs text-muted-foreground">
-        {Number(job.distance_km).toFixed(1)} km · {isPasugo ? "estimated fare" : "delivery"} {peso(Number(job.delivery_fee))}
+        {Number(job.distance_km).toFixed(1)} km · {isPasugo ? "estimated fare" : "delivery"}{" "}
+        {peso(Number(job.delivery_fee))}
       </p>
 
       {isPasugo && job.customer_notes ? (
         <p className="mt-2 text-xs text-muted-foreground">Notes: {job.customer_notes}</p>
       ) : null}
 
-      {(job.status === "assigned" || job.status === "picked_up" || job.status === "delivered") ? (
+      {job.status === "assigned" || job.status === "picked_up" || job.status === "delivered" ? (
         <Button asChild variant="outline" className="mt-4">
           <Link to="/booking-chat/$orderId" params={{ orderId }}>
             Chat with rider

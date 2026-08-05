@@ -106,7 +106,8 @@ function CustomerDashboard() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["my-orders"] });
     },
-    onError: (error: Error) => toast.error("Could not cancel order", { description: error.message }),
+    onError: (error: Error) =>
+      toast.error("Could not cancel order", { description: error.message }),
   });
 
   const recent = useMemo(() => (orders ?? []).slice(0, 12), [orders]);
@@ -180,14 +181,19 @@ function CustomerDashboard() {
                   Order number
                 </p>
                 <p className="mt-1 font-display text-2xl font-extrabold tracking-tight">
-                  {activeOrder.claim_number ? activeOrder.claim_number : `Order #${activeOrder.id.slice(0, 8)}`}
+                  {activeOrder.claim_number
+                    ? activeOrder.claim_number
+                    : `Order #${activeOrder.id.slice(0, 8)}`}
                 </p>
 
                 <dl className="mt-5 grid gap-3 sm:grid-cols-2">
                   <InfoRow label="Current status" value={formatStatus(activeOrder.status)} />
                   <InfoRow label="Store name" value={activeOrder.stores?.name ?? "Unknown store"} />
                   <InfoRow label="Order total" value={peso(Number(activeOrder.total ?? 0))} />
-                  <InfoRow label="Delivery fee" value={peso(Number(activeOrder.delivery_fee ?? 0))} />
+                  <InfoRow
+                    label="Delivery fee"
+                    value={peso(Number(activeOrder.delivery_fee ?? 0))}
+                  />
                   <InfoRow label="Estimated arrival" value={estimateArrival(activeOrder)} />
                 </dl>
               </div>
@@ -238,7 +244,11 @@ function CustomerDashboard() {
         )}
       </section>
 
-      <Panel title="Order history" description="Completed orders, cancelled orders and invoices" className="mt-6">
+      <Panel
+        title="Order history"
+        description="Completed orders, cancelled orders and invoices"
+        className="mt-6"
+      >
         <div className="grid gap-6 lg:grid-cols-3">
           <HistoryColumn
             title="Completed Orders"
@@ -429,7 +439,13 @@ function HistoryColumn({
 }: {
   title: string;
   icon: React.ComponentType<{ className?: string }>;
-  orders: { id: string; claim_number: string | null; created_at: string; total: number; status: string }[];
+  orders: {
+    id: string;
+    claim_number: string | null;
+    created_at: string;
+    total: number;
+    status: string;
+  }[];
   emptyText: string;
   showInvoiceAmount?: boolean;
 }) {
@@ -447,16 +463,24 @@ function HistoryColumn({
             <li key={order.id} className="rounded-xl border border-border bg-card p-4">
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <Link to="/order/$orderId" params={{ orderId: order.id }} className="text-sm font-semibold hover:underline">
+                  <Link
+                    to="/order/$orderId"
+                    params={{ orderId: order.id }}
+                    className="text-sm font-semibold hover:underline"
+                  >
                     {order.claim_number ? order.claim_number : `Order #${order.id.slice(0, 8)}`}
                   </Link>
                   <p className="mt-1 text-xs text-muted-foreground">
-                    {new Date(order.created_at).toLocaleDateString("en-PH", { dateStyle: "medium" })}
+                    {new Date(order.created_at).toLocaleDateString("en-PH", {
+                      dateStyle: "medium",
+                    })}
                   </p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm font-semibold">
-                    {showInvoiceAmount ? peso(Number(order.total ?? 0)) : formatStatus(order.status)}
+                    {showInvoiceAmount
+                      ? peso(Number(order.total ?? 0))
+                      : formatStatus(order.status)}
                   </p>
                 </div>
               </div>

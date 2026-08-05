@@ -32,11 +32,16 @@ function LegalDocumentPage() {
         <LegalDocumentView doc={data} />
       ) : (
         <div className="mx-auto w-full max-w-5xl px-4 py-16 sm:px-6 lg:px-8">
-          <h1 className="font-display text-2xl font-extrabold tracking-tight">Document not found</h1>
+          <h1 className="font-display text-2xl font-extrabold tracking-tight">
+            Document not found
+          </h1>
           <p className="mt-2 text-sm text-muted-foreground">
             The requested legal document does not exist or is not currently published.
           </p>
-          <Link to="/legal" className="mt-4 inline-flex text-sm font-semibold text-primary hover:underline">
+          <Link
+            to="/legal"
+            className="mt-4 inline-flex text-sm font-semibold text-primary hover:underline"
+          >
             Back to Legal Center
           </Link>
         </div>

@@ -86,7 +86,9 @@ function PasugoChatPage() {
 
   const recipientId = useMemo(() => {
     if (!user || !booking.data?.assigned_rider_id) return null;
-    return user.id === booking.data.customer_id ? booking.data.assigned_rider_id : booking.data.customer_id;
+    return user.id === booking.data.customer_id
+      ? booking.data.assigned_rider_id
+      : booking.data.customer_id;
   }, [user, booking.data]);
 
   const send = useMutation({
@@ -113,7 +115,9 @@ function PasugoChatPage() {
   return (
     <PublicLayout>
       <main className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6">
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Pasugo chat</p>
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
+          Pasugo chat
+        </p>
         <h1 className="mt-2 font-display text-2xl font-extrabold tracking-tight sm:text-3xl">
           Booking #{bookingId.slice(0, 8).toUpperCase()}
         </h1>

@@ -24,7 +24,8 @@ function InternalAdminLegalPage() {
   const logsQuery = useQuery(legalAcceptanceLogsQuery(500));
 
   const [selectedSlug, setSelectedSlug] = useState(LEGAL_DOCUMENTS[0].slug);
-  const selectedTemplate = LEGAL_DOCUMENTS.find((doc) => doc.slug === selectedSlug) ?? LEGAL_DOCUMENTS[0];
+  const selectedTemplate =
+    LEGAL_DOCUMENTS.find((doc) => doc.slug === selectedSlug) ?? LEGAL_DOCUMENTS[0];
   const stored = (docsQuery.data ?? []).find((row) => row.slug === selectedSlug);
 
   const [title, setTitle] = useState(selectedTemplate.title);
@@ -125,13 +126,20 @@ function InternalAdminLegalPage() {
           </div>
         </Panel>
 
-        <Panel title="Document editor" description="Update document text, version metadata, and publish.">
+        <Panel
+          title="Document editor"
+          description="Update document text, version metadata, and publish."
+        >
           <div className="grid gap-4 sm:grid-cols-2">
             <Field label="Title">
               <Input value={title} onChange={(e) => setTitle(e.target.value)} />
             </Field>
             <Field label="Version">
-              <Input value={version} onChange={(e) => setVersion(e.target.value)} placeholder="e.g. 1.1.0" />
+              <Input
+                value={version}
+                onChange={(e) => setVersion(e.target.value)}
+                placeholder="e.g. 1.1.0"
+              />
             </Field>
           </div>
 
@@ -170,14 +178,7 @@ function InternalAdminLegalPage() {
           <p className="text-sm text-muted-foreground">Loading acceptance logs…</p>
         ) : (
           <AdminTable
-            head={[
-              "Accepted at",
-              "Audience",
-              "User",
-              "Terms version",
-              "Privacy version",
-              "Source",
-            ]}
+            head={["Accepted at", "Audience", "User", "Terms version", "Privacy version", "Source"]}
           >
             {logs.map((row) => (
               <tr key={row.id}>

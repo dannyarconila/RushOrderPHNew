@@ -356,14 +356,16 @@ export const LEGAL_DOCUMENTS: LegalDocumentTemplate[] = [
     slug: "terms-conditions",
     title: "Terms & Conditions",
     summary: "General terms for all RushOrder PH users.",
-    seoDescription: "RushOrder PH Terms & Conditions for customers, sellers, and riders in the Philippines.",
+    seoDescription:
+      "RushOrder PH Terms & Conditions for customers, sellers, and riders in the Philippines.",
     sections: termsSections,
   },
   {
     slug: "privacy-policy",
     title: "Privacy Policy",
     summary: "How RushOrder PH collects, uses, and protects personal data.",
-    seoDescription: "RushOrder PH Privacy Policy aligned with the Philippine Data Privacy Act of 2012.",
+    seoDescription:
+      "RushOrder PH Privacy Policy aligned with the Philippine Data Privacy Act of 2012.",
     sections: privacySections,
   },
   {
@@ -412,21 +414,24 @@ export const LEGAL_DOCUMENTS: LegalDocumentTemplate[] = [
     slug: "cookie-policy",
     title: "Cookie Policy",
     summary: "Cookie categories and usage transparency.",
-    seoDescription: "RushOrder PH Cookie Policy covering essential, analytics, and marketing cookies.",
+    seoDescription:
+      "RushOrder PH Cookie Policy covering essential, analytics, and marketing cookies.",
     sections: cookieSections,
   },
   {
     slug: "intellectual-property-policy",
     title: "Intellectual Property Policy",
     summary: "Ownership rights and infringement reporting.",
-    seoDescription: "Intellectual Property Policy for RushOrder PH platform and user-generated content.",
+    seoDescription:
+      "Intellectual Property Policy for RushOrder PH platform and user-generated content.",
     sections: ipSections,
   },
   {
     slug: "data-privacy-notice",
     title: "Data Privacy Notice",
     summary: "Privacy rights and compliance under Philippine law.",
-    seoDescription: "Data Privacy Notice for RushOrder PH under the Philippine Data Privacy Act of 2012.",
+    seoDescription:
+      "Data Privacy Notice for RushOrder PH under the Philippine Data Privacy Act of 2012.",
     sections: dataNoticeSections,
   },
   {
@@ -481,13 +486,11 @@ export function mergeLegalDocument(
 
   const contentSections =
     resolvedVersion.content && resolvedVersion.content.trim().length > 0
-      ? resolvedVersion.content
-          .split("\n\n")
-          .map((block, index) => ({
-            id: `custom-${index + 1}`,
-            title: index === 0 ? "Policy" : `Policy ${index + 1}`,
-            body: [block.trim()],
-          }))
+      ? resolvedVersion.content.split("\n\n").map((block, index) => ({
+          id: `custom-${index + 1}`,
+          title: index === 0 ? "Policy" : `Policy ${index + 1}`,
+          body: [block.trim()],
+        }))
       : base.sections;
 
   return {

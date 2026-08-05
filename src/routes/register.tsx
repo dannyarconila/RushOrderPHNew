@@ -146,14 +146,23 @@ function RegisterPage() {
               required
             />
             <label className="flex items-start gap-3 rounded-xl border border-border bg-card px-3 py-3 text-sm">
-              <Checkbox checked={acceptedLegal} onCheckedChange={(next) => setAcceptedLegal(Boolean(next))} />
+              <Checkbox
+                checked={acceptedLegal}
+                onCheckedChange={(next) => setAcceptedLegal(Boolean(next))}
+              />
               <span>
                 I agree to the{" "}
-                <Link to="/legal/terms-conditions" className="font-semibold text-primary hover:underline">
+                <Link
+                  to="/legal/terms-conditions"
+                  className="font-semibold text-primary hover:underline"
+                >
                   Terms & Conditions
                 </Link>{" "}
                 and{" "}
-                <Link to="/legal/privacy-policy" className="font-semibold text-primary hover:underline">
+                <Link
+                  to="/legal/privacy-policy"
+                  className="font-semibold text-primary hover:underline"
+                >
                   Privacy Policy
                 </Link>
                 .

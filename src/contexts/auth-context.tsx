@@ -25,7 +25,7 @@ interface AuthContextValue {
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
 
-const ROLE_PRIORITY: AppRole[] = ["admin", "seller", "rider", "customer"];
+const ROLE_PRIORITY: AppRole[] = ["customer", "seller", "rider", "admin"];
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);

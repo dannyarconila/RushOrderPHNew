@@ -88,7 +88,12 @@ function BookingChatPage() {
       .channel(`booking-chat-${orderId}`)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "dispatch_chat_messages", filter: `order_id=eq.${orderId}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "dispatch_chat_messages",
+          filter: `order_id=eq.${orderId}`,
+        },
         () => {
           void queryClient.invalidateQueries({ queryKey: ["booking-chat", orderId] });
         },

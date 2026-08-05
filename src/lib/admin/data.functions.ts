@@ -355,10 +355,7 @@ export const adminMutateFn = createServerFn({ method: "POST" })
 
       case "upsert_setting": {
         const account = await requirePermission("settings");
-        const seededSettingDefaults: Record<
-          string,
-          { description: string; is_public: boolean }
-        > = {
+        const seededSettingDefaults: Record<string, { description: string; is_public: boolean }> = {
           marketplace_customer_radius_km: {
             description:
               "Maximum distance in kilometers for showing stores in customer marketplace results.",
@@ -420,17 +417,15 @@ export const adminMutateFn = createServerFn({ method: "POST" })
         };
 
         const docKey = `legal_doc_${data.slug}`;
-        const { error: settingError } = await supabaseAdmin
-          .from("system_settings")
-          .upsert(
-            {
-              key: docKey,
-              value: payload as never,
-              description: `Legal document payload for ${data.slug}`,
-              is_public: true,
-            },
-            { onConflict: "key" },
-          );
+        const { error: settingError } = await supabaseAdmin.from("system_settings").upsert(
+          {
+            key: docKey,
+            value: payload as never,
+            description: `Legal document payload for ${data.slug}`,
+            is_public: true,
+          },
+          { onConflict: "key" },
+        );
         if (settingError) throw new Error(settingError.message);
 
         const versionSettingKeyBySlug: Record<string, string> = {
@@ -442,17 +437,15 @@ export const adminMutateFn = createServerFn({ method: "POST" })
         const versionSettingKey = versionSettingKeyBySlug[data.slug];
 
         if (versionSettingKey) {
-          const { error: versionError } = await supabaseAdmin
-            .from("system_settings")
-            .upsert(
-              {
-                key: versionSettingKey,
-                value: data.version as never,
-                description: `Current version for ${data.slug}`,
-                is_public: true,
-              },
-              { onConflict: "key" },
-            );
+          const { error: versionError } = await supabaseAdmin.from("system_settings").upsert(
+            {
+              key: versionSettingKey,
+              value: data.version as never,
+              description: `Current version for ${data.slug}`,
+              is_public: true,
+            },
+            { onConflict: "key" },
+          );
           if (versionError) throw new Error(versionError.message);
         }
 

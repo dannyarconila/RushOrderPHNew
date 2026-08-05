@@ -109,7 +109,8 @@ function PasugoTrackingPage() {
       toast.success("Booking cancelled");
       void queryClient.invalidateQueries({ queryKey: ["pasugo-booking", bookingId] });
     },
-    onError: (error: Error) => toast.error("Could not cancel booking", { description: error.message }),
+    onError: (error: Error) =>
+      toast.error("Could not cancel booking", { description: error.message }),
   });
 
   const availableCount = useQuery({
@@ -146,17 +147,22 @@ function PasugoTrackingPage() {
   return (
     <PublicLayout>
       <main className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6">
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Pasugo booking</p>
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
+          Pasugo booking
+        </p>
         <h1 className="mt-2 font-display text-2xl font-extrabold tracking-tight sm:text-3xl">
           {statusText}
         </h1>
-        <p className="mt-1.5 text-sm text-muted-foreground">Booking #{bookingId.slice(0, 8).toUpperCase()}</p>
+        <p className="mt-1.5 text-sm text-muted-foreground">
+          Booking #{bookingId.slice(0, 8).toUpperCase()}
+        </p>
 
         <section className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
           {job.data?.status === "searching" ? (
             <p className="flex items-center gap-2 text-sm text-muted-foreground">
               <Loader2 className="size-4 animate-spin" />
-              Finding nearby rider... Attempt {job.data.attempt}/{job.data.max_attempts} within {Number(job.data.radius_km).toFixed(0)} km.
+              Finding nearby rider... Attempt {job.data.attempt}/{job.data.max_attempts} within{" "}
+              {Number(job.data.radius_km).toFixed(0)} km.
             </p>
           ) : null}
 
@@ -171,7 +177,9 @@ function PasugoTrackingPage() {
             </div>
             <div className="flex justify-between gap-3">
               <dt className="text-muted-foreground">Estimated distance</dt>
-              <dd className="font-medium">{Number(booking.data?.estimated_distance_km ?? 0).toFixed(1)} km</dd>
+              <dd className="font-medium">
+                {Number(booking.data?.estimated_distance_km ?? 0).toFixed(1)} km
+              </dd>
             </div>
             <div className="flex justify-between gap-3">
               <dt className="text-muted-foreground">Estimated fare</dt>
@@ -193,7 +201,7 @@ function PasugoTrackingPage() {
             ) : null}
           </dl>
 
-          {(booking.data?.status === "finding_rider" || booking.data?.status === "requested") ? (
+          {booking.data?.status === "finding_rider" || booking.data?.status === "requested" ? (
             <Button
               variant="outline"
               className="mt-5"

@@ -66,13 +66,12 @@ function RidersPage() {
     >();
     for (const job of pasugoJobs ?? []) {
       if (!job.assigned_rider_id) continue;
-      const entry =
-        map.get(job.assigned_rider_id) ?? {
-          active: 0,
-          completed: 0,
-          grossFare: 0,
-          latestStatus: null,
-        };
+      const entry = map.get(job.assigned_rider_id) ?? {
+        active: 0,
+        completed: 0,
+        grossFare: 0,
+        latestStatus: null,
+      };
 
       if (job.status === "assigned" || job.status === "picked_up") {
         entry.active += 1;

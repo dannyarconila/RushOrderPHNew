@@ -399,7 +399,9 @@ export function activePasugoJobForRiderQuery(riderId: string | undefined) {
   });
 }
 
-export async function acceptPasugoDispatch(jobId: string): Promise<{ ok: boolean; booking_id?: string; reason?: string }> {
+export async function acceptPasugoDispatch(
+  jobId: string,
+): Promise<{ ok: boolean; booking_id?: string; reason?: string }> {
   const { data, error } = await supabase.rpc("pasugo_dispatch_accept", { _job_id: jobId });
   if (error) throw error;
   return (data ?? { ok: false }) as { ok: boolean; booking_id?: string; reason?: string };

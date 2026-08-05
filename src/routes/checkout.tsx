@@ -97,7 +97,10 @@ function CheckoutPage() {
       return 0;
     }
 
-    return Math.max(0, Math.round(haversineKm(storeLat, storeLng, addressLat, addressLng) * 100) / 100);
+    return Math.max(
+      0,
+      Math.round(haversineKm(storeLat, storeLng, addressLat, addressLng) * 100) / 100,
+    );
   }, [store.data, selectedAddress]);
   const feeSettings = useMemo(
     () => ({

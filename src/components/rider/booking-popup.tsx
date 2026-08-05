@@ -47,8 +47,7 @@ export function BookingPopup({ data, onClose }: { data: OfferWithJob; onClose: (
       if (result.ok) {
         toast.success("Delivery assigned to you");
         navigate({ to: "/booking-chat/$orderId", params: { orderId: job.order_id } });
-      }
-      else toast.info("Another rider accepted this booking first");
+      } else toast.info("Another rider accepted this booking first");
       refresh();
       onClose();
     },
@@ -72,7 +71,8 @@ export function BookingPopup({ data, onClose }: { data: OfferWithJob; onClose: (
       <div className="w-full max-w-md overflow-hidden rounded-3xl border border-border bg-card shadow-2xl">
         <div className="flex items-center justify-between gap-3 bg-primary px-5 py-4 text-primary-foreground">
           <span className="flex items-center gap-2 font-display text-lg font-extrabold">
-            <Bike className="size-5" /> {isPasugo ? "Incoming Pasugo Order!" : "Incoming Delivery Order"}
+            <Bike className="size-5" />{" "}
+            {isPasugo ? "Incoming Pasugo Order!" : "Incoming Delivery Order"}
           </span>
           <span className="flex items-center gap-1 text-sm font-bold tabular-nums">
             <Clock className="size-4" /> {remaining}s
@@ -108,7 +108,7 @@ export function BookingPopup({ data, onClose }: { data: OfferWithJob; onClose: (
             <Row
               icon={MapPin}
               label="Pick up"
-              title={isPasugo ? "Pickup Address" : job.store_name ?? "Store"}
+              title={isPasugo ? "Pickup Address" : (job.store_name ?? "Store")}
               detail={job.pickup_address}
             />
             <Row
@@ -121,7 +121,9 @@ export function BookingPopup({ data, onClose }: { data: OfferWithJob; onClose: (
 
           {isPasugo && job.customer_notes ? (
             <div className="rounded-2xl border border-border bg-muted/30 p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">Customer notes</p>
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Customer notes
+              </p>
               <p className="mt-1 text-sm">{job.customer_notes}</p>
             </div>
           ) : null}
