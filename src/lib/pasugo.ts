@@ -301,3 +301,164 @@ export function customerPasugoOrdersQuery(userId: string | undefined, limit = 5)
     },
   });
 }
+
+export function pasugoBookingQuery(bookingId: string) {
+  return queryOptions({
+    queryKey: ["pasugo-booking", bookingId],
+    queryFn: async (): Promise<PasugoBooking | null> => {
+      const { data, error } = await supabase
+        .from("pasugo_bookings" as never)
+        .select("*")
+        .eq("id", bookingId)
+        .maybeSingle();
+      if (error) throw error;
+      return (data ?? null) as PasugoBooking | null;
+    },
+  });
+}
+
+export function pasugoJobQuery(bookingId: string) {
+  return queryOptions({
+    queryKey: ["pasugo-job", bookingId],
+    queryFn: async (): Promise<PasugoDispatchJob | null> => {
+      const { data, error } = await supabase
+        .from("pasugo_dispatch_jobs" as never)
+        .select("*")
+        .eq("booking_id", bookingId)
+        .maybeSingle();
+      if (error) throw error;
+      return (data ?? null) as PasugoDispatchJob | null;
+    },
+  });
+}
+
+export function riderPendingPasugoOfferQuery(riderId: string | undefined) {
+  return queryOptions({
+    queryKey: ["pasugo-offer", riderId ?? null],
+    enabled: Boolean(riderId),
+    queryFn: async (): Promise<PasugoOfferWithJob | null> => {
+      const { data, error } = await supabase
+        .from("pasugo_dispatch_offers" as never)
+        .select("*,pasugo_dispatch_jobs(*),pasugo_bookings(*)")
+        .eq("rider_id", riderId!)
+        .eq("status", "pending")
+        .gt("expires_at", new Date().toISOString())
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+
+      const row = data as {
+        id: string;
+        job_id: string;
+        booking_id: string;
+        rider_id: string;
+        status: string;
+        expires_at: string;
+        distance_km: number | null;
+        pasugo_dispatch_jobs: PasugoDispatchJob | null;
+        pasugo_bookings: PasugoBooking | null;
+      };
+      if (!row.pasugo_dispatch_jobs || !row.pasugo_bookings) return null;
+      if (row.pasugo_dispatch_jobs.status !== "searching") return null;
+
+      return {
+        offer: {
+          id: row.id,
+          job_id: row.job_id,
+          booking_id: row.booking_id,
+          rider_id: row.rider_id,
+          status: row.status,
+          expires_at: row.expires_at,
+          distance_km: row.distance_km,
+        },
+        job: row.pasugo_dispatch_jobs,
+        booking: row.pasugo_bookings,
+      };
+    },
+  });
+}
+
+export function activePasugoJobForRiderQuery(riderId: string | undefined) {
+  return queryOptions({
+    queryKey: ["pasugo-active-job", riderId ?? null],
+    enabled: Boolean(riderId),
+    queryFn: async (): Promise<PasugoDispatchJob | null> => {
+      const { data, error } = await supabase
+        .from("pasugo_dispatch_jobs" as never)
+        .select("*")
+        .eq("assigned_rider_id", riderId!)
+        .in("status", ["assigned", "picked_up"])
+        .order("assigned_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return (data ?? null) as PasugoDispatchJob | null;
+    },
+  });
+}
+
+export async function acceptPasugoDispatch(jobId: string): Promise<{ ok: boolean; booking_id?: string; reason?: string }> {
+  const { data, error } = await supabase.rpc("pasugo_dispatch_accept", { _job_id: jobId });
+  if (error) throw error;
+  return (data ?? { ok: false }) as { ok: boolean; booking_id?: string; reason?: string };
+}
+
+export async function declinePasugoDispatch(jobId: string) {
+  const { error } = await supabase.rpc("pasugo_dispatch_decline", { _job_id: jobId });
+  if (error) throw error;
+}
+
+export async function advancePasugoDispatch(
+  jobId: string,
+  step: "arrived" | "picked_up" | "delivered" | "completed",
+) {
+  const { error } = await supabase.rpc("pasugo_dispatch_advance", { _job_id: jobId, _step: step });
+  if (error) throw error;
+}
+
+export async function retryPasugoDispatch(jobId: string) {
+  const { error } = await supabase.rpc("pasugo_dispatch_retry", { _job_id: jobId });
+  if (error) throw error;
+}
+
+export async function cancelPasugoBooking(bookingId: string) {
+  const { error } = await supabase.rpc("pasugo_cancel", { _booking_id: bookingId });
+  if (error) throw error;
+}
+
+export function customerLatestPasugoQuery(userId: string | undefined) {
+  return queryOptions({
+    queryKey: ["pasugo-customer-latest", userId ?? null],
+    enabled: Boolean(userId),
+    queryFn: async (): Promise<PasugoBooking | null> => {
+      const { data, error } = await supabase
+        .from("pasugo_bookings" as never)
+        .select("*")
+        .eq("customer_id", userId!)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return (data ?? null) as PasugoBooking | null;
+    },
+  });
+}
+
+export function customerPasugoBookingsQuery(userId: string | undefined, limit = 5) {
+  return queryOptions({
+    queryKey: ["pasugo-customer-list", userId ?? null, limit],
+    enabled: Boolean(userId),
+    queryFn: async (): Promise<PasugoBooking[]> => {
+      const { data, error } = await supabase
+        .from("pasugo_bookings" as never)
+        .select("*")
+        .eq("customer_id", userId!)
+        .order("created_at", { ascending: false })
+        .limit(limit);
+      if (error) throw error;
+      return (data ?? []) as PasugoBooking[];
+    },
+  });
+}

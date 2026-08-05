@@ -25,6 +25,23 @@ import { DISPATCH_SETTING_KEYS } from "@/lib/dispatch";
 type DispatchJobRow = Database["public"]["Tables"]["dispatch_jobs"]["Row"];
 type RiderStatusRow = Database["public"]["Tables"]["rider_status"]["Row"];
 type SettingRow = Database["public"]["Tables"]["system_settings"]["Row"];
+type PasugoDispatchJobRow = {
+  id: string;
+  booking_id: string;
+  status: string;
+  distance_km: number;
+  delivery_fee: number;
+  attempt: number;
+  max_attempts: number;
+  radius_km: number;
+  assigned_rider_id: string | null;
+  pickup_address: string | null;
+  dropoff_address: string | null;
+  pasugo_bookings: {
+    rider_fee_per_booking: number | null;
+  } | null;
+  created_at: string;
+};
 
 export const Route = createFileRoute("/internal-admin/dispatch")({
   component: DispatchPage,
@@ -57,6 +74,24 @@ function dispatchJobsQuery() {
         },
       });
       return (result.rows ?? []) as DispatchJobRow[];
+    },
+  });
+}
+
+function pasugoDispatchJobsQuery() {
+  return queryOptions({
+    queryKey: ["admin", "pasugo-dispatch-jobs"],
+    refetchInterval: 10_000,
+    queryFn: async () => {
+      const result = await adminReadFn({
+        data: {
+          table: "pasugo_dispatch_jobs",
+          columns: "*,pasugo_bookings(rider_fee_per_booking)",
+          order: [{ column: "created_at", ascending: false }],
+          limit: 100,
+        },
+      });
+      return (result.rows ?? []) as PasugoDispatchJobRow[];
     },
   });
 }
@@ -96,16 +131,16 @@ function dispatchSettingsRowsQuery() {
 
 function DispatchPage() {
   const { data: jobs, isLoading } = useQuery(dispatchJobsQuery());
+  const { data: pasugoJobs } = useQuery(pasugoDispatchJobsQuery());
   const { data: riders } = useQuery(ridersOnlineQuery());
   const { data: settings } = useQuery(dispatchSettingsRowsQuery());
 
   const list = jobs ?? [];
+  const pasugoList = pasugoJobs ?? [];
   const searching = list.filter((job) => job.status === "searching");
   const live = list.filter((job) => job.status === "assigned" || job.status === "picked_up");
-  const pasugoSearching = list.filter((job) => job.dispatch_type === "pasugo" && job.status === "searching");
-  const pasugoLive = list.filter(
-    (job) => job.dispatch_type === "pasugo" && (job.status === "assigned" || job.status === "picked_up"),
-  );
+  const pasugoSearching = pasugoList.filter((job) => job.status === "searching");
+  const pasugoLive = pasugoList.filter((job) => job.status === "assigned" || job.status === "picked_up");
   const online = (riders ?? []).filter((rider) => rider.is_online);
 
   return (
@@ -187,26 +222,30 @@ function DispatchPage() {
         ) : (
           <AdminTable
             head={[
-              "Order",
+              "Booking",
               "Pickup",
               "Drop-off",
               "Distance",
               "Fare",
+              "Rider fee",
               "Attempt",
               "Rider",
               "Status",
               "Created",
             ]}
           >
-            {list
-              .filter((job) => job.dispatch_type === "pasugo")
-              .map((job) => (
+            {pasugoList.map((job) => (
               <tr key={job.id}>
-                <Td className="text-xs text-muted-foreground">{shortId(job.order_id)}</Td>
+                <Td className="text-xs text-muted-foreground">{shortId(job.booking_id)}</Td>
                 <Td className="text-sm">{job.pickup_address ?? "—"}</Td>
                 <Td className="text-sm">{job.dropoff_address ?? "—"}</Td>
                 <Td className="text-sm">{Number(job.distance_km).toFixed(1)} km</Td>
                 <Td className="text-sm">{peso(Number(job.delivery_fee))}</Td>
+                <Td className="text-sm">
+                  {job.pasugo_bookings?.rider_fee_per_booking != null
+                    ? peso(Number(job.pasugo_bookings.rider_fee_per_booking))
+                    : "Pending"}
+                </Td>
                 <Td className="text-xs text-muted-foreground">
                   {job.attempt}/{job.max_attempts} · {Number(job.radius_km).toFixed(0)} km
                 </Td>
