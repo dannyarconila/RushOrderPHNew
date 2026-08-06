@@ -115,7 +115,8 @@ function BecomeSellerPage() {
   const [documents, setDocuments] = useState<Record<string, string>>({});
   const [showLegalModal, setShowLegalModal] = useState(false);
   const [selectedLegalSlug, setSelectedLegalSlug] = useState("");
-  const { data: legalDocument } = useQuery(legalDocumentQuery(selectedLegalSlug), {
+  const { data: legalDocument } = useQuery({
+    ...legalDocumentQuery(selectedLegalSlug),
     enabled: showLegalModal && selectedLegalSlug.length > 0,
   });
 
