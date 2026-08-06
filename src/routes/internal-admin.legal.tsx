@@ -42,7 +42,7 @@ function InternalAdminLegalPage() {
     setContent(row?.content ?? "");
   }, [docsQuery.data, selectedSlug, selectedTemplate.summary, selectedTemplate.title]);
 
-  const logs = logsQuery.data ?? [];
+  const logs = useMemo(() => logsQuery.data ?? [], [logsQuery.data]);
   const stats = useMemo(() => {
     const byAudience = {
       customer: 0,
