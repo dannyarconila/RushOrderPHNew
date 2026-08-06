@@ -26,9 +26,21 @@ const COLUMNS = [
     title: "Legal",
     links: [
       { to: "/legal", label: "Legal Center" },
-      { to: "/legal/$slug", params: { slug: "terms-conditions" as LegalSlug }, label: "Terms & Conditions" },
-      { to: "/legal/$slug", params: { slug: "privacy-policy" as LegalSlug }, label: "Privacy Policy" },
-      { to: "/legal/$slug", params: { slug: "trust-safety" as LegalSlug }, label: "Trust & Safety" },
+      {
+        to: "/legal/$slug",
+        params: { slug: "terms-conditions" as LegalSlug },
+        label: "Terms & Conditions",
+      },
+      {
+        to: "/legal/$slug",
+        params: { slug: "privacy-policy" as LegalSlug },
+        label: "Privacy Policy",
+      },
+      {
+        to: "/legal/$slug",
+        params: { slug: "trust-safety" as LegalSlug },
+        label: "Trust & Safety",
+      },
     ],
   },
 ] as const;

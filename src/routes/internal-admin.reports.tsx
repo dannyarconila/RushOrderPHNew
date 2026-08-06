@@ -2,13 +2,7 @@ import { createFileRoute } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
 
-import {
-  AdminTable,
-  FilterBar,
-  FilterChip,
-  Td,
-  shortId,
-} from "@/components/admin/primitives";
+import { AdminTable, FilterBar, FilterChip, Td, shortId } from "@/components/admin/primitives";
 import { PageHeader, Panel, StatCard } from "@/components/dashboard/primitives";
 import { adminReportsQuery, type SalesBucket } from "@/lib/admin/queries";
 import { peso } from "@/lib/currency";

@@ -35,9 +35,7 @@ function createSupabaseClient() {
   // Preferred convention: VITE_SUPABASE_PUBLISHABLE_KEY.
   // Backward compatibility: VITE_SUPABASE_ANON_KEY and server-side aliases.
   const SUPABASE_URL =
-    import.meta.env.VITE_SUPABASE_URL ||
-    processEnv?.VITE_SUPABASE_URL ||
-    processEnv?.SUPABASE_URL;
+    import.meta.env.VITE_SUPABASE_URL || processEnv?.VITE_SUPABASE_URL || processEnv?.SUPABASE_URL;
   const SUPABASE_PUBLISHABLE_KEY =
     import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY ||
     import.meta.env.VITE_SUPABASE_ANON_KEY ||

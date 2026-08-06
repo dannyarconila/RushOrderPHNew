@@ -5,14 +5,7 @@ import { Radar } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
-import {
-  AdminTable,
-  Pill,
-  Td,
-  dateTime,
-  shortId,
-  statusTone,
-} from "@/components/admin/primitives";
+import { AdminTable, Pill, Td, dateTime, shortId, statusTone } from "@/components/admin/primitives";
 import { EmptyState, PageHeader, Panel } from "@/components/dashboard/primitives";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";

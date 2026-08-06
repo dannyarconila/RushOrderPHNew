@@ -29,7 +29,11 @@ function LegalDocumentPage() {
           <p className="text-sm text-muted-foreground">Loading document…</p>
         </div>
       ) : data ? (
-        <LegalDocumentView doc={data} />
+        <>
+          <pre style={{ whiteSpace: "pre-wrap", fontSize: "12px" }}>
+            {JSON.stringify(data, null, 2)}
+          </pre>
+        </>
       ) : (
         <div className="mx-auto w-full max-w-5xl px-4 py-16 sm:px-6 lg:px-8">
           <h1 className="font-display text-2xl font-extrabold tracking-tight">
