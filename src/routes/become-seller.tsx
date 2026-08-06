@@ -1,6 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ArrowLeft, ArrowRight, Building2, Home, Loader2, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { toast } from "sonner";
 
 import { DocumentUpload } from "@/components/forms/document-upload";
@@ -17,6 +18,8 @@ import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import type { SellerBusinessType } from "@/types";
 import { cn } from "@/lib/utils";
+import { LegalModal } from "@/components/legal/legal-modal";
+import { legalDocumentQuery } from "@/lib/legal/public";
 
 export const Route = createFileRoute("/become-seller")({
   head: () => ({
@@ -110,6 +113,11 @@ function BecomeSellerPage() {
     prep_time: "",
   });
   const [documents, setDocuments] = useState<Record<string, string>>({});
+  const [showLegalModal, setShowLegalModal] = useState(false);
+  const [selectedLegalSlug, setSelectedLegalSlug] = useState("");
+  const { data: legalDocument } = useQuery(legalDocumentQuery(selectedLegalSlug), {
+    enabled: showLegalModal && selectedLegalSlug.length > 0,
+  });
 
   useEffect(() => {
     if (!loading && !user)
@@ -399,6 +407,60 @@ function BecomeSellerPage() {
                   ["Documents uploaded", String(Object.keys(documents).length)],
                 ]}
               />
+
+              <div className="mt-8 rounded-xl border border-border bg-secondary/30 p-5">
+                <h3 className="font-semibold">Legal Agreements</h3>
+
+                <div className="mt-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Privacy Policy</span>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedLegalSlug("privacy-policy");
+                        setShowLegalModal(true);
+                      }}
+                    >
+                      View
+                    </Button>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Terms & Conditions</span>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedLegalSlug("terms-and-conditions");
+                        setShowLegalModal(true);
+                      }}
+                    >
+                      View
+                    </Button>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm">Seller Partner Agreement</span>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        setSelectedLegalSlug("seller-partner-agreement");
+                        setShowLegalModal(true);
+                      }}
+                    >
+                      View
+                    </Button>
+                  </div>
+                </div>
+              </div>
             </div>
           ) : null}
 
@@ -429,6 +491,15 @@ function BecomeSellerPage() {
           </Link>
         </p>
       </section>
+
+      <LegalModal
+        open={showLegalModal}
+        document={legalDocument ?? null}
+        onClose={() => {
+          setShowLegalModal(false);
+          setSelectedLegalSlug("");
+        }}
+      />
     </PublicLayout>
   );
 }
