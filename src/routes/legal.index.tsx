@@ -1,7 +1,7 @@
-import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 
-import { PublicLayout, PageHero } from "@/components/site/public-layout";
+import { PageHero } from "@/components/site/public-layout";
 import { legalCenterQuery } from "@/lib/legal/public";
 
 export const Route = createFileRoute("/legal/")({
@@ -27,7 +27,7 @@ function LegalCenterPage() {
   const { data, isLoading } = useQuery(legalCenterQuery());
 
   return (
-    <PublicLayout>
+    <>
       <PageHero
         eyebrow="Legal & Compliance"
         title="RushOrder PH Legal Center"
@@ -66,7 +66,6 @@ function LegalCenterPage() {
           </div>
         )}
       </section>
-      <Outlet />
-    </PublicLayout>
+    </>
   );
 }
