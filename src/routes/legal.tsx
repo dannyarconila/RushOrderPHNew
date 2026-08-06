@@ -1,4 +1,4 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, Link, Outlet } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 
 import { PublicLayout, PageHero } from "@/components/site/public-layout";
@@ -66,6 +66,7 @@ function LegalCenterPage() {
           </div>
         )}
       </section>
+      <Outlet />
     </PublicLayout>
   );
 }
