@@ -57,6 +57,7 @@ import { Route as InternalAdminStoreApplicationsRouteImport } from './routes/int
 import { Route as InternalAdminTopupsRouteImport } from './routes/internal-admin.topups'
 import { Route as InternalAdminUsersRouteImport } from './routes/internal-admin.users'
 import { Route as InternalAdminWalletsRouteImport } from './routes/internal-admin.wallets'
+import { Route as LegalIndexRouteImport } from './routes/legal.index'
 import { Route as LegalSlugRouteImport } from './routes/legal.$slug'
 import { Route as OrderOrderIdRouteImport } from './routes/order.$orderId'
 import { Route as PasugoChatBookingIdRouteImport } from './routes/pasugo-chat.$bookingId'
@@ -311,6 +312,11 @@ const InternalAdminWalletsRoute = InternalAdminWalletsRouteImport.update({
   path: '/wallets',
   getParentRoute: () => InternalAdminRoute,
 } as any)
+const LegalIndexRoute = LegalIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => LegalRoute,
+} as any)
 const LegalSlugRoute = LegalSlugRouteImport.update({
   id: '/$slug',
   path: '/$slug',
@@ -402,6 +408,7 @@ export interface FileRoutesByFullPath {
   '/pasugo/$bookingId': typeof PasugoBookingIdRoute
   '/store/$storeId': typeof StoreStoreIdRoute
   '/internal-admin/': typeof InternalAdminIndexRoute
+  '/legal/': typeof LegalIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
 }
@@ -417,7 +424,6 @@ export interface FileRoutesByTo {
   '/faq': typeof FaqRoute
   '/food': typeof FoodRoute
   '/groceries': typeof GroceriesRoute
-  '/legal': typeof LegalRouteWithChildren
   '/login': typeof LoginRoute
   '/marketplace': typeof MarketplaceRoute
   '/mcp': typeof McpRoute
@@ -458,6 +464,7 @@ export interface FileRoutesByTo {
   '/pasugo/$bookingId': typeof PasugoBookingIdRoute
   '/store/$storeId': typeof StoreStoreIdRoute
   '/internal-admin': typeof InternalAdminIndexRoute
+  '/legal': typeof LegalIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
 }
@@ -516,6 +523,7 @@ export interface FileRoutesById {
   '/pasugo/$bookingId': typeof PasugoBookingIdRoute
   '/store/$storeId': typeof StoreStoreIdRoute
   '/internal-admin/': typeof InternalAdminIndexRoute
+  '/legal/': typeof LegalIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
 }
@@ -575,6 +583,7 @@ export interface FileRouteTypes {
     | '/pasugo/$bookingId'
     | '/store/$storeId'
     | '/internal-admin/'
+    | '/legal/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
   fileRoutesByTo: FileRoutesByTo
@@ -590,7 +599,6 @@ export interface FileRouteTypes {
     | '/faq'
     | '/food'
     | '/groceries'
-    | '/legal'
     | '/login'
     | '/marketplace'
     | '/mcp'
@@ -631,6 +639,7 @@ export interface FileRouteTypes {
     | '/pasugo/$bookingId'
     | '/store/$storeId'
     | '/internal-admin'
+    | '/legal'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
   id:
@@ -688,6 +697,7 @@ export interface FileRouteTypes {
     | '/pasugo/$bookingId'
     | '/store/$storeId'
     | '/internal-admin/'
+    | '/legal/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
   fileRoutesById: FileRoutesById
@@ -1068,6 +1078,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof InternalAdminWalletsRouteImport
       parentRoute: typeof InternalAdminRoute
     }
+    '/legal/': {
+      id: '/legal/'
+      path: '/'
+      fullPath: '/legal/'
+      preLoaderRoute: typeof LegalIndexRouteImport
+      parentRoute: typeof LegalRoute
+    }
     '/legal/$slug': {
       id: '/legal/$slug'
       path: '/$slug'
@@ -1168,10 +1185,12 @@ const InternalAdminRouteWithChildren = InternalAdminRoute._addFileChildren(
 
 interface LegalRouteChildren {
   LegalSlugRoute: typeof LegalSlugRoute
+  LegalIndexRoute: typeof LegalIndexRoute
 }
 
 const LegalRouteChildren: LegalRouteChildren = {
   LegalSlugRoute: LegalSlugRoute,
+  LegalIndexRoute: LegalIndexRoute,
 }
 
 const LegalRouteWithChildren = LegalRoute._addFileChildren(LegalRouteChildren)

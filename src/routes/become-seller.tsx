@@ -1,5 +1,4 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ArrowRight, Building2, Home, Loader2, ShieldCheck } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -14,10 +13,8 @@ import {
 } from "@/components/forms/wizard";
 import { PageHero, PublicLayout } from "@/components/site/public-layout";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
-import { legalVersionSnapshotQuery } from "@/lib/legal/public";
 import type { SellerBusinessType } from "@/types";
 import { cn } from "@/lib/utils";
 
@@ -83,11 +80,9 @@ const STEPS_HOME = [
 function BecomeSellerPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const versions = useQuery(legalVersionSnapshotQuery());
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [type, setType] = useState<SellerBusinessType | "">("");
-  const [acceptedLegal, setAcceptedLegal] = useState(false);
 
   const [business, setBusiness] = useState({
     business_name: "",
@@ -137,10 +132,6 @@ function BecomeSellerPage() {
       toast.error("Please complete your store name and address");
       return;
     }
-    if (!acceptedLegal) {
-      toast.error("Please accept the Seller Terms & Conditions and Privacy Policy.");
-      return;
-    }
 
     const ownerInfo = {
       ...owner,
@@ -160,9 +151,6 @@ function BecomeSellerPage() {
       service_type: mapStoreServiceType(store.category),
     };
 
-    const termsVersion = versions.data?.sellerTermsVersion ?? "1.0.0";
-    const privacyVersion = versions.data?.privacyVersion ?? "1.0.0";
-
     setSubmitting(true);
     const { error } = await supabase.from("seller_applications").insert({
       user_id: user.id,
@@ -172,11 +160,7 @@ function BecomeSellerPage() {
       address: normalizedAddress,
       store_info: storeInfo,
       documents,
-      accepted_terms: true,
-      accepted_terms_at: new Date().toISOString(),
-      terms_version: termsVersion,
-      privacy_version: privacyVersion,
-    } as never);
+    });
     setSubmitting(false);
     if (error) {
       toast.error("Could not submit application", { description: error.message });
@@ -415,31 +399,6 @@ function BecomeSellerPage() {
                   ["Documents uploaded", String(Object.keys(documents).length)],
                 ]}
               />
-              <label className="flex items-start gap-3 rounded-xl border border-border bg-card px-3 py-3 text-sm">
-                <Checkbox
-                  checked={acceptedLegal}
-                  onCheckedChange={(next) => setAcceptedLegal(Boolean(next))}
-                />
-                <span>
-                  I have read and agree to the{" "}
-                  <Link
-                    to="/legal/$slug"
-                    params={{ slug: "seller-terms-conditions" }}
-                    className="font-semibold text-primary hover:underline"
-                  >
-                    Seller Terms & Conditions
-                  </Link>{" "}
-                  and{" "}
-                  <Link
-                    to="/legal/$slug"
-                    params={{ slug: "privacy-policy" }}
-                    className="font-semibold text-primary hover:underline"
-                  >
-                    Privacy Policy
-                  </Link>
-                  .
-                </span>
-              </label>
             </div>
           ) : null}
 
@@ -452,7 +411,7 @@ function BecomeSellerPage() {
               <ArrowLeft className="size-4" /> Back
             </Button>
             {step === steps.length - 1 ? (
-              <Button onClick={submit} disabled={submitting || !acceptedLegal}>
+              <Button onClick={submit} disabled={submitting}>
                 {submitting ? <Loader2 className="size-4 animate-spin" /> : null} Submit application
               </Button>
             ) : (

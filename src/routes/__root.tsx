@@ -191,7 +191,20 @@ function PublicAppAuthGate({ children }: { children: ReactNode }) {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
   const pathname = useRouterState({ select: (state) => state.location.pathname });
+  const publicRoutes = [
+    "/about",
+    "/contact",
+    "/faq",
+    "/food",
+    "/groceries",
+    "/services",
+    "/marketplace",
+    "/legal",
+  ];
+
   const exempt =
+    pathname === "/" ||
+    publicRoutes.some((route) => pathname === route || pathname.startsWith(`${route}/`)) ||
     pathname === "/login" ||
     pathname === "/register" ||
     pathname.startsWith("/internal-admin") ||
