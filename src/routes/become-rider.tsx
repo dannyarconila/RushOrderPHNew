@@ -11,7 +11,9 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
-import { legalVersionSnapshotQuery } from "@/lib/legal/public";
+import { legalVersionSnapshotQuery, legalDocumentQuery } from "@/lib/legal/public";
+
+import { LegalModal } from "@/components/legal/legal-modal";
 
 export const Route = createFileRoute("/become-rider")({
   head: () => ({
@@ -42,6 +44,12 @@ function BecomeRiderPage() {
   const [step, setStep] = useState(0);
   const [submitting, setSubmitting] = useState(false);
   const [acceptedLegal, setAcceptedLegal] = useState(false);
+  const [showLegalModal, setShowLegalModal] = useState(false);
+  const [selectedLegalSlug, setSelectedLegalSlug] = useState("");
+  const { data: legalDocument } = useQuery({
+    ...legalDocumentQuery(selectedLegalSlug),
+    enabled: showLegalModal && selectedLegalSlug.length > 0,
+  });
 
   const [personal, setPersonal] = useState({ full_name: "", email: "", phone: "", birthdate: "" });
   const [address, setAddress] = useState({
@@ -276,21 +284,27 @@ function BecomeRiderPage() {
                 />
                 <span>
                   I have read and agree to the{" "}
-                  <Link
-                    to="/legal/$slug"
-                    params={{ slug: "rider-terms-conditions" }}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedLegalSlug("rider-terms-conditions");
+                      setShowLegalModal(true);
+                    }}
                     className="font-semibold text-primary hover:underline"
                   >
                     Rider Terms & Conditions
-                  </Link>{" "}
+                  </button>
                   and{" "}
-                  <Link
-                    to="/legal/$slug"
-                    params={{ slug: "privacy-policy" }}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedLegalSlug("privacy-policy");
+                      setShowLegalModal(true);
+                    }}
                     className="font-semibold text-primary hover:underline"
                   >
                     Privacy Policy
-                  </Link>
+                  </button>
                   .
                 </span>
               </label>
@@ -324,6 +338,14 @@ function BecomeRiderPage() {
           </Link>
         </p>
       </section>
+      <LegalModal
+        open={showLegalModal}
+        document={legalDocument ?? null}
+        onClose={() => {
+          setShowLegalModal(false);
+          setSelectedLegalSlug("");
+        }}
+      />
     </PublicLayout>
   );
 }

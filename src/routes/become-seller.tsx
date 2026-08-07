@@ -428,12 +428,12 @@ function BecomeSellerPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        setSelectedLegalSlug("seller-partner-agreement");
+                        setSelectedLegalSlug("seller-terms-conditions");
                         setShowLegalModal(true);
                       }}
                       className="font-semibold text-primary hover:underline"
                     >
-                      Seller Partner Agreement
+                      Seller Terms & Conditions
                     </button>{" "}
                     and{" "}
                     <button
