@@ -115,6 +115,7 @@ function BecomeSellerPage() {
   const [documents, setDocuments] = useState<Record<string, string>>({});
   const [showLegalModal, setShowLegalModal] = useState(false);
   const [selectedLegalSlug, setSelectedLegalSlug] = useState("");
+  const [acceptedLegal, setAcceptedLegal] = useState(false);
   const { data: legalDocument } = useQuery({
     ...legalDocumentQuery(selectedLegalSlug),
     enabled: showLegalModal && selectedLegalSlug.length > 0,
@@ -137,6 +138,10 @@ function BecomeSellerPage() {
 
   async function submit() {
     if (!user) return;
+    if (!acceptedLegal) {
+      toast.error("Please accept the Seller Terms & Conditions and Privacy Policy.");
+      return;
+    }
     if (!store.store_name || !address.city) {
       toast.error("Please complete your store name and address");
       return;
@@ -409,58 +414,41 @@ function BecomeSellerPage() {
                 ]}
               />
 
-              <div className="mt-8 rounded-xl border border-border bg-secondary/30 p-5">
-                <h3 className="font-semibold">Legal Agreements</h3>
+              <div className="mt-6 rounded-xl border border-border bg-secondary/30 p-5">
+                <label className="flex items-start gap-3">
+                  <input
+                    type="checkbox"
+                    checked={acceptedLegal}
+                    onChange={(e) => setAcceptedLegal(e.target.checked)}
+                    className="mt-1"
+                  />
 
-                <div className="mt-4 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Privacy Policy</span>
-
-                    <Button
+                  <span className="text-sm leading-6">
+                    I have read and agree to the{" "}
+                    <button
                       type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedLegalSlug("privacy-policy");
-                        setShowLegalModal(true);
-                      }}
-                    >
-                      View
-                    </Button>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Terms & Conditions</span>
-
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedLegalSlug("terms-and-conditions");
-                        setShowLegalModal(true);
-                      }}
-                    >
-                      View
-                    </Button>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm">Seller Partner Agreement</span>
-
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
                       onClick={() => {
                         setSelectedLegalSlug("seller-partner-agreement");
                         setShowLegalModal(true);
                       }}
+                      className="font-semibold text-primary hover:underline"
                     >
-                      View
-                    </Button>
-                  </div>
-                </div>
+                      Seller Partner Agreement
+                    </button>{" "}
+                    and{" "}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedLegalSlug("privacy-policy");
+                        setShowLegalModal(true);
+                      }}
+                      className="font-semibold text-primary hover:underline"
+                    >
+                      Privacy Policy
+                    </button>
+                    .
+                  </span>
+                </label>
               </div>
             </div>
           ) : null}
@@ -474,8 +462,9 @@ function BecomeSellerPage() {
               <ArrowLeft className="size-4" /> Back
             </Button>
             {step === steps.length - 1 ? (
-              <Button onClick={submit} disabled={submitting}>
-                {submitting ? <Loader2 className="size-4 animate-spin" /> : null} Submit application
+              <Button onClick={submit} disabled={submitting || !acceptedLegal}>
+                {submitting ? <Loader2 className="size-4 animate-spin" /> : null}
+                Submit application
               </Button>
             ) : (
               <Button onClick={next}>
