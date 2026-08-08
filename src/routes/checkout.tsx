@@ -307,7 +307,14 @@ const submit = useMutation({
                         <button
                           key={address.id}
                           type="button"
-                          onClick={() => setAddressId(address.id)}
+                          onClick={() => {
+                        setAddressId(address.id);
+                        setEditingAddressLocation(address.id);
+                        setEditingAddressCoords({
+                          lat: address.latitude != null ? Number(address.latitude) : null,
+                          lng: address.longitude != null ? Number(address.longitude) : null,
+                        });
+                      }}
                           className={cn(
                             "rounded-xl border p-4 text-left transition-colors",
                             active
@@ -414,13 +421,60 @@ const submit = useMutation({
                       Add a new address
                     </Button>
                   )}
+              {selectedAddress && !selectedAddressHasCoords ? (
+                <div className="mt-4 rounded-xl border border-warning/40 bg-warning/10 p-4">
+                  <p className="text-sm font-bold">Set delivery location</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    This address needs a map location before you can place the order. Tap the map,
+                    drag the pin, or use your current location.
+                  </p>
 
-                  {selectedAddress && !selectedAddressHasCoords ? (
-                    <p className="mt-3 rounded-xl border border-warning/40 bg-warning/10 p-3 text-xs font-semibold text-warning-foreground">
-                      This address is missing map coordinates. Add a new address with latitude and
-                      longitude to place an order securely.
-                    </p>
-                  ) : null}
+                  <div className="mt-4">
+                    <AddressLocationPicker
+                      latitude={editingAddressCoords.lat}
+                      longitude={editingAddressCoords.lng}
+                      onChange={(coordinate) =>
+                        setEditingAddressCoords({
+                          lat: coordinate.lat,
+                          lng: coordinate.lng,
+                        })
+                      }
+                    />
+                  </div>
+
+                  <div className="mt-3 flex justify-end">
+                    <Button
+                      size="sm"
+                      onClick={() => {
+                        if (
+                          editingAddressLocation &&
+                          editingAddressCoords.lat != null &&
+                          editingAddressCoords.lng != null
+                        ) {
+                          updateAddressLocationMutation.mutate({
+                            addressId: editingAddressLocation,
+                            latitude: editingAddressCoords.lat,
+                            longitude: editingAddressCoords.lng,
+                          });
+                        }
+                      }}
+                      disabled={
+                        updateAddressLocationMutation.isPending ||
+                        editingAddressLocation == null ||
+                        editingAddressCoords.lat == null ||
+                        editingAddressCoords.lng == null
+                      }
+                    >
+                      {updateAddressLocationMutation.isPending ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <MapPin className="size-4" />
+                      )}
+                      Save delivery location
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
                 </>
               )}
             </section>
