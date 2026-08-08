@@ -3,7 +3,13 @@ import { useEffect, useState } from "react";
 
 import { type LegalDocumentResolved } from "@/lib/legal/catalog";
 
-export function LegalDocumentView({ doc }: { doc: LegalDocumentResolved }) {
+export function LegalDocumentView({
+  doc,
+  showToc = true,
+}: {
+  doc: LegalDocumentResolved;
+  showToc?: boolean;
+}) {
   const router = useRouter();
   const [activeSection, setActiveSection] = useState(doc.toc[0]?.id ?? "");
 
@@ -43,37 +49,32 @@ export function LegalDocumentView({ doc }: { doc: LegalDocumentResolved }) {
         </div>
       </header>
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[280px_1fr] print:block">
-        <aside className="sticky top-24 h-fit rounded-2xl border border-border bg-card shadow-[var(--shadow-soft)] print:hidden overflow-hidden">
-          <div className="border-b border-border px-5 py-4">
+      <div className="mt-6 grid gap-6 print:block">
+        {showToc ? (
+          <aside className="h-fit rounded-2xl border border-border bg-card p-4 shadow-[var(--shadow-soft)] lg:sticky lg:top-24 print:hidden">
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-muted-foreground">
-              Table of Contents
+              Table of contents
             </p>
-          </div>
-          <nav className="max-h-[70vh] overflow-y-auto p-3 text-sm">
-            {doc.toc.map((entry) => (
-              <a
-                key={entry.id}
-                href={`#${entry.id}`}
-                className={`block rounded-md px-3 py-2 transition-all ${
-                  activeSection === entry.id
-                    ? "bg-primary text-primary-foreground font-semibold"
-                    : "text-muted-foreground hover:bg-primary/10 hover:text-primary"
-                }`}
-              >
-                {entry.title}
-              </a>
-            ))}
-          </nav>
 
-          <button
-            type="button"
-            onClick={() => router.history.back()}
-            className="mt-4 inline-flex text-sm font-semibold text-primary hover:underline"
-          >
-            ← Back to previous page
-          </button>
-        </aside>
+            <nav className="mt-3 flex flex-col gap-2 text-sm">
+              {doc.toc.map((entry) => (
+                <a
+                  key={entry.id}
+                  href={`#${entry.id}`}
+                  className="rounded-lg px-2 py-1.5 text-muted-foreground transition-colors hover:bg-secondary hover:text-foreground"
+                >
+                  {entry.title}
+                </a>
+              ))}
+            </nav>
+          </aside>
+        ) : null}
+
+        <article
+          className={`rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)] print:rounded-none print:border-none print:p-0 print:shadow-none ${
+            showToc ? "" : "lg:col-span-1"
+          }`}
+        ></article>
 
         <article className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)] print:rounded-none print:border-none print:p-0 print:shadow-none">
           <div className="mb-4 border-b border-border pb-4 text-xs text-muted-foreground print:hidden">

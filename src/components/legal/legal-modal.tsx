@@ -26,7 +26,7 @@ export function LegalModal({ open, document, onClose }: LegalModalProps) {
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          <LegalDocumentView doc={document} />
+          <LegalDocumentView doc={document} showToc={false} />
         </div>
       </div>
     </div>
