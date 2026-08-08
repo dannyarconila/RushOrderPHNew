@@ -204,8 +204,22 @@ function CheckoutPage() {
   },
   onSuccess: (row) => {
     setAddressId(row.id);
-    void queryClient.invalidateQueries({ queryKey: ["my-addresses"] });
-    toast.success("Delivery location saved");
+
+    if (user) {
+      queryClient.setQueryData(
+        ["my-addresses", user.id],
+        (current: typeof addresses.data) =>
+          (current ?? []).map((address) => (address.id === row.id ? row : address)),
+      );
+    }
+
+    void queryClient.invalidateQueries({
+      queryKey: ["my-addresses", user?.id],
+    });
+
+    toast.success("Delivery location saved", {
+      description: `${Number(row.latitude).toFixed(6)}, ${Number(row.longitude).toFixed(6)}`,
+    });
   },
   onError: (error: Error) =>
     toast.error("Could not save delivery location", {
