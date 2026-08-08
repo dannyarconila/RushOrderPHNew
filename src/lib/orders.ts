@@ -234,23 +234,21 @@ export function storeOrdersQuery(storeIds: string[]) {
   });
 }
 
-export async function updateOrderStatus(orderId: string, status: OrderStatus) {
-  const { error } = await supabase.from("orders").update({ status }).eq("id", orderId);
+export async function transitionOrderStatus(orderId: string, status: OrderStatus) {
+  const { error } = await supabase.rpc("transition_order_status", {
+    _order_id: orderId,
+    _next_status: status,
+  });
   if (error) throw error;
+}
+
+export async function updateOrderStatus(orderId: string, status: OrderStatus) {
+  await transitionOrderStatus(orderId, status);
 }
 
 /** Customer can cancel only while order is still pending. */
 export async function cancelOrder(orderId: string) {
-  const { error } = await supabase
-    .from("orders")
-    .update({
-      status: "cancelled",
-      updated_at: new Date().toISOString(),
-    })
-    .eq("id", orderId)
-    .eq("status", "pending");
-
-  if (error) throw error;
+  await transitionOrderStatus(orderId, "cancelled");
 }
 /** Hide an order from the customer's history (soft delete). */
 export async function deleteOrder(orderId: string) {

@@ -32,6 +32,8 @@ dist-ssr
 *.sw?
 
 .env
+.env.*
+!.env.example
 supabase/.temp/
 *.zip
 *.zip

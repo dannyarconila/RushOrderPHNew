@@ -22,6 +22,8 @@ import {
 
 /** Factory resets are opt-in; production credentials never live in source control. */
 export const DEFAULT_ADMIN_PASSWORD = process.env.ADMIN_FACTORY_RESET_PASSWORD ?? "";
+const BOOTSTRAP_ADMIN_USERNAME = process.env.ADMIN_BOOTSTRAP_USERNAME?.trim() ?? "";
+const BOOTSTRAP_ADMIN_PASSWORD = process.env.ADMIN_BOOTSTRAP_PASSWORD ?? "";
 
 const PBKDF2_ITERATIONS = 100_000;
 const MAX_FAILED_ATTEMPTS = 5;
@@ -48,6 +50,8 @@ interface AdminSessionData {
   adminId?: string;
   lastSeen?: number;
 }
+
+let bootstrapAdminPromise: Promise<void> | null = null;
 
 /* ------------------------------------------------------------------ */
 /* Password hashing (WebCrypto PBKDF2 — Worker safe)                   */
@@ -130,11 +134,74 @@ export async function sessionTimeoutMinutes(): Promise<number> {
   return Number.isFinite(raw) && raw >= 1 ? raw : DEFAULT_TIMEOUT_MINUTES;
 }
 
+async function ensureBootstrapAdmin(): Promise<void> {
+  if (bootstrapAdminPromise) {
+    await bootstrapAdminPromise;
+    return;
+  }
+
+  bootstrapAdminPromise = (async () => {
+    const { count, error } = await supabaseAdmin
+      .from("admin_accounts")
+      .select("id", { count: "exact", head: true })
+      .eq("is_active", true);
+    if (error) throw new Error(`Could not inspect administrator bootstrap state: ${error.message}`);
+
+    if ((count ?? 0) > 0) return;
+    if (!BOOTSTRAP_ADMIN_USERNAME || !BOOTSTRAP_ADMIN_PASSWORD) return;
+
+    const password_hash = await hashPassword(BOOTSTRAP_ADMIN_PASSWORD);
+    const payload = {
+      username: BOOTSTRAP_ADMIN_USERNAME,
+      password_hash,
+      role: "super_admin" as const,
+      is_active: true,
+      is_default_credentials: false,
+      must_change_credentials: true,
+      failed_attempts: 0,
+      locked_until: null,
+    };
+
+    const { data: existing, error: existingError } = await supabaseAdmin
+      .from("admin_accounts")
+      .select("id")
+      .eq("username", BOOTSTRAP_ADMIN_USERNAME)
+      .maybeSingle();
+    if (existingError) {
+      throw new Error(
+        `Could not inspect bootstrap administrator account: ${existingError.message}`,
+      );
+    }
+
+    const { error: writeError } = existing
+      ? await supabaseAdmin.from("admin_accounts").update(payload).eq("id", existing.id)
+      : await supabaseAdmin.from("admin_accounts").insert(payload);
+    if (writeError) {
+      throw new Error(`Could not provision bootstrap administrator account: ${writeError.message}`);
+    }
+
+    const { error: auditError } = await supabaseAdmin.from("admin_audit_logs").insert({
+      admin_username: BOOTSTRAP_ADMIN_USERNAME,
+      action: existing ? "bootstrap_admin_refreshed" : "bootstrap_admin_provisioned",
+      entity_type: "admin_accounts",
+      details: { must_change_credentials: true } as never,
+    });
+    if (auditError) {
+      throw new Error(`Could not write bootstrap administrator audit log: ${auditError.message}`);
+    }
+  })().finally(() => {
+    bootstrapAdminPromise = null;
+  });
+
+  await bootstrapAdminPromise;
+}
+
 /* ------------------------------------------------------------------ */
 /* Account lookups                                                     */
 /* ------------------------------------------------------------------ */
 
 export async function findAccountByUsername(username: string): Promise<AdminAccount | null> {
+  await ensureBootstrapAdmin();
   const { data, error } = await supabaseAdmin
     .from("admin_accounts")
     .select("*")
@@ -145,6 +212,7 @@ export async function findAccountByUsername(username: string): Promise<AdminAcco
 }
 
 export async function findAccountById(id: string): Promise<AdminAccount | null> {
+  await ensureBootstrapAdmin();
   const { data, error } = await supabaseAdmin
     .from("admin_accounts")
     .select("*")

@@ -172,135 +172,40 @@ export const adminMutateFn = createServerFn({ method: "POST" })
         const account = await requirePermission("applications");
         const table = data.kind === "seller" ? "seller_applications" : "rider_applications";
 
-        const { data: previousApplication, error: previousError } = await supabaseAdmin
-          .from(table)
-          .select("status,user_id")
-          .eq("id", data.id)
-          .maybeSingle();
-        if (previousError) throw new Error(previousError.message);
-        if (!previousApplication) throw new Error("Application not found.");
+        const { data: reviewResult, error: reviewError } = await supabaseAdmin.rpc(
+          "admin_portal_review_application",
+          {
+            _kind: data.kind,
+            _application_id: data.id,
+            _next_status: data.status as never,
+            _notes: data.notes ?? undefined,
+            _approval_bonus: data.approvalBonus ?? undefined,
+          },
+        );
+        if (reviewError) throw new Error(reviewError.message);
 
-        // Update the application status and notes
-        const { error: updateError } = await supabaseAdmin
-          .from(table)
-          .update({
-            status: data.status as never,
-            review_notes: data.notes ?? null,
-            reviewed_at: new Date().toISOString(),
-          })
-          .eq("id", data.id);
-        if (updateError) throw new Error(updateError.message);
+        const result = (reviewResult ?? {}) as {
+          changed?: boolean;
+          new_status?: string;
+          old_status?: string;
+          user_id?: string;
+          wallet_bonus?: number;
+        };
 
-        // Audit the status change
         await mod.audit({
           account,
           action:
             data.kind === "seller" ? "seller_application_reviewed" : "rider_application_reviewed",
           entityType: table,
           entityId: data.id,
-          details: { status: data.status },
+          details: {
+            changed: result.changed ?? true,
+            new_status: result.new_status ?? data.status,
+            old_status: result.old_status ?? null,
+            note: data.notes ?? null,
+            wallet_bonus: result.wallet_bonus ?? null,
+          },
         });
-
-        // If approved, ensure the user has a wallet and credit the configurable welcome bonus.
-        if (data.status === "approved" && previousApplication.status !== "approved") {
-          // Fetch the application to obtain the user_id
-          const { data: appRow, error: appError } = await supabaseAdmin
-            .from(table)
-            .select("user_id")
-            .eq("id", data.id)
-            .maybeSingle();
-          if (appError) throw new Error(appError.message);
-          const userId: string | undefined = appRow?.user_id;
-          if (userId) {
-            const walletType = data.kind === "seller" ? "seller" : "rider";
-
-            // Ensure a wallet row exists for this user
-            const { data: existingWallet, error: walletSelectError } = await supabaseAdmin
-              .from("wallets")
-              .select("id,balance")
-              .eq("user_id", userId)
-              .eq("wallet_type", walletType as never)
-              .maybeSingle();
-            if (walletSelectError) throw new Error(walletSelectError.message);
-
-            let walletId: string;
-            let currentBalance = 0;
-            if (!existingWallet) {
-              const { data: insertWallet, error: insertError } = await supabaseAdmin
-                .from("wallets")
-                .insert({ user_id: userId, wallet_type: walletType })
-                .select("id,balance")
-                .maybeSingle();
-              if (insertError) throw new Error(insertError.message);
-              if (!insertWallet) throw new Error("Wallet creation returned no record.");
-              walletId = insertWallet.id;
-              currentBalance = Number(insertWallet.balance ?? 0);
-            } else {
-              walletId = existingWallet.id;
-              currentBalance = Number(existingWallet.balance ?? 0);
-            }
-
-            // Read configured welcome bonus from system settings
-            const { data: settingRow, error: settingError } = await supabaseAdmin
-              .from("system_settings")
-              .select("value")
-              .eq("key", "welcome_wallet_bonus")
-              .maybeSingle();
-            if (settingError) throw new Error(settingError.message);
-
-            const rawWelcomeAmount = settingRow?.value;
-            const configuredAmount =
-              typeof rawWelcomeAmount === "number"
-                ? rawWelcomeAmount
-                : Number(rawWelcomeAmount ?? 0) || 0;
-            const requestedAmount = Number(data.approvalBonus);
-            const welcomeAmount = Number.isFinite(requestedAmount)
-              ? Math.max(0, requestedAmount)
-              : configuredAmount;
-
-            if (welcomeAmount > 0) {
-              const newBalance = currentBalance + welcomeAmount;
-              const { error: walletUpdateError } = await supabaseAdmin
-                .from("wallets")
-                .update({ balance: newBalance })
-                .eq("id", walletId);
-              if (walletUpdateError) throw new Error(walletUpdateError.message);
-
-              // Insert a wallet transaction record
-              const { error: txError } = await supabaseAdmin.from("wallet_transactions").insert({
-                wallet_id: walletId,
-                amount: welcomeAmount,
-                kind: "welcome",
-                description: "Welcome Credit",
-              });
-              if (txError) throw new Error(txError.message);
-
-              // Notify the user
-              const { error: notifyError } = await supabaseAdmin.from("notifications").insert({
-                user_id: userId,
-                title: "Welcome Credit",
-                body: `A welcome credit of ₱${welcomeAmount.toFixed(2)} has been added to your wallet.`,
-                kind: "wallet",
-              });
-              if (notifyError) throw new Error(notifyError.message);
-
-              await mod.audit({
-                account,
-                action: "welcome_credit_awarded",
-                entityType: "wallets",
-                entityId: walletId,
-                details: { amount: welcomeAmount, for: walletType },
-              });
-
-              // Enforce wallet-driven online/offline state now the welcome credit has been applied.
-              try {
-                await enforceWalletState(userId, walletType as "seller" | "rider");
-              } catch (e) {
-                console.error("enforce-after-welcome", e);
-              }
-            }
-          }
-        }
 
         return { ok: true };
       }

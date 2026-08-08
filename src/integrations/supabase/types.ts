@@ -1937,6 +1937,16 @@ export type Database = {
         Args: { _notes?: string; _topup_id: string };
         Returns: string;
       };
+      admin_portal_review_application: {
+        Args: {
+          _application_id: string;
+          _approval_bonus?: number;
+          _kind: string;
+          _next_status: Database["public"]["Enums"]["application_status"];
+          _notes?: string;
+        };
+        Returns: Json;
+      };
       admin_portal_reject_topup: {
         Args: { _reason: string; _topup_id: string };
         Returns: boolean;
@@ -2004,6 +2014,13 @@ export type Database = {
       };
       rider_set_presence: {
         Args: { _lat?: number; _lng?: number; _online: boolean };
+        Returns: boolean;
+      };
+      transition_order_status: {
+        Args: {
+          _next_status: Database["public"]["Enums"]["order_status"];
+          _order_id: string;
+        };
         Returns: boolean;
       };
     };

@@ -7,13 +7,7 @@ import { PublicLayout } from "@/components/site/public-layout";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { peso } from "@/lib/currency";
-import {
-  orderDispatchQuery,
-  retryDispatch,
-  secondsLeft,
-  watchDispatchJob,
-  watchAssignedRider,
-} from "@/lib/dispatch";
+import { orderDispatchQuery, watchAssignedRider, watchDispatchJob } from "@/lib/dispatch";
 import { ORDER_FLOW, ORDER_LABELS, orderItemsQuery, orderQuery } from "@/lib/orders";
 import { cn } from "@/lib/utils";
 import { LiveDeliveryMap } from "@/components/maps";
@@ -221,15 +215,6 @@ function DispatchPanel({ orderId }: { orderId: string }) {
       void supabase.removeChannel(sub);
     };
   }, [orderId, queryClient]);
-
-  useEffect(() => {
-    if (!job || job.status !== "searching") return;
-    const tick = () => {
-      if (secondsLeft(job.expires_at) === 0) void retryDispatch(job.id).catch(() => undefined);
-    };
-    const timer = window.setInterval(tick, 3000);
-    return () => window.clearInterval(timer);
-  }, [job]);
 
   useEffect(() => {
     if (!job?.assigned_rider_id) return;
