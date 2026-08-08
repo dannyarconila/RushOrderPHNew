@@ -63,6 +63,28 @@ export async function createAddress(userId: string, input: AddressInput): Promis
   return data;
 }
 
+export async function updateAddressLocation(
+  userId: string,
+  addressId: string,
+  latitude: number,
+  longitude: number,
+): Promise<AddressRow> {
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+    throw new Error("A valid map location is required.");
+  }
+
+  const { data, error } = await supabase
+    .from("addresses")
+    .update({ latitude, longitude })
+    .eq("id", addressId)
+    .eq("user_id", userId)
+    .select("*")
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
 export function formatAddress(address: AddressRow): string {
   return [address.line1, address.barangay, address.city, address.province, address.postal_code]
     .filter(Boolean)

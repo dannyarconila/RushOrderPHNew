@@ -4,12 +4,19 @@ import { Loader2, MapPin, ShoppingBag, Wallet } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
+import AddressLocationPicker from "@/components/maps/AddressLocationPicker";
 import { TextAreaField, TextField } from "@/components/forms/wizard";
 import { PublicLayout } from "@/components/site/public-layout";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/use-auth";
 import { useCart } from "@/contexts/cart-context";
-import { EMPTY_ADDRESS, createAddress, formatAddress, myAddressesQuery } from "@/lib/addresses";
+import {
+  EMPTY_ADDRESS,
+  createAddress,
+  formatAddress,
+  myAddressesQuery,
+  updateAddressLocation,
+} from "@/lib/addresses";
 import { peso } from "@/lib/currency";
 import { dispatchSettingsQuery } from "@/lib/dispatch";
 import { publicSettingsQuery, storeQuery } from "@/lib/marketplace";
@@ -84,6 +91,11 @@ function CheckoutPage() {
   const [notes, setNotes] = useState("");
   const [showNew, setShowNew] = useState(false);
   const [draft, setDraft] = useState(EMPTY_ADDRESS);
+  const [editingAddressLocation, setEditingAddressLocation] = useState<string | null>(null);
+  const [editingAddressCoords, setEditingAddressCoords] = useState<{
+    lat: number | null;
+    lng: number | null;
+  }>({ lat: null, lng: null });
   const [idempotencyKey, setIdempotencyKey] = useState("");
 
   const selectedAddress =
@@ -177,7 +189,31 @@ function CheckoutPage() {
       toast.error("Could not save address", { description: error.message }),
   });
 
-  const submit = useMutation({
+  const updateAddressLocationMutation = useMutation({
+  mutationFn: async ({
+    addressId,
+    latitude,
+    longitude,
+  }: {
+    addressId: string;
+    latitude: number;
+    longitude: number;
+  }) => {
+    if (!user) throw new Error("Please sign in first.");
+    return updateAddressLocation(user.id, addressId, latitude, longitude);
+  },
+  onSuccess: (row) => {
+    setAddressId(row.id);
+    void queryClient.invalidateQueries({ queryKey: ["my-addresses"] });
+    toast.success("Delivery location saved");
+  },
+  onError: (error: Error) =>
+    toast.error("Could not save delivery location", {
+      description: error.message,
+    }),
+});
+
+const submit = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error("Please sign in to place an order.");
       if (!storeId) throw new Error("Your cart is empty.");
