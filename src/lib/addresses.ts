@@ -85,6 +85,28 @@ export async function updateAddressLocation(
   return data;
 }
 
+export async function deleteAddress(
+  userId: string,
+  addressId: string,
+): Promise<void> {
+  const { error } = await supabase
+    .from("addresses")
+    .delete()
+    .eq("id", addressId)
+    .eq("user_id", userId);
+
+  if (error) throw error;
+}
+
+export async function deleteAllAddresses(userId: string): Promise<void> {
+  const { error } = await supabase
+    .from("addresses")
+    .delete()
+    .eq("user_id", userId);
+
+  if (error) throw error;
+}
+
 export function formatAddress(address: AddressRow): string {
   return [address.line1, address.barangay, address.city, address.province, address.postal_code]
     .filter(Boolean)

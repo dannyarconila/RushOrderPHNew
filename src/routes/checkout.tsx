@@ -13,6 +13,7 @@ import { useCart } from "@/contexts/cart-context";
 import {
   EMPTY_ADDRESS,
   createAddress,
+  deleteAllAddresses,
   formatAddress,
   myAddressesQuery,
   updateAddressLocation,
@@ -181,8 +182,22 @@ function CheckoutPage() {
     onSuccess: (row) => {
       setAddressId(row.id);
       setShowNew(false);
+      setEditingAddressLocation(null);
+      setEditingAddressCoords({ lat: null, lng: null });
       setDraft(EMPTY_ADDRESS);
-      void queryClient.invalidateQueries({ queryKey: ["my-addresses"] });
+
+      queryClient.setQueryData(
+        ["my-addresses", user?.id],
+        (current: typeof addresses.data) =>
+          (current ?? []).some((address) => address.id === row.id)
+            ? (current ?? []).map((address) => (address.id === row.id ? row : address))
+            : [row, ...(current ?? [])],
+      );
+
+      void queryClient.invalidateQueries({
+        queryKey: ["my-addresses", user?.id],
+      });
+
       toast.success("Address saved");
     },
     onError: (error: Error) =>
@@ -223,6 +238,30 @@ function CheckoutPage() {
   },
   onError: (error: Error) =>
     toast.error("Could not save delivery location", {
+      description: error.message,
+    }),
+});
+
+const clearAddressesMutation = useMutation({
+  mutationFn: async () => {
+    if (!user) throw new Error("Please sign in first.");
+    await deleteAllAddresses(user.id);
+  },
+  onSuccess: () => {
+    setAddressId(null);
+    setEditingAddressLocation(null);
+    setEditingAddressCoords({ lat: null, lng: null });
+    setShowNew(false);
+    setDraft(EMPTY_ADDRESS);
+
+    void queryClient.invalidateQueries({
+      queryKey: ["my-addresses", user?.id],
+    });
+
+    toast.success("Addresses cleared");
+  },
+  onError: (error: Error) =>
+    toast.error("Could not clear addresses", {
       description: error.message,
     }),
 });
@@ -295,152 +334,271 @@ const submit = useMutation({
 
         <div className="mt-8 grid gap-6 lg:grid-cols-[1.4fr_1fr]">
           <div className="flex flex-col gap-6">
-            <section className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
-              <h2 className="flex items-center gap-2 font-display text-base font-bold">
-                <MapPin className="size-4 text-primary" /> Delivery address
-              </h2>
+        <section className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
+          <h2 className="flex items-center gap-2 font-display text-base font-bold">
+            <MapPin className="size-4 text-primary" /> Delivery address
+          </h2>
 
-              {!user && !loading ? (
-                <div className="mt-4 rounded-xl border border-dashed border-border p-5 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    Sign in or create an account to save your delivery address and place this order.
-                    Your cart is kept.
-                  </p>
-                  <Button asChild size="sm" className="mt-3">
-                    <Link to="/login" search={{ next: "/checkout" }}>
-                      Sign in
-                    </Link>
-                  </Button>
-                </div>
-              ) : (
-                <>
-                  <div className="mt-4 flex flex-col gap-2">
-                    {(addresses.data ?? []).map((address) => {
-                      const active = selectedAddress?.id === address.id;
-                      return (
+          {!user && !loading ? (
+            <div className="mt-4 rounded-xl border border-dashed border-border p-5 text-center">
+              <p className="text-sm text-muted-foreground">
+                Sign in or create an account to save your delivery address and place this order.
+                Your cart is kept.
+              </p>
+
+              <Button asChild size="sm" className="mt-3">
+                <Link to="/login" search={{ next: "/checkout" }}>
+                  Sign in
+                </Link>
+              </Button>
+            </div>
+          ) : (
+            <>
+              {(addresses.data ?? []).length > 0 ? (
+                <div className="mt-4 flex flex-col gap-2">
+                  {(addresses.data ?? []).map((address) => {
+                    const active = selectedAddress?.id === address.id;
+                    const hasCoords =
+                      address.latitude != null && address.longitude != null;
+
+                    return (
+                      <div
+                        key={address.id}
+                        className={cn(
+                          "rounded-xl border p-4 transition-colors",
+                          active
+                            ? "border-primary bg-primary-soft"
+                            : "border-border",
+                        )}
+                      >
                         <button
-                          key={address.id}
                           type="button"
                           onClick={() => {
-                        setAddressId(address.id);
-                        setEditingAddressLocation(address.id);
-                        setEditingAddressCoords({
-                          lat: address.latitude != null ? Number(address.latitude) : null,
-                          lng: address.longitude != null ? Number(address.longitude) : null,
-                        });
-                      }}
-                          className={cn(
-                            "rounded-xl border p-4 text-left transition-colors",
-                            active
-                              ? "border-primary bg-primary-soft"
-                              : "border-border hover:bg-secondary",
-                          )}
+                            setAddressId(address.id);
+                            setShowNew(false);
+                            setEditingAddressLocation(null);
+                            setEditingAddressCoords({
+                              lat: hasCoords ? Number(address.latitude) : null,
+                              lng: hasCoords ? Number(address.longitude) : null,
+                            });
+                          }}
+                          className="w-full text-left"
                         >
-                          <p className="text-sm font-bold">
-                            {address.label ?? "Address"} · {address.recipient_name ?? ""}
-                          </p>
-                          <p className="mt-0.5 text-xs text-muted-foreground">
-                            {formatAddress(address)}
+                          <div className="flex items-start justify-between gap-3">
+                            <div>
+                              <p className="text-sm font-bold">
+                                {address.label ?? "Address"} ·{" "}
+                                {address.recipient_name ?? ""}
+                              </p>
+
+                              <p className="mt-0.5 text-xs text-muted-foreground">
+                                {formatAddress(address)}
+                              </p>
+                            </div>
+
+                            {active ? (
+                              <span className="text-xs font-bold text-primary">
+                                Selected
+                              </span>
+                            ) : null}
+                          </div>
+
+                          <p
+                            className={cn(
+                              "mt-2 text-xs font-semibold",
+                              hasCoords
+                                ? "text-emerald-600"
+                                : "text-warning-foreground",
+                            )}
+                          >
+                            {hasCoords
+                              ? "✓ Delivery location ready"
+                              : "⚠ Map location required"}
                           </p>
                         </button>
-                      );
-                    })}
+
+                        {active ? (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="mt-2"
+                            onClick={() => {
+                              setShowNew(false);
+                              setEditingAddressLocation(address.id);
+                              setEditingAddressCoords({
+                                lat: hasCoords ? Number(address.latitude) : null,
+                                lng: hasCoords ? Number(address.longitude) : null,
+                              });
+                            }}
+                          >
+                            Change delivery location
+                          </Button>
+                        ) : null}
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="mt-4 rounded-xl border border-dashed border-border p-5 text-center">
+                  <p className="text-sm font-semibold">No saved addresses</p>
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Add a delivery address before placing your order.
+                  </p>
+                </div>
+              )}
+
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowNew(true);
+                    setEditingAddressLocation(null);
+                    setEditingAddressCoords({ lat: null, lng: null });
+                    setDraft(EMPTY_ADDRESS);
+                  }}
+                >
+                  + Enter New Address
+                </Button>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setShowNew(true);
+                    setEditingAddressLocation(null);
+                    setEditingAddressCoords({ lat: null, lng: null });
+                    setDraft(EMPTY_ADDRESS);
+                  }}
+                >
+                  <MapPin className="size-4" />
+                  Use My Current Location
+                </Button>
+              </div>
+
+              {showNew ? (
+                <div className="mt-4 rounded-xl border border-border p-4">
+                  <p className="text-sm font-bold">New delivery address</p>
+
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    Enter the address details and select the exact delivery location on the map.
+                  </p>
+
+                  <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                    <TextField
+                      label="Label"
+                      value={draft.label}
+                      onChange={(v) => setDraft((d) => ({ ...d, label: v }))}
+                    />
+
+                    <TextField
+                      label="Recipient name"
+                      value={draft.recipient_name}
+                      onChange={(v) => setDraft((d) => ({ ...d, recipient_name: v }))}
+                    />
+
+                    <TextField
+                      label="Phone"
+                      value={draft.phone}
+                      onChange={(v) => setDraft((d) => ({ ...d, phone: v }))}
+                    />
+
+                    <TextField
+                      label="Street address"
+                      value={draft.line1}
+                      onChange={(v) => setDraft((d) => ({ ...d, line1: v }))}
+                    />
+
+                    <TextField
+                      label="Barangay"
+                      value={draft.barangay}
+                      onChange={(v) => setDraft((d) => ({ ...d, barangay: v }))}
+                    />
+
+                    <TextField
+                      label="City / municipality"
+                      value={draft.city}
+                      onChange={(v) => setDraft((d) => ({ ...d, city: v }))}
+                    />
+
+                    <TextField
+                      label="Province"
+                      value={draft.province}
+                      onChange={(v) => setDraft((d) => ({ ...d, province: v }))}
+                    />
+
+                    <TextField
+                      label="Postal code"
+                      value={draft.postal_code}
+                      onChange={(v) => setDraft((d) => ({ ...d, postal_code: v }))}
+                    />
                   </div>
 
-                  {showNew ? (
-                    <div className="mt-4 grid gap-4 rounded-xl border border-border p-4 sm:grid-cols-2">
-                      <TextField
-                        label="Label"
-                        value={draft.label}
-                        onChange={(v) => setDraft((d) => ({ ...d, label: v }))}
-                      />
-                      <TextField
-                        label="Recipient name"
-                        value={draft.recipient_name}
-                        onChange={(v) => setDraft((d) => ({ ...d, recipient_name: v }))}
-                      />
-                      <TextField
-                        label="Phone"
-                        value={draft.phone}
-                        onChange={(v) => setDraft((d) => ({ ...d, phone: v }))}
-                      />
-                      <TextField
-                        label="Street address"
-                        value={draft.line1}
-                        onChange={(v) => setDraft((d) => ({ ...d, line1: v }))}
-                      />
-                      <TextField
-                        label="Barangay"
-                        value={draft.barangay}
-                        onChange={(v) => setDraft((d) => ({ ...d, barangay: v }))}
-                      />
-                      <TextField
-                        label="City / municipality"
-                        value={draft.city}
-                        onChange={(v) => setDraft((d) => ({ ...d, city: v }))}
-                      />
-                      <TextField
-                        label="Province"
-                        value={draft.province}
-                        onChange={(v) => setDraft((d) => ({ ...d, province: v }))}
-                      />
-                      <TextField
-                        label="Postal code"
-                        value={draft.postal_code}
-                        onChange={(v) => setDraft((d) => ({ ...d, postal_code: v }))}
-                      />
-                      <TextField
-                        label="Latitude"
-                        value={draft.latitude == null ? "" : String(draft.latitude)}
-                        onChange={(v) =>
-                          setDraft((d) => ({
-                            ...d,
-                            latitude: v.trim() === "" ? null : Number(v),
-                          }))
-                        }
-                      />
-                      <TextField
-                        label="Longitude"
-                        value={draft.longitude == null ? "" : String(draft.longitude)}
-                        onChange={(v) =>
-                          setDraft((d) => ({
-                            ...d,
-                            longitude: v.trim() === "" ? null : Number(v),
-                          }))
-                        }
-                      />
-                      <div className="sm:col-span-2 flex justify-end gap-2">
-                        <Button variant="ghost" size="sm" onClick={() => setShowNew(false)}>
-                          Cancel
-                        </Button>
-                        <Button
-                          size="sm"
-                          onClick={() => saveAddress.mutate()}
-                          disabled={saveAddress.isPending}
-                        >
-                          {saveAddress.isPending ? (
-                            <Loader2 className="size-4 animate-spin" />
-                          ) : null}
-                          Save address
-                        </Button>
-                      </div>
-                    </div>
-                  ) : (
+                  <div className="mt-4">
+                    <AddressLocationPicker
+                      latitude={editingAddressCoords.lat}
+                      longitude={editingAddressCoords.lng}
+                      onChange={(coordinate) => {
+                        setEditingAddressCoords(coordinate);
+                        setDraft((d) => ({
+                          ...d,
+                          latitude: coordinate.lat,
+                          longitude: coordinate.lng,
+                        }));
+                      }}
+                    />
+                  </div>
+
+                  <div className="mt-4 flex justify-end gap-2">
                     <Button
-                      variant="outline"
-                      size="sm"
-                      className="mt-4"
-                      onClick={() => setShowNew(true)}
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        setShowNew(false);
+                        setDraft(EMPTY_ADDRESS);
+                        setEditingAddressCoords({ lat: null, lng: null });
+                      }}
                     >
-                      Add a new address
+                      Cancel
                     </Button>
-                  )}
-              {selectedAddress && !selectedAddressHasCoords ? (
+
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        if (
+                          draft.latitude == null ||
+                          draft.longitude == null
+                        ) {
+                          toast.error("Set your delivery location first.");
+                          return;
+                        }
+
+                        saveAddress.mutate();
+                      }}
+                      disabled={
+                        saveAddress.isPending ||
+                        draft.latitude == null ||
+                        draft.longitude == null
+                      }
+                    >
+                      {saveAddress.isPending ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <MapPin className="size-4" />
+                      )}
+                      Save Address
+                    </Button>
+                  </div>
+                </div>
+              ) : null}
+
+              {editingAddressLocation ? (
                 <div className="mt-4 rounded-xl border border-warning/40 bg-warning/10 p-4">
-                  <p className="text-sm font-bold">Set delivery location</p>
+                  <p className="text-sm font-bold">Change delivery location</p>
+
                   <p className="mt-1 text-xs text-muted-foreground">
-                    This address needs a map location before you can place the order. Tap the map,
-                    drag the pin, or use your current location.
+                    Tap the map, drag the pin, or use your current location.
                   </p>
 
                   <div className="mt-4">
@@ -448,33 +606,43 @@ const submit = useMutation({
                       latitude={editingAddressCoords.lat}
                       longitude={editingAddressCoords.lng}
                       onChange={(coordinate) =>
-                        setEditingAddressCoords({
-                          lat: coordinate.lat,
-                          lng: coordinate.lng,
-                        })
+                        setEditingAddressCoords(coordinate)
                       }
                     />
                   </div>
 
-                  <div className="mt-3 flex justify-end">
+                  <div className="mt-4 flex justify-end gap-2">
                     <Button
-                      size="sm"
+                      type="button"
+                      variant="ghost"
+                      onClick={() => {
+                        setEditingAddressLocation(null);
+                        setEditingAddressCoords({ lat: null, lng: null });
+                      }}
+                    >
+                      Cancel
+                    </Button>
+
+                    <Button
+                      type="button"
                       onClick={() => {
                         if (
-                          editingAddressLocation &&
-                          editingAddressCoords.lat != null &&
-                          editingAddressCoords.lng != null
+                          editingAddressCoords.lat == null ||
+                          editingAddressCoords.lng == null ||
+                          !editingAddressLocation
                         ) {
-                          updateAddressLocationMutation.mutate({
-                            addressId: editingAddressLocation,
-                            latitude: editingAddressCoords.lat,
-                            longitude: editingAddressCoords.lng,
-                          });
+                          toast.error("Set your delivery location first.");
+                          return;
                         }
+
+                        updateAddressLocationMutation.mutate({
+                          addressId: editingAddressLocation,
+                          latitude: editingAddressCoords.lat,
+                          longitude: editingAddressCoords.lng,
+                        });
                       }}
                       disabled={
                         updateAddressLocationMutation.isPending ||
-                        editingAddressLocation == null ||
                         editingAddressCoords.lat == null ||
                         editingAddressCoords.lng == null
                       }
@@ -484,14 +652,40 @@ const submit = useMutation({
                       ) : (
                         <MapPin className="size-4" />
                       )}
-                      Save delivery location
+                      Save Location
                     </Button>
                   </div>
                 </div>
               ) : null}
-                </>
-              )}
-            </section>
+
+              {(addresses.data ?? []).length > 0 ? (
+                <div className="mt-4 flex justify-end">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="text-destructive hover:text-destructive"
+                    disabled={clearAddressesMutation.isPending}
+                    onClick={() => {
+                      if (
+                        window.confirm(
+                          "Clear all saved delivery addresses? This cannot be undone.",
+                        )
+                      ) {
+                        clearAddressesMutation.mutate();
+                      }
+                    }}
+                  >
+                    {clearAddressesMutation.isPending ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : null}
+                    Clear Addresses
+                  </Button>
+                </div>
+              ) : null}
+            </>
+          )}
+        </section>
 
             <section className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
               <h2 className="flex items-center gap-2 font-display text-base font-bold">
