@@ -100,6 +100,26 @@ function SellerOverview() {
   const showWalletMinimumNotice =
     storeForcedOffline || (minimumBalance != null && (wallet?.balance ?? 0) < minimumBalance);
 
+  const { data: ordersThisWeek = 0 } = useQuery({
+    queryKey: ["seller-orders-this-week", user?.id, store?.id],
+    enabled: Boolean(user && store),
+    queryFn: async () => {
+      const start = new Date();
+      const day = start.getDay();
+      const diff = day === 0 ? -6 : 1 - day;
+      start.setDate(start.getDate() + diff);
+      start.setHours(0, 0, 0, 0);
+      const { count, error } = await supabase
+        .from("orders")
+        .select("id", { count: "exact", head: true })
+        .eq("store_id", store!.id)
+        .gte("created_at", start.toISOString())
+        .is("deleted_at", null);
+      if (error) throw error;
+      return count ?? 0;
+    },
+  });
+
   const { data: application } = useQuery({
     queryKey: ["seller-application", user?.id],
     enabled: Boolean(user),
@@ -123,7 +143,7 @@ function SellerOverview() {
           icon={Store}
           hint={availability?.detail ?? "Your storefront appears here once verified"}
         />
-        <StatCard label="Orders this week" value="0" icon={ClipboardList} />
+        <StatCard label="Orders this week" value={String(ordersThisWeek)} icon={ClipboardList} />
         <StatCard
           label="Wallet balance"
           value={peso(wallet?.balance ?? 0)}

@@ -812,6 +812,7 @@ export type Database = {
         Row: {
           created_at: string;
           id: string;
+          line_subtotal: number;
           order_id: string;
           product_id: string | null;
           product_name: string;
@@ -821,6 +822,7 @@ export type Database = {
         Insert: {
           created_at?: string;
           id?: string;
+          line_subtotal?: number;
           order_id: string;
           product_id?: string | null;
           product_name: string;
@@ -830,6 +832,7 @@ export type Database = {
         Update: {
           created_at?: string;
           id?: string;
+          line_subtotal?: number;
           order_id?: string;
           product_id?: string | null;
           product_name?: string;
@@ -863,6 +866,8 @@ export type Database = {
           delivery_fee: number;
           distance_km: number;
           id: string;
+          idempotency_key: string | null;
+          inventory_reserved: boolean;
           notes: string | null;
           payment_method: Database["public"]["Enums"]["payment_method"];
           payment_status: Database["public"]["Enums"]["payment_status"];
@@ -886,6 +891,8 @@ export type Database = {
           delivery_fee?: number;
           distance_km?: number;
           id?: string;
+          idempotency_key?: string | null;
+          inventory_reserved?: boolean;
           notes?: string | null;
           payment_method?: Database["public"]["Enums"]["payment_method"];
           payment_status?: Database["public"]["Enums"]["payment_status"];
@@ -909,6 +916,8 @@ export type Database = {
           delivery_fee?: number;
           distance_km?: number;
           id?: string;
+          idempotency_key?: string | null;
+          inventory_reserved?: boolean;
           notes?: string | null;
           payment_method?: Database["public"]["Enums"]["payment_method"];
           payment_status?: Database["public"]["Enums"]["payment_status"];
@@ -1381,6 +1390,7 @@ export type Database = {
           comment: string | null;
           created_at: string;
           id: string;
+          order_id: string | null;
           product_id: string | null;
           rating: number;
           store_id: string | null;
@@ -1390,6 +1400,7 @@ export type Database = {
           comment?: string | null;
           created_at?: string;
           id?: string;
+          order_id?: string | null;
           product_id?: string | null;
           rating?: number;
           store_id?: string | null;
@@ -1399,12 +1410,20 @@ export type Database = {
           comment?: string | null;
           created_at?: string;
           id?: string;
+          order_id?: string | null;
           product_id?: string | null;
           rating?: number;
           store_id?: string | null;
           user_id?: string;
         };
         Relationships: [
+          {
+            foreignKeyName: "reviews_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
           {
             foreignKeyName: "reviews_product_id_fkey";
             columns: ["product_id"];
@@ -1972,6 +1991,17 @@ export type Database = {
         Returns: string;
       };
       claim_first_admin: { Args: never; Returns: boolean };
+      create_order_secure: {
+        Args: {
+          _address_id: string;
+          _idempotency_key?: string;
+          _items?: Json;
+          _notes?: string;
+          _payment_method: Database["public"]["Enums"]["payment_method"];
+          _store_id: string;
+        };
+        Returns: string;
+      };
       dispatch_accept: { Args: { _job_id: string }; Returns: Json };
       dispatch_advance: {
         Args: { _job_id: string; _step: string };

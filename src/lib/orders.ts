@@ -80,59 +80,30 @@ export function quoteOrder({
   };
 }
 
-export function claimNumber() {
-  return `RO-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
-}
-
 export interface PlaceOrderInput {
-  customerId: string;
   storeId: string;
-  addressId: string | null;
+  addressId: string;
   notes: string;
   paymentMethod: PaymentMethod;
-  quote: OrderQuote;
-  lines: { productId: string; name: string; price: number; quantity: number }[];
+  idempotencyKey: string;
+  lines: { productId: string; quantity: number }[];
 }
 
-/** Creates the order plus its line items and returns the new order id. */
+/** Creates the order server-side and returns the authoritative order id. */
 export async function placeOrder(input: PlaceOrderInput): Promise<string> {
-  const { quote } = input;
-  const { data, error } = await supabase
-    .from("orders")
-    .insert({
-      customer_id: input.customerId,
-      store_id: input.storeId,
-      address_id: input.addressId,
-      status: "pending",
-      payment_method: input.paymentMethod,
-      payment_status: input.paymentMethod === "cod" ? "pending" : "pending",
-      subtotal: quote.subtotal,
-      delivery_fee: quote.deliveryFee,
-      surge_fee: quote.surgeFee,
-      tax: quote.tax,
-      total: quote.total,
-      seller_commission: quote.sellerCommission,
-      rider_commission: quote.riderCommission,
-      distance_km: quote.distanceKm,
-      claim_number: claimNumber(),
-      notes: input.notes.trim() || null,
-    })
-    .select("id")
-    .single();
-  if (error) throw error;
-
-  const { error: itemsError } = await supabase.from("order_items").insert(
-    input.lines.map((line) => ({
-      order_id: data.id,
+  const { data, error } = await supabase.rpc("create_order_secure", {
+    _store_id: input.storeId,
+    _address_id: input.addressId,
+    _payment_method: input.paymentMethod,
+    _notes: input.notes.trim() || undefined,
+    _idempotency_key: input.idempotencyKey,
+    _items: input.lines.map((line) => ({
       product_id: line.productId,
-      product_name: line.name,
-      unit_price: line.price,
       quantity: line.quantity,
     })),
-  );
-  if (itemsError) throw itemsError;
-
-  return data.id;
+  });
+  if (error) throw error;
+  return data;
 }
 
 const ORDER_FIELDS =
@@ -141,6 +112,44 @@ const ORDER_FIELDS =
 export interface OrderItemPreview {
   product_name: string;
   quantity: number;
+}
+
+const ORDER_SUBMISSION_KEY_PREFIX = "rushorder.order-idempotency.v1:";
+
+export function orderIntentSignature(input: {
+  userId: string;
+  storeId: string;
+  addressId: string;
+  paymentMethod: PaymentMethod;
+  notes: string;
+  lines: { productId: string; quantity: number }[];
+}) {
+  const normalized = {
+    userId: input.userId,
+    storeId: input.storeId,
+    addressId: input.addressId,
+    paymentMethod: input.paymentMethod,
+    notes: input.notes.trim(),
+    lines: [...input.lines]
+      .sort((left, right) => left.productId.localeCompare(right.productId))
+      .map((line) => ({ productId: line.productId, quantity: line.quantity })),
+  };
+  return JSON.stringify(normalized);
+}
+
+export function getOrderIdempotencyKey(signature: string) {
+  if (typeof window === "undefined") return "";
+  const storageKey = `${ORDER_SUBMISSION_KEY_PREFIX}${signature}`;
+  const existing = window.sessionStorage.getItem(storageKey);
+  if (existing) return existing;
+  const generated = crypto.randomUUID();
+  window.sessionStorage.setItem(storageKey, generated);
+  return generated;
+}
+
+export function clearOrderIdempotencyKey(signature: string) {
+  if (typeof window === "undefined") return;
+  window.sessionStorage.removeItem(`${ORDER_SUBMISSION_KEY_PREFIX}${signature}`);
 }
 
 export type OrderRow = Pick<
@@ -261,4 +270,8 @@ export async function deleteOrder(orderId: string) {
     .eq("id", orderId);
 
   if (error) throw error;
+}
+
+export function claimNumber() {
+  return `RO-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2, 6).toUpperCase()}`;
 }

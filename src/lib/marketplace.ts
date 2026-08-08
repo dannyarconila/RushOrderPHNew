@@ -23,6 +23,7 @@ export interface StoreCard {
   address: unknown;
   latitude: number | null;
   longitude: number | null;
+  delivery_fee_override: number | null;
 }
 
 export interface ProductCard {
@@ -38,7 +39,7 @@ export interface ProductCard {
 }
 
 const STORE_FIELDS =
-  "id,name,slug,description,logo_url,banner_url,service_type,category_id,is_online,is_featured,business_hours,prep_time_minutes,minimum_order,rating,rating_count,address,latitude,longitude";
+  "id,name,slug,description,logo_url,banner_url,service_type,category_id,is_online,is_featured,business_hours,delivery_fee_override,prep_time_minutes,minimum_order,rating,rating_count,address,latitude,longitude";
 const PRODUCT_FIELDS =
   "id,store_id,name,description,price,compare_at_price,stock,images,is_available";
 

@@ -1,4 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
@@ -6,9 +7,11 @@ import { toast } from "sonner";
 import { Logo } from "@/components/brand/logo";
 import { TextField } from "@/components/forms/wizard";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { getDashboardRoute } from "@/lib/dashboard-route";
+import { legalVersionSnapshotQuery } from "@/lib/legal/public";
 
 const APP_ORIGIN = import.meta.env.VITE_APP_ORIGIN || window.location.origin;
 
@@ -19,9 +22,10 @@ function safeNext(value: unknown): string | undefined {
 }
 
 export const Route = createFileRoute("/login")({
-  validateSearch: (s: Record<string, unknown>): { next?: string } => {
+  validateSearch: (s: Record<string, unknown>): { next?: string; oauth?: string } => {
     const next = safeNext(s.next);
-    return next ? { next } : {};
+    const oauth = s.oauth === "google" ? "google" : undefined;
+    return { ...(next ? { next } : {}), ...(oauth ? { oauth } : {}) };
   },
   head: () => ({
     meta: [
@@ -41,19 +45,55 @@ function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
+  const [acceptedGoogleLegal, setAcceptedGoogleLegal] = useState(false);
   const { user, primaryRole, loading } = useAuth();
   const navigate = useNavigate();
-  const { next } = Route.useSearch();
+  const versions = useQuery(legalVersionSnapshotQuery());
+  const { next, oauth } = Route.useSearch();
 
   useEffect(() => {
     if (loading || !user) return;
-    // Return the visitor to where they came from (e.g. a protected page or an OAuth consent screen).
-    if (next) {
-      navigate({ href: next, replace: true });
-      return;
+
+    let cancelled = false;
+    async function finishGoogleConsent() {
+      if (oauth !== "google") return;
+      const raw = localStorage.getItem("rushorder-google-legal-consent");
+      if (!raw) return;
+
+      try {
+        const saved = JSON.parse(raw) as { termsVersion?: string; privacyVersion?: string };
+        const termsVersion = saved.termsVersion || versions.data?.termsVersion || "1.0.0";
+        const privacyVersion = saved.privacyVersion || versions.data?.privacyVersion || "1.0.0";
+        const { error } = await supabase.rpc(
+          "accept_customer_legal" as never,
+          {
+            _terms_version: termsVersion,
+            _privacy_version: privacyVersion,
+          } as never,
+        );
+        if (error) {
+          toast.error("Could not save legal acceptance", { description: error.message });
+          return;
+        }
+        localStorage.removeItem("rushorder-google-legal-consent");
+      } catch {
+        localStorage.removeItem("rushorder-google-legal-consent");
+      }
     }
-    navigate({ to: getDashboardRoute(primaryRole), replace: true });
-  }, [loading, user, primaryRole, navigate, next]);
+
+    void finishGoogleConsent().finally(() => {
+      if (cancelled) return;
+      if (next) {
+        navigate({ href: next, replace: true });
+        return;
+      }
+      navigate({ to: getDashboardRoute(primaryRole), replace: true });
+    });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [loading, user, primaryRole, navigate, next, oauth, versions.data]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -68,6 +108,17 @@ function LoginPage() {
   }
 
   async function handleGoogle() {
+    if (!acceptedGoogleLegal) {
+      toast.error("Please accept the Terms & Conditions and Privacy Policy first.");
+      return;
+    }
+    const termsVersion = versions.data?.termsVersion ?? "1.0.0";
+    const privacyVersion = versions.data?.privacyVersion ?? "1.0.0";
+    localStorage.setItem(
+      "rushorder-google-legal-consent",
+      JSON.stringify({ termsVersion, privacyVersion }),
+    );
+
     const callback = new URL("/login", APP_ORIGIN);
     if (next) callback.searchParams.set("next", next);
     const { error } = await supabase.auth.signInWithOAuth({
@@ -117,7 +168,38 @@ function LoginPage() {
             <span className="h-px flex-1 bg-border" /> or <span className="h-px flex-1 bg-border" />
           </div>
 
-          <Button variant="outline" size="lg" block onClick={handleGoogle}>
+          <label className="mt-4 flex items-start gap-3 rounded-xl border border-border bg-card px-3 py-3 text-sm">
+            <Checkbox
+              checked={acceptedGoogleLegal}
+              onCheckedChange={(nextValue) => setAcceptedGoogleLegal(Boolean(nextValue))}
+            />
+            <span>
+              I agree to the{" "}
+              <Link
+                to="/legal/$slug"
+                params={{ slug: "terms-conditions" }}
+                className="font-semibold text-primary hover:underline"
+              >
+                Terms & Conditions
+              </Link>{" "}
+              and{" "}
+              <Link
+                to="/legal/$slug"
+                params={{ slug: "privacy-policy" }}
+                className="font-semibold text-primary hover:underline"
+              >
+                Privacy Policy
+              </Link>
+              .
+            </span>
+          </label>
+          <Button
+            variant="outline"
+            size="lg"
+            block
+            onClick={handleGoogle}
+            disabled={!acceptedGoogleLegal}
+          >
             Continue with Google
           </Button>
 

@@ -31,6 +31,8 @@ export interface AddressInput {
   city: string;
   province: string;
   postal_code: string;
+  latitude: number | null;
+  longitude: number | null;
   is_default: boolean;
 }
 
@@ -43,6 +45,8 @@ export const EMPTY_ADDRESS: AddressInput = {
   city: "",
   province: "",
   postal_code: "",
+  latitude: null,
+  longitude: null,
   is_default: true,
 };
 

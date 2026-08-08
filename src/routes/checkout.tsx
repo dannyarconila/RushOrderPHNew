@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { Loader2, MapPin, ShoppingBag, Wallet } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { TextAreaField, TextField } from "@/components/forms/wizard";
@@ -13,6 +13,11 @@ import { EMPTY_ADDRESS, createAddress, formatAddress, myAddressesQuery } from "@
 import { peso } from "@/lib/currency";
 import { dispatchSettingsQuery } from "@/lib/dispatch";
 import { publicSettingsQuery, storeQuery } from "@/lib/marketplace";
+import {
+  clearOrderIdempotencyKey,
+  getOrderIdempotencyKey,
+  orderIntentSignature,
+} from "@/lib/orders";
 import { storeAvailability } from "@/lib/store-status";
 import { placeOrder, quoteOrder, type PaymentMethod } from "@/lib/orders";
 import { cn } from "@/lib/utils";
@@ -79,9 +84,12 @@ function CheckoutPage() {
   const [notes, setNotes] = useState("");
   const [showNew, setShowNew] = useState(false);
   const [draft, setDraft] = useState(EMPTY_ADDRESS);
+  const [idempotencyKey, setIdempotencyKey] = useState("");
 
   const selectedAddress =
     (addresses.data ?? []).find((a) => a.id === addressId) ?? (addresses.data ?? [])[0] ?? null;
+  const selectedAddressHasCoords =
+    selectedAddress?.latitude != null && selectedAddress?.longitude != null;
 
   const distanceKm = useMemo(() => {
     const addressLat = toNumber(selectedAddress?.latitude);
@@ -123,15 +131,39 @@ function CheckoutPage() {
         subtotal,
         distanceKm,
         settings: feeSettings,
+        deliveryFeeOverride: store.data?.delivery_fee_override ?? null,
       }),
-    [subtotal, distanceKm, feeSettings],
+    [subtotal, distanceKm, feeSettings, store.data?.delivery_fee_override],
   );
+
+  const intentSignature = useMemo(() => {
+    if (!user || !storeId || !selectedAddress) return null;
+    return orderIntentSignature({
+      userId: user.id,
+      storeId,
+      addressId: selectedAddress.id,
+      paymentMethod: payment,
+      notes,
+      lines: lines.map((line) => ({ productId: line.productId, quantity: line.quantity })),
+    });
+  }, [user, storeId, selectedAddress, payment, notes, lines]);
+
+  useEffect(() => {
+    if (!intentSignature) {
+      setIdempotencyKey("");
+      return;
+    }
+    setIdempotencyKey(getOrderIdempotencyKey(intentSignature));
+  }, [intentSignature]);
 
   const saveAddress = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error("Please sign in first.");
       if (draft.line1.trim().length < 4) throw new Error("Enter a complete street address.");
       if (draft.city.trim().length < 2) throw new Error("Enter your city or municipality.");
+      if (draft.latitude == null || draft.longitude == null) {
+        throw new Error("Enter the latitude and longitude for this address.");
+      }
       return createAddress(user.id, draft);
     },
     onSuccess: (row) => {
@@ -150,6 +182,12 @@ function CheckoutPage() {
       if (!user) throw new Error("Please sign in to place an order.");
       if (!storeId) throw new Error("Your cart is empty.");
       if (!selectedAddress) throw new Error("Add a delivery address first.");
+      if (!selectedAddressHasCoords) {
+        throw new Error("Your selected address is missing map coordinates.");
+      }
+      if (!idempotencyKey || !intentSignature) {
+        throw new Error("Your order could not be created. Please try again.");
+      }
       if (storeClosed) {
         throw new Error(
           availability?.detail
@@ -158,21 +196,16 @@ function CheckoutPage() {
         );
       }
       return placeOrder({
-        customerId: user.id,
         storeId,
         addressId: selectedAddress.id,
         notes,
         paymentMethod: payment,
-        quote,
-        lines: lines.map((l) => ({
-          productId: l.productId,
-          name: l.name,
-          price: l.price,
-          quantity: l.quantity,
-        })),
+        idempotencyKey,
+        lines: lines.map((l) => ({ productId: l.productId, quantity: l.quantity })),
       });
     },
     onSuccess: (orderId) => {
+      if (intentSignature) clearOrderIdempotencyKey(intentSignature);
       clear();
       void queryClient.invalidateQueries({ queryKey: ["my-orders"] });
       toast.success("Order placed", { description: "We've notified the store." });
@@ -299,6 +332,26 @@ function CheckoutPage() {
                         value={draft.postal_code}
                         onChange={(v) => setDraft((d) => ({ ...d, postal_code: v }))}
                       />
+                      <TextField
+                        label="Latitude"
+                        value={draft.latitude == null ? "" : String(draft.latitude)}
+                        onChange={(v) =>
+                          setDraft((d) => ({
+                            ...d,
+                            latitude: v.trim() === "" ? null : Number(v),
+                          }))
+                        }
+                      />
+                      <TextField
+                        label="Longitude"
+                        value={draft.longitude == null ? "" : String(draft.longitude)}
+                        onChange={(v) =>
+                          setDraft((d) => ({
+                            ...d,
+                            longitude: v.trim() === "" ? null : Number(v),
+                          }))
+                        }
+                      />
                       <div className="sm:col-span-2 flex justify-end gap-2">
                         <Button variant="ghost" size="sm" onClick={() => setShowNew(false)}>
                           Cancel
@@ -325,6 +378,13 @@ function CheckoutPage() {
                       Add a new address
                     </Button>
                   )}
+
+                  {selectedAddress && !selectedAddressHasCoords ? (
+                    <p className="mt-3 rounded-xl border border-warning/40 bg-warning/10 p-3 text-xs font-semibold text-warning-foreground">
+                      This address is missing map coordinates. Add a new address with latitude and
+                      longitude to place an order securely.
+                    </p>
+                  ) : null}
                 </>
               )}
             </section>
@@ -402,7 +462,7 @@ function CheckoutPage() {
             </Button>
 
             <p className="mt-2 text-center text-xs text-muted-foreground">
-              You'll be able to track your order in real time.
+              Final pricing and stock are validated when you submit the order.
             </p>
           </aside>
         </div>

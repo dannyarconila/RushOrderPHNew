@@ -1,7 +1,8 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Bike, CheckCircle2, Circle, Loader2, Package } from "lucide-react";
+import { Bike, CheckCircle2, Circle, Loader2, Package, Star } from "lucide-react";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 
 import { PublicLayout } from "@/components/site/public-layout";
 import { Button } from "@/components/ui/button";
@@ -178,6 +179,10 @@ function OrderTrackingPage() {
           </p>
         </section>
 
+        {order.data.status === "delivered" && !isPasugo ? (
+          <OrderReview orderId={orderId} storeId={order.data.store_id} />
+        ) : null}
+
         <Button asChild variant="outline" className="mt-6">
           <Link to="/customer">Back to my orders</Link>
         </Button>
@@ -286,6 +291,117 @@ function DispatchPanel({ orderId }: { orderId: string }) {
       <div className="mt-4 overflow-hidden rounded-xl border">
         <LiveDeliveryMap dispatchJob={job} riderLocation={riderLocation} />
       </div>
+    </section>
+  );
+}
+
+function OrderReview({ orderId, storeId }: { orderId: string; storeId: string | null }) {
+  const queryClient = useQueryClient();
+  const [rating, setRating] = useState(5);
+  const [comment, setComment] = useState("");
+  const [saving, setSaving] = useState(false);
+
+  const existing = useQuery({
+    queryKey: ["review", orderId],
+    enabled: Boolean(storeId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("reviews")
+        .select("id,rating,comment")
+        .eq("order_id", orderId)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  async function submit() {
+    if (!storeId || existing.data) return;
+    setSaving(true);
+    const { data: sessionData } = await supabase.auth.getSession();
+    const userId = sessionData.session?.user.id;
+    if (!userId) {
+      setSaving(false);
+      toast.error("Please sign in to review this order.");
+      return;
+    }
+
+    const { error } = await supabase.from("reviews").insert({
+      user_id: userId,
+      order_id: orderId,
+      store_id: storeId,
+      rating,
+      comment: comment.trim() || null,
+    } as never);
+    setSaving(false);
+    if (error) {
+      toast.error("Could not submit review", { description: error.message });
+      return;
+    }
+    toast.success("Thanks for your review!");
+    await queryClient.invalidateQueries({ queryKey: ["review", orderId] });
+    await queryClient.invalidateQueries({ queryKey: ["store"] });
+    await queryClient.invalidateQueries({ queryKey: ["stores"] });
+  }
+
+  return (
+    <section className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
+      <h2 className="flex items-center gap-2 font-display text-base font-bold">
+        <Star className="size-4 text-primary" /> Review your order
+      </h2>
+      {existing.isLoading ? (
+        <p className="mt-3 text-sm text-muted-foreground">Checking your review…</p>
+      ) : existing.data ? (
+        <div className="mt-4">
+          <div className="flex gap-1" aria-label={`${existing.data.rating} out of 5 stars`}>
+            {Array.from({ length: 5 }, (_, index) => (
+              <Star
+                key={index}
+                className={`size-5 ${index < existing.data!.rating ? "fill-current text-primary" : "text-muted-foreground/30"}`}
+              />
+            ))}
+          </div>
+          {existing.data.comment ? (
+            <p className="mt-3 text-sm text-muted-foreground">{existing.data.comment}</p>
+          ) : null}
+          <p className="mt-2 text-xs text-muted-foreground">You already reviewed this order.</p>
+        </div>
+      ) : (
+        <div className="mt-4 space-y-4">
+          <div>
+            <p className="text-xs font-semibold text-muted-foreground">Your rating</p>
+            <div className="mt-2 flex gap-1">
+              {Array.from({ length: 5 }, (_, index) => {
+                const value = index + 1;
+                return (
+                  <button
+                    key={value}
+                    type="button"
+                    aria-label={`${value} star${value > 1 ? "s" : ""}`}
+                    onClick={() => setRating(value)}
+                    className="rounded-md p-1 hover:bg-muted"
+                  >
+                    <Star
+                      className={`size-6 ${value <= rating ? "fill-current text-primary" : "text-muted-foreground/30"}`}
+                    />
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+          <textarea
+            value={comment}
+            onChange={(event) => setComment(event.target.value)}
+            rows={3}
+            maxLength={500}
+            placeholder="Tell the store how your order went (optional)"
+            className="w-full resize-none rounded-xl border border-input bg-background px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-ring"
+          />
+          <Button onClick={submit} disabled={saving}>
+            {saving ? <Loader2 className="size-4 animate-spin" /> : null} Submit review
+          </Button>
+        </div>
+      )}
     </section>
   );
 }

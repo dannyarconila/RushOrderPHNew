@@ -19,7 +19,7 @@ import { supabase } from "@/integrations/supabase/client";
 import type { SellerBusinessType } from "@/types";
 import { cn } from "@/lib/utils";
 import { LegalModal } from "@/components/legal/legal-modal";
-import { legalDocumentQuery } from "@/lib/legal/public";
+import { legalDocumentQuery, legalVersionSnapshotQuery } from "@/lib/legal/public";
 
 export const Route = createFileRoute("/become-seller")({
   head: () => ({
@@ -116,6 +116,7 @@ function BecomeSellerPage() {
   const [showLegalModal, setShowLegalModal] = useState(false);
   const [selectedLegalSlug, setSelectedLegalSlug] = useState("");
   const [acceptedLegal, setAcceptedLegal] = useState(false);
+  const versions = useQuery(legalVersionSnapshotQuery());
   const { data: legalDocument } = useQuery({
     ...legalDocumentQuery(selectedLegalSlug),
     enabled: showLegalModal && selectedLegalSlug.length > 0,
@@ -164,6 +165,8 @@ function BecomeSellerPage() {
       ...store,
       service_type: mapStoreServiceType(store.category),
     };
+    const termsVersion = versions.data?.sellerTermsVersion ?? "1.0.0";
+    const privacyVersion = versions.data?.privacyVersion ?? "1.0.0";
 
     setSubmitting(true);
     const { error } = await supabase.from("seller_applications").insert({
@@ -174,7 +177,11 @@ function BecomeSellerPage() {
       address: normalizedAddress,
       store_info: storeInfo,
       documents,
-    });
+      accepted_terms: true,
+      accepted_terms_at: new Date().toISOString(),
+      terms_version: termsVersion,
+      privacy_version: privacyVersion,
+    } as never);
     setSubmitting(false);
     if (error) {
       toast.error("Could not submit application", { description: error.message });

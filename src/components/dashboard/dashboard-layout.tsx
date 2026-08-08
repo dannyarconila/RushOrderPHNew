@@ -4,6 +4,7 @@ import { useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { Logo } from "@/components/brand/logo";
+import { NotificationCenter } from "@/components/dashboard/notification-center";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -111,9 +112,12 @@ export function DashboardLayout({
               {workspace}
             </span>
           </div>
-          <Button asChild variant="ghost" size="sm">
-            <Link to="/">Back to site</Link>
-          </Button>
+          <div className="flex items-center gap-1">
+            <NotificationCenter />
+            <Button asChild variant="ghost" size="sm">
+              <Link to="/">Back to site</Link>
+            </Button>
+          </div>
         </header>
 
         {open ? (

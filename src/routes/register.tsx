@@ -85,10 +85,24 @@ function RegisterPage() {
   }
 
   async function handleGoogle() {
+    if (!acceptedLegal) {
+      toast.error("Please accept the Terms & Conditions and Privacy Policy first.");
+      return;
+    }
+
+    const termsVersion = versions.data?.termsVersion ?? "1.0.0";
+    const privacyVersion = versions.data?.privacyVersion ?? "1.0.0";
+    localStorage.setItem(
+      "rushorder-google-legal-consent",
+      JSON.stringify({ termsVersion, privacyVersion }),
+    );
+
+    const callback = new URL("/login", APP_ORIGIN);
+    callback.searchParams.set("oauth", "google");
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: APP_ORIGIN,
+        redirectTo: callback.toString(),
       },
     });
     if (error) toast.error("Google sign-up failed", { description: error.message });
