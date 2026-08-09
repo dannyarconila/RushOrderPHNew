@@ -24,7 +24,6 @@ import { peso } from "@/lib/currency";
 import {
   activeJobQuery,
   advanceDispatch,
-  currentPosition,
   type DispatchJob,
   pendingOfferQuery,
   riderHistoryQuery,
@@ -34,6 +33,7 @@ import {
   stopWatchingLocation,
 } from "@/lib/dispatch";
 import { minimumWalletBalanceQuery, myWalletQuery } from "@/lib/wallet";
+import { getCurrentLocation } from "@/lib/geolocation";
 
 export const Route = createFileRoute("/rider")({
   head: () => ({
@@ -173,14 +173,25 @@ function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
   }, [online]);
 
   const presence = useMutation({
-    mutationFn: async (next: boolean) =>
-      setRiderPresence(next, next ? await currentPosition() : null),
+    mutationFn: async (next: boolean) => {
+      if (!next) {
+        return setRiderPresence(false, null);
+      }
+
+      // Rider must have a valid GPS location before going online.
+      const coords = await getCurrentLocation();
+
+      return setRiderPresence(true, coords);
+    },
     onSuccess: (_data, next) => {
       toast.success(next ? "You are online — bookings will come in" : "You are offline");
       void queryClient.invalidateQueries({ queryKey: ["rider-status"] });
     },
-    onError: (error: Error) =>
-      toast.error("Could not update status", { description: error.message }),
+    onError: (error: Error) => {
+      toast.error("Could not update status", {
+        description: error.message || "Please allow location access and try again.",
+      });
+    },
   });
 
   const advance = useMutation({
