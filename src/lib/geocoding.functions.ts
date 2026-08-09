@@ -38,12 +38,15 @@ interface NominatimAddress {
   street?: string;
   pedestrian?: string;
   footway?: string;
+  residential?: string;
+  path?: string;
 
   barangay?: string;
-
   neighbourhood?: string;
   neighborhood?: string;
   suburb?: string;
+  quarter?: string;
+  locality?: string;
   village?: string;
   town?: string;
   municipality?: string;
@@ -122,7 +125,14 @@ function parseCoordinates(result: NominatimResult): {
 function buildLine1(address: NominatimAddress): string {
   const houseNumber = firstNonEmpty(address.house_number);
 
-  const street = firstNonEmpty(address.road, address.street, address.pedestrian, address.footway);
+  const street = firstNonEmpty(
+    address.road,
+    address.street,
+    address.residential,
+    address.pedestrian,
+    address.footway,
+    address.path,
+  );
 
   return [houseNumber, street].filter(Boolean).join(" ").trim();
 }
@@ -137,12 +147,26 @@ function parseAddress(address: NominatimAddress | undefined) {
     source.suburb,
     source.neighbourhood,
     source.neighborhood,
+    source.quarter,
     source.village,
+    source.locality,
   );
 
-  const city = firstNonEmpty(source.municipality, source.city, source.town);
+  const city = firstNonEmpty(
+    source.municipality,
+    source.city,
+    source.town,
+    source.city_district,
+    source.district,
+    source.county,
+  );
 
-  const province = firstNonEmpty(source.province, source.state, source.region);
+  const province = firstNonEmpty(
+    source.province,
+    source.state,
+    source.region,
+    source.state_district,
+  );
 
   const postalCode = firstNonEmpty(source.postcode);
 
