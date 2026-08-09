@@ -1,8 +1,11 @@
 import { useEffect, useMemo } from "react";
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
-import { Button } from "@/components/ui/button";
 import { LocateFixed, MapPin } from "lucide-react";
 import { toast } from "sonner";
+
+import { Button } from "@/components/ui/button";
+import { getCurrentLocation } from "@/lib/geolocation";
+
 import "./leaflet-icons";
 
 interface Coordinate {
@@ -55,37 +58,31 @@ export default function AddressLocationPicker({
     [latitude, longitude],
   );
 
-  function useCurrentLocation() {
-    if (!navigator.geolocation) {
-      toast.error("Location is not supported by this browser.");
-      return;
+  async function useCurrentLocation() {
+    try {
+      const coords = await getCurrentLocation();
+
+      const lat = coords.latitude;
+      const lng = coords.longitude;
+
+      onChange({
+        lat,
+        lng,
+      });
+
+      toast.success("Current location detected", {
+        description: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
+      });
+    } catch (error) {
+      const geolocationError = error as GeolocationPositionError;
+
+      toast.error("Could not get your current location", {
+        description:
+          geolocationError.code === geolocationError.PERMISSION_DENIED
+            ? "Please allow location access for RushOrder PH."
+            : "Please try again or tap the map to set your delivery location.",
+      });
     }
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        const lat = position.coords.latitude;
-        const lng = position.coords.longitude;
-
-        onChange({ lat, lng });
-
-        toast.success("Current location detected", {
-          description: `${lat.toFixed(6)}, ${lng.toFixed(6)}`,
-        });
-      },
-      (error) => {
-        toast.error("Could not get your current location", {
-          description:
-            error.code === error.PERMISSION_DENIED
-              ? "Please allow location access for RushOrder PH."
-              : "Please try again or tap the map to set your delivery location.",
-        });
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 0,
-      },
-    );
   }
 
   return (
@@ -117,6 +114,7 @@ export default function AddressLocationPicker({
           />
 
           <MapClickHandler onChange={onChange} />
+
           <RecenterMap coordinate={coordinate} />
 
           <Marker

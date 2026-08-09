@@ -1,7 +1,8 @@
 import { Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { Clock3, Search, ShoppingBag, Star, Store as StoreIcon } from "lucide-react";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { getCurrentLocation, isLocationSupported } from "@/lib/geolocation";
 
 import { StorageImage } from "@/components/media/storage-image";
 import { Input } from "@/components/ui/input";
@@ -28,11 +29,14 @@ const toNumber = (value: unknown): number | null => {
 
 const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number) => {
   const toRad = (deg: number) => (deg * Math.PI) / 180;
+
   const dLat = toRad(lat2 - lat1);
   const dLon = toRad(lon2 - lon1);
+
   const a =
     Math.sin(dLat / 2) ** 2 +
     Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
+
   return 6371 * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
 };
 
@@ -44,36 +48,155 @@ export function MarketplaceBrowser({
   emptyLabel?: string;
 }) {
   const { user } = useAuth();
+
   const [term, setTerm] = useState("");
   const [category, setCategory] = useState<string | null>(null);
+  const [gpsCoords, setGpsCoords] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+  const [locationError, setLocationError] = useState<string | null>(null);
 
   const stores = useQuery(storesQuery(serviceType));
   const settings = useQuery(publicSettingsQuery());
   const addresses = useQuery(myAddressesQuery(user?.id));
   const categories = useQuery(categoriesQuery(serviceType));
   const products = useQuery(productSearchQuery(term, serviceType));
+  useEffect(() => {
+    if (!user) return;
+    if (!isLocationSupported()) return;
+
+    const preferred = (addresses.data ?? []).find((address) => address.is_default);
+
+    const savedLat = toNumber(preferred?.latitude);
+    const savedLng = toNumber(preferred?.longitude);
+
+    // A saved default address with valid coordinates is the
+    // authoritative delivery location for the customer.
+    if (savedLat != null && savedLng != null) {
+      setGpsCoords(null);
+      setLocationError(null);
+      return;
+    }
+
+    let cancelled = false;
+
+    setIsDetectingLocation(true);
+    setLocationError(null);
+
+    getCurrentLocation()
+      .then((coords) => {
+        if (cancelled) return;
+
+        setGpsCoords({
+          lat: coords.latitude,
+          lng: coords.longitude,
+        });
+      })
+      .catch((error: unknown) => {
+        if (cancelled) return;
+
+        const code =
+          typeof error === "object" && error !== null && "code" in error
+            ? Number((error as { code?: unknown }).code)
+            : null;
+
+        setLocationError(
+          code === 1
+            ? "Location permission was denied. Please allow location access to find stores near you."
+            : "Could not detect your current location. You can continue browsing or set a delivery location at checkout.",
+        );
+      })
+      .finally(() => {
+        if (!cancelled) {
+          setIsDetectingLocation(false);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [user, addresses.data]);
 
   const radiusKm = useMemo(() => {
     const raw = settings.data?.marketplace_customer_radius_km;
     const parsed = typeof raw === "number" ? raw : Number(raw);
+
     return Number.isFinite(parsed) && parsed > 0 ? parsed : null;
   }, [settings.data]);
 
-  const customerCoords = useMemo(() => {
-    const preferred = (addresses.data ?? [])[0] ?? null;
-    const lat = toNumber(preferred?.latitude);
-    const lng = toNumber(preferred?.longitude);
-    if (lat == null || lng == null) return null;
-    return { lat, lng };
+  const preferredAddress = useMemo(() => {
+    const list = addresses.data ?? [];
+
+    return list.find((address) => address.is_default) ?? list[0] ?? null;
   }, [addresses.data]);
+
+  const customerCoords = useMemo(() => {
+    const savedLat = toNumber(preferredAddress?.latitude);
+    const savedLng = toNumber(preferredAddress?.longitude);
+
+    if (savedLat != null && savedLng != null) {
+      return {
+        lat: savedLat,
+        lng: savedLng,
+      };
+    }
+
+    return gpsCoords;
+  }, [preferredAddress, gpsCoords]);
+
+  const locationRequired = Boolean(user) && Boolean(radiusKm) && !customerCoords;
+  const detectCurrentLocation = async () => {
+    if (!isLocationSupported()) {
+      setLocationError("Location is not supported by this browser.");
+      return;
+    }
+
+    setIsDetectingLocation(true);
+    setLocationError(null);
+
+    try {
+      const coords = await getCurrentLocation();
+
+      setGpsCoords({
+        lat: coords.latitude,
+        lng: coords.longitude,
+      });
+    } catch (error: unknown) {
+      const code =
+        typeof error === "object" && error !== null && "code" in error
+          ? Number((error as { code?: unknown }).code)
+          : null;
+
+      setLocationError(
+        code === 1
+          ? "Location permission was denied. Please allow location access for RushOrder PH."
+          : "Could not detect your current location. Please try again.",
+      );
+    } finally {
+      setIsDetectingLocation(false);
+    }
+  };
 
   const visibleStores = useMemo(() => {
     const list = stores.data ?? [];
-    if (!radiusKm || !customerCoords) return list;
+
+    // Guests or customers without a configured radius/location
+    // can still browse the marketplace.
+    if (!radiusKm || !customerCoords) {
+      return list;
+    }
+
     return list.filter((store) => {
       const storeLat = toNumber(store.latitude);
       const storeLng = toNumber(store.longitude);
-      if (storeLat == null || storeLng == null) return false;
+
+      if (storeLat == null || storeLng == null) {
+        return false;
+      }
+
       return haversineKm(customerCoords.lat, customerCoords.lng, storeLat, storeLng) <= radiusKm;
     });
   }, [stores.data, customerCoords, radiusKm]);
@@ -81,18 +204,22 @@ export function MarketplaceBrowser({
   const results = useMemo(() => {
     const list = visibleStores;
     const needle = term.trim().toLowerCase();
-    return list.filter((s) => {
+
+    return list.filter((store) => {
       const matchesTerm =
         !needle ||
-        s.name.toLowerCase().includes(needle) ||
-        (s.description ?? "").toLowerCase().includes(needle);
-      const matchesCategory = !category || s.category_id === category;
+        store.name.toLowerCase().includes(needle) ||
+        (store.description ?? "").toLowerCase().includes(needle);
+
+      const matchesCategory = !category || store.category_id === category;
+
       return matchesTerm && matchesCategory;
     });
   }, [visibleStores, term, category]);
 
   const filteredProducts = useMemo(() => {
     const allowedStores = new Set(visibleStores.map((store) => store.id));
+
     return (products.data ?? []).filter((product) => allowedStores.has(product.store_id));
   }, [products.data, visibleStores]);
 
@@ -101,9 +228,10 @@ export function MarketplaceBrowser({
       <div className="flex flex-col gap-4">
         <div className="relative">
           <Search className="pointer-events-none absolute left-4 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
+
           <Input
             value={term}
-            onChange={(e) => setTerm(e.target.value)}
+            onChange={(event) => setTerm(event.target.value)}
             placeholder="Search stores, dishes, groceries, medicines…"
             className="h-12 rounded-full pl-11"
             aria-label="Search stores and products"
@@ -115,26 +243,59 @@ export function MarketplaceBrowser({
             <CategoryChip active={category === null} onClick={() => setCategory(null)}>
               All
             </CategoryChip>
-            {categories.data.map((c) => (
+
+            {categories.data.map((categoryItem) => (
               <CategoryChip
-                key={c.id}
-                active={category === c.id}
-                onClick={() => setCategory(category === c.id ? null : c.id)}
+                key={categoryItem.id}
+                active={category === categoryItem.id}
+                onClick={() => setCategory(category === categoryItem.id ? null : categoryItem.id)}
               >
-                {c.name}
+                {categoryItem.name}
               </CategoryChip>
             ))}
           </div>
         ) : null}
       </div>
 
+      {locationRequired ? (
+        <div className="mt-6 rounded-2xl border border-dashed border-border bg-muted/30 p-5">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold">Set your delivery location</p>
+
+              <p className="mt-1 text-sm text-muted-foreground">
+                RushOrder PH is showing stores within {radiusKm} km of your delivery location.
+              </p>
+
+              {locationError ? (
+                <p className="mt-2 text-xs text-destructive">{locationError}</p>
+              ) : isDetectingLocation ? (
+                <p className="mt-2 text-xs text-muted-foreground">
+                  Detecting your current location…
+                </p>
+              ) : null}
+            </div>
+
+            <button
+              type="button"
+              onClick={detectCurrentLocation}
+              disabled={isDetectingLocation}
+              className="inline-flex h-9 shrink-0 items-center justify-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground transition-colors hover:bg-primary/90 disabled:pointer-events-none disabled:opacity-50"
+            >
+              {isDetectingLocation ? "Detecting location…" : "Use my current location"}
+            </button>
+          </div>
+        </div>
+      ) : null}
+
       {term.trim().length >= 2 ? (
         <section className="mt-8">
           <h2 className="font-display text-lg font-bold tracking-tight">Matching items</h2>
+
           {products.isLoading ? (
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <Skeleton key={i} className="h-28 rounded-2xl" />
+              {Array.from({ length: 4 }).map((_, index) => (
+                <Skeleton key={index} className="h-28 rounded-2xl" />
               ))}
             </div>
           ) : filteredProducts.length === 0 ? (
@@ -143,25 +304,30 @@ export function MarketplaceBrowser({
             </p>
           ) : (
             <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
-              {filteredProducts.map((p) => (
+              {filteredProducts.map((product) => (
                 <Link
-                  key={p.id}
+                  key={product.id}
                   to="/store/$storeId"
-                  params={{ storeId: p.store_id }}
+                  params={{ storeId: product.store_id }}
                   className="flex gap-3 rounded-2xl border border-border bg-card p-3 shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-0.5"
                 >
                   <div className="size-16 shrink-0 overflow-hidden rounded-xl bg-secondary">
                     <StorageImage
                       bucket={BUCKETS.productImages}
-                      path={firstImage(p.images)}
-                      alt={p.name}
+                      path={firstImage(product.images)}
+                      alt={product.name}
                       className="size-full"
                     />
                   </div>
+
                   <div className="min-w-0">
-                    <p className="truncate text-sm font-bold">{p.name}</p>
-                    <p className="truncate text-xs text-muted-foreground">{p.store?.name}</p>
-                    <p className="mt-1 text-sm font-bold text-primary">{peso(Number(p.price))}</p>
+                    <p className="truncate text-sm font-bold">{product.name}</p>
+
+                    <p className="truncate text-xs text-muted-foreground">{product.store?.name}</p>
+
+                    <p className="mt-1 text-sm font-bold text-primary">
+                      {peso(Number(product.price))}
+                    </p>
                   </div>
                 </Link>
               ))}
@@ -171,13 +337,15 @@ export function MarketplaceBrowser({
       ) : null}
 
       <h2 className="mt-10 font-display text-lg font-bold tracking-tight">Stores</h2>
+
       <div className="mt-4 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
         {stores.isLoading
-          ? Array.from({ length: 6 }).map((_, i) => (
-              <Skeleton key={i} className="h-56 rounded-2xl" />
+          ? Array.from({ length: 6 }).map((_, index) => (
+              <Skeleton key={index} className="h-56 rounded-2xl" />
             ))
           : results.map((store) => {
               const availability = storeAvailability(store);
+
               return (
                 <Link
                   key={store.id}
@@ -198,25 +366,30 @@ export function MarketplaceBrowser({
                         <StoreIcon className="size-8" />
                       </div>
                     )}
+
                     {store.is_featured ? (
                       <span className="absolute left-3 top-3 rounded-full bg-accent px-3 py-1 text-[11px] font-bold text-accent-foreground">
                         Featured
                       </span>
                     ) : null}
                   </div>
+
                   <div className="p-5">
                     <div className="flex items-start justify-between gap-3">
                       <h3 className="font-display text-base font-bold tracking-tight">
                         {store.name}
                       </h3>
+
                       <span className="inline-flex shrink-0 items-center gap-1 text-xs font-bold text-muted-foreground">
                         <Star className="size-3.5 fill-accent text-accent" />
                         {Number(store.rating ?? 0).toFixed(1)}
                       </span>
                     </div>
+
                     <p className="mt-2 line-clamp-2 text-sm text-muted-foreground">
                       {store.description ?? "Local partner store on RushOrder PH."}
                     </p>
+
                     <div className="mt-3 flex flex-wrap items-center gap-2">
                       <span
                         className={cn(
@@ -228,15 +401,18 @@ export function MarketplaceBrowser({
                       >
                         {availability.label}
                       </span>
+
                       {availability.detail ? (
                         <span className="text-xs text-muted-foreground">{availability.detail}</span>
                       ) : null}
                     </div>
+
                     <div className="mt-4 flex items-center gap-4 border-t border-border pt-3 text-xs text-muted-foreground">
                       <span className="inline-flex items-center gap-1.5">
                         <Clock3 className="size-3.5" />
                         {store.prep_time_minutes} min prep
                       </span>
+
                       <span className="inline-flex items-center gap-1.5">
                         <ShoppingBag className="size-3.5" />
                         Min. {peso(Number(store.minimum_order ?? 0))}
@@ -271,10 +447,10 @@ function CategoryChip({
       type="button"
       onClick={onClick}
       className={cn(
-        "rounded-full border px-4 py-2 text-sm font-semibold transition-colors",
+        "rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors",
         active
-          ? "border-primary bg-primary-soft text-primary"
-          : "border-border text-muted-foreground hover:bg-secondary hover:text-foreground",
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-border bg-background text-muted-foreground hover:bg-muted",
       )}
     >
       {children}

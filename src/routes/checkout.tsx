@@ -30,6 +30,7 @@ import {
 import { storeAvailability } from "@/lib/store-status";
 import { placeOrder, quoteOrder, type PaymentMethod } from "@/lib/orders";
 import { cn } from "@/lib/utils";
+import { getCurrentLocation } from "@/lib/geolocation";
 
 export const Route = createFileRoute("/checkout")({
   head: () => ({
@@ -282,7 +283,7 @@ function CheckoutPage() {
       }),
   });
 
-  const useCurrentLocationForSelectedAddress = () => {
+  const useCurrentLocationForSelectedAddress = async () => {
     if (!user) {
       toast.error("Please sign in first.");
       return;
@@ -293,44 +294,35 @@ function CheckoutPage() {
       return;
     }
 
-    if (!navigator.geolocation) {
-      toast.error("Location is not supported by this browser.");
-      return;
-    }
-
     setIsLocatingSelectedAddress(true);
 
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        updateAddressLocationMutation.mutate(
-          {
-            addressId: selectedAddress.id,
-            latitude: position.coords.latitude,
-            longitude: position.coords.longitude,
-          },
-          {
-            onSettled: () => {
-              setIsLocatingSelectedAddress(false);
-            },
-          },
-        );
-      },
-      (error) => {
-        setIsLocatingSelectedAddress(false);
+    try {
+      const coords = await getCurrentLocation();
 
-        toast.error("Could not get your current location.", {
-          description:
-            error.code === error.PERMISSION_DENIED
-              ? "Please allow location access for RushOrder PH."
-              : "Please try again or check your GPS connection.",
-        });
-      },
-      {
-        enableHighAccuracy: true,
-        timeout: 15000,
-        maximumAge: 0,
-      },
-    );
+      updateAddressLocationMutation.mutate(
+        {
+          addressId: selectedAddress.id,
+          latitude: coords.latitude,
+          longitude: coords.longitude,
+        },
+        {
+          onSettled: () => {
+            setIsLocatingSelectedAddress(false);
+          },
+        },
+      );
+    } catch (error) {
+      setIsLocatingSelectedAddress(false);
+
+      const geolocationError = error as GeolocationPositionError;
+
+      toast.error("Could not get your current location.", {
+        description:
+          geolocationError.code === geolocationError.PERMISSION_DENIED
+            ? "Please allow location access for RushOrder PH."
+            : "Please try again or check your GPS connection.",
+      });
+    }
   };
 
   const clearAddressesMutation = useMutation({
