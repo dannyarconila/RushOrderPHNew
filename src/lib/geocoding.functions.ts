@@ -14,73 +14,6 @@ interface GeocodeResult {
   place_name: string;
 }
 
-export const geocodeAddressFn = createServerFn({ method: "POST" })
-  .inputValidator((data: GeocodeAddressInput) => data)
-  .handler(async ({ data }): Promise<GeocodeResult> => {
-    const token = process.env.MAPBOX_SECRET_TOKEN;
-
-    if (!token) {
-      throw new Error("Map geocoding is not configured.");
-    }
-
-    const address = [
-      data.line1,
-      data.barangay,
-      data.city,
-      data.province,
-      data.postal_code,
-      "Philippines",
-    ]
-      .map((value) => value.trim())
-      .filter(Boolean)
-      .join(", ");
-
-    if (address.length < 8) {
-      throw new Error("Enter a more complete delivery address.");
-    }
-
-    const url = new URL("https://api.mapbox.com/search/geocode/v6/forward");
-
-    url.searchParams.set("q", address);
-    url.searchParams.set("access_token", token);
-    url.searchParams.set("country", "PH");
-    url.searchParams.set("limit", "1");
-    url.searchParams.set("language", "en");
-
-    const response = await fetch(url);
-
-    if (!response.ok) {
-      throw new Error("Unable to locate this delivery address.");
-    }
-
-    const payload = (await response.json()) as {
-      features?: Array<{
-        place_name?: string;
-        geometry?: {
-          coordinates?: [number, number];
-        };
-      }>;
-    };
-
-    const feature = payload.features?.[0];
-    const coordinates = feature?.geometry?.coordinates;
-
-    if (
-      !coordinates ||
-      coordinates.length < 2 ||
-      !Number.isFinite(coordinates[0]) ||
-      !Number.isFinite(coordinates[1])
-    ) {
-      throw new Error("We could not find an exact map location for this address.");
-    }
-
-    return {
-      longitude: coordinates[0],
-      latitude: coordinates[1],
-      place_name: feature.place_name ?? address,
-    };
-  });
-
 interface ReverseGeocodeInput {
   latitude: number;
   longitude: number;
@@ -99,15 +32,196 @@ interface ReverseGeocodeResult {
   };
 }
 
+interface NominatimAddress {
+  house_number?: string;
+  road?: string;
+  street?: string;
+  pedestrian?: string;
+  footway?: string;
+
+  barangay?: string;
+
+  neighbourhood?: string;
+  neighborhood?: string;
+  suburb?: string;
+  village?: string;
+  town?: string;
+  municipality?: string;
+  city?: string;
+
+  city_district?: string;
+  district?: string;
+  county?: string;
+  state_district?: string;
+
+  state?: string;
+  region?: string;
+  province?: string;
+
+  postcode?: string;
+
+  country?: string;
+  country_code?: string;
+}
+
+interface NominatimResult {
+  place_id?: number;
+  display_name?: string;
+  lat?: string;
+  lon?: string;
+  address?: NominatimAddress;
+}
+
+const NOMINATIM_BASE_URL = "https://nominatim.openstreetmap.org";
+
+const NOMINATIM_HEADERS = {
+  Accept: "application/json",
+  "User-Agent": "RushOrderPH/1.0 (https://rushorderph.online)",
+};
+
+function clean(value: unknown): string {
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function firstNonEmpty(...values: unknown[]): string {
+  for (const value of values) {
+    const result = clean(value);
+
+    if (result) {
+      return result;
+    }
+  }
+
+  return "";
+}
+
+function parseCoordinates(result: NominatimResult): {
+  latitude: number;
+  longitude: number;
+} {
+  const latitude = Number(result.lat);
+  const longitude = Number(result.lon);
+
+  if (
+    !Number.isFinite(latitude) ||
+    !Number.isFinite(longitude) ||
+    latitude < -90 ||
+    latitude > 90 ||
+    longitude < -180 ||
+    longitude > 180
+  ) {
+    throw new Error("The geocoding service returned invalid coordinates.");
+  }
+
+  return {
+    latitude,
+    longitude,
+  };
+}
+
+function buildLine1(address: NominatimAddress): string {
+  const houseNumber = firstNonEmpty(address.house_number);
+
+  const street = firstNonEmpty(address.road, address.street, address.pedestrian, address.footway);
+
+  return [houseNumber, street].filter(Boolean).join(" ").trim();
+}
+
+function parseAddress(address: NominatimAddress | undefined) {
+  const source = address ?? {};
+
+  const line1 = buildLine1(source);
+
+  const barangay = firstNonEmpty(
+    source.barangay,
+    source.suburb,
+    source.neighbourhood,
+    source.neighborhood,
+    source.village,
+  );
+
+  const city = firstNonEmpty(source.municipality, source.city, source.town);
+
+  const province = firstNonEmpty(source.province, source.state, source.region);
+
+  const postalCode = firstNonEmpty(source.postcode);
+
+  return {
+    line1,
+    barangay,
+    city,
+    province,
+    postal_code: postalCode,
+  };
+}
+
+/**
+ * Forward geocoding:
+ * human-readable address -> latitude / longitude.
+ *
+ * Used by checkout when the user enters an address manually.
+ */
+export const geocodeAddressFn = createServerFn({ method: "POST" })
+  .inputValidator((data: GeocodeAddressInput) => data)
+  .handler(async ({ data }): Promise<GeocodeResult> => {
+    const address = [
+      data.line1,
+      data.barangay,
+      data.city,
+      data.province,
+      data.postal_code,
+      "Philippines",
+    ]
+      .map(clean)
+      .filter(Boolean)
+      .join(", ");
+
+    if (address.length < 8) {
+      throw new Error("Enter a more complete delivery address.");
+    }
+
+    const url = new URL(`${NOMINATIM_BASE_URL}/search`);
+
+    url.searchParams.set("q", address);
+    url.searchParams.set("format", "jsonv2");
+    url.searchParams.set("addressdetails", "1");
+    url.searchParams.set("countrycodes", "ph");
+    url.searchParams.set("limit", "1");
+    url.searchParams.set("accept-language", "en");
+
+    const response = await fetch(url, {
+      headers: NOMINATIM_HEADERS,
+    });
+
+    if (!response.ok) {
+      throw new Error("Unable to locate this delivery address.");
+    }
+
+    const payload = (await response.json()) as NominatimResult[];
+
+    const result = payload[0];
+
+    if (!result) {
+      throw new Error("We could not find this delivery address.");
+    }
+
+    const coordinates = parseCoordinates(result);
+
+    return {
+      ...coordinates,
+      place_name: result.display_name ?? address,
+    };
+  });
+
+/**
+ * Reverse geocoding:
+ * browser GPS coordinates -> human-readable address.
+ *
+ * Used by My Store / customer address location flows.
+ */
 export const reverseGeocodeFn = createServerFn({ method: "POST" })
   .inputValidator((data: ReverseGeocodeInput) => data)
   .handler(async ({ data }): Promise<ReverseGeocodeResult> => {
-    const token = process.env.MAPBOX_SECRET_TOKEN;
-
-    if (!token) {
-      throw new Error("Map geocoding is not configured.");
-    }
-
     const { latitude, longitude } = data;
 
     if (
@@ -121,68 +235,33 @@ export const reverseGeocodeFn = createServerFn({ method: "POST" })
       throw new Error("Invalid location coordinates.");
     }
 
-    const url = new URL("https://api.mapbox.com/search/geocode/v6/reverse");
+    const url = new URL(`${NOMINATIM_BASE_URL}/reverse`);
 
-    url.searchParams.set("longitude", String(longitude));
-    url.searchParams.set("latitude", String(latitude));
-    url.searchParams.set("access_token", token);
-    url.searchParams.set("country", "PH");
-    url.searchParams.set("language", "en");
+    url.searchParams.set("lat", String(latitude));
+    url.searchParams.set("lon", String(longitude));
+    url.searchParams.set("format", "jsonv2");
+    url.searchParams.set("addressdetails", "1");
+    url.searchParams.set("zoom", "18");
+    url.searchParams.set("accept-language", "en");
 
-    const response = await fetch(url);
+    const response = await fetch(url, {
+      headers: NOMINATIM_HEADERS,
+    });
 
     if (!response.ok) {
       throw new Error("Unable to determine the address for this location.");
     }
 
-    const payload = (await response.json()) as {
-      features?: Array<{
-        id?: string;
-        place_name?: string;
-        properties?: {
-          address?: string;
-          postcode?: string;
-        };
-        text?: string;
-        context?: Array<{
-          id?: string;
-          text?: string;
-          wikidata?: string;
-        }>;
-      }>;
-    };
+    const result = (await response.json()) as NominatimResult;
 
-    const feature = payload.features?.[0];
-
-    if (!feature) {
+    if (!result || !result.display_name) {
       throw new Error("No address was found for this location.");
     }
-
-    const context = feature.context ?? [];
-
-    const findContext = (...types: string[]) =>
-      context.find((item) => types.some((type) => item.id?.startsWith(`${type}.`)))?.text ?? "";
-
-    const addressLine = feature.properties?.address ?? feature.text ?? "";
-
-    const barangay = findContext("locality", "neighborhood", "district");
-
-    const city = findContext("place", "municipality");
-
-    const province = findContext("region");
-
-    const postalCode = feature.properties?.postcode ?? findContext("postcode");
 
     return {
       latitude,
       longitude,
-      place_name: feature.place_name ?? addressLine,
-      address: {
-        line1: addressLine,
-        barangay,
-        city,
-        province,
-        postal_code: postalCode,
-      },
+      place_name: result.display_name,
+      address: parseAddress(result.address),
     };
   });
