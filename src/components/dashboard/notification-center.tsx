@@ -104,8 +104,8 @@ export function NotificationCenter() {
       </Button>
 
       {open ? (
-        <div className="absolute right-0 top-11 z-50 w-[min(24rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
-          <div className="flex items-center justify-between border-b border-border px-4 py-3">
+        <div className="absolute right-0 top-11 z-50 w-[min(24rem,calc(100vw-1rem))] max-w-[calc(100vw-1rem)] overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
+          <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
             <div>
               <p className="text-sm font-bold">Notifications</p>
               <p className="text-xs text-muted-foreground">
@@ -118,8 +118,10 @@ export function NotificationCenter() {
               size="sm"
               disabled={!unread || markAllRead.isPending}
               onClick={() => markAllRead.mutate()}
+              className="shrink-0 whitespace-nowrap"
             >
-              <CheckCheck className="size-4" /> Mark all read
+              <CheckCheck className="size-4" />
+              <span className="hidden sm:inline">Mark all read</span>
             </Button>
           </div>
 
