@@ -19,7 +19,7 @@ import {
   updateAddressLocation,
 } from "@/lib/addresses";
 import { peso } from "@/lib/currency";
-import { geocodeAddressFn } from "@/lib/geocoding.functions";
+import { geocodeAddressFn, reverseGeocodeFn } from "@/lib/geocoding.functions";
 import { dispatchSettingsQuery } from "@/lib/dispatch";
 import { publicSettingsQuery, storeQuery } from "@/lib/marketplace";
 import {
@@ -96,6 +96,7 @@ function CheckoutPage() {
   const [draft, setDraft] = useState(EMPTY_ADDRESS);
   const [editingAddressLocation, setEditingAddressLocation] = useState<string | null>(null);
   const [isLocatingSelectedAddress, setIsLocatingSelectedAddress] = useState(false);
+  const [isLocatingNewAddress, setIsLocatingNewAddress] = useState(false);
   const [editingAddressCoords, setEditingAddressCoords] = useState<{
     lat: number | null;
     lng: number | null;
@@ -217,12 +218,36 @@ function CheckoutPage() {
   const saveAddress = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error("Please sign in first.");
-      if (draft.line1.trim().length < 4) throw new Error("Enter a complete street address.");
-      if (draft.city.trim().length < 2) throw new Error("Enter your city or municipality.");
-      if (draft.latitude == null || draft.longitude == null) {
-        throw new Error("Enter the latitude and longitude for this address.");
+
+      if (draft.line1.trim().length < 4) {
+        throw new Error("Enter a complete street address.");
       }
-      return createAddress(user.id, draft);
+
+      if (draft.city.trim().length < 2) {
+        throw new Error("Enter your city or municipality.");
+      }
+
+      let addressToSave = draft;
+
+      if (draft.latitude == null || draft.longitude == null) {
+        const result = await geocodeAddressFn({
+          data: {
+            line1: draft.line1,
+            barangay: draft.barangay,
+            city: draft.city,
+            province: draft.province,
+            postal_code: draft.postal_code,
+          },
+        });
+
+        addressToSave = {
+          ...draft,
+          latitude: result.latitude,
+          longitude: result.longitude,
+        };
+      }
+
+      return createAddress(user.id, addressToSave);
     },
     onSuccess: (row) => {
       setAddressId(row.id);
@@ -322,6 +347,64 @@ function CheckoutPage() {
             ? "Please allow location access for RushOrder PH."
             : "Please try again or check your GPS connection.",
       });
+    }
+  };
+
+  const useCurrentLocationForNewAddress = async () => {
+    setIsLocatingNewAddress(true);
+
+    try {
+      const coords = await getCurrentLocation();
+
+      const latitude = coords.latitude;
+      const longitude = coords.longitude;
+
+      const result = await reverseGeocodeFn({
+        data: {
+          latitude,
+          longitude,
+        },
+      });
+
+      setEditingAddressCoords({
+        lat: latitude,
+        lng: longitude,
+      });
+
+      setDraft((current) => ({
+        ...current,
+        line1: result.address.line1 || current.line1,
+        barangay: result.address.barangay || current.barangay,
+        city: result.address.city || current.city,
+        province: result.address.province || current.province,
+        postal_code: result.address.postal_code || current.postal_code,
+        latitude,
+        longitude,
+      }));
+
+      toast.success("Current location detected", {
+        description: result.place_name || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+      });
+    } catch (error) {
+      const geolocationError = error as GeolocationPositionError;
+
+      let description = "Please try again or check your location settings.";
+
+      if (geolocationError?.code === GeolocationPositionError.PERMISSION_DENIED) {
+        description = "Please allow location access for RushOrder PH.";
+      } else if (geolocationError?.code === GeolocationPositionError.POSITION_UNAVAILABLE) {
+        description = "Your current location could not be determined.";
+      } else if (geolocationError?.code === GeolocationPositionError.TIMEOUT) {
+        description = "Location request timed out. Please try again.";
+      } else if (error instanceof Error) {
+        description = error.message;
+      }
+
+      toast.error("Could not get your current location", {
+        description,
+      });
+    } finally {
+      setIsLocatingNewAddress(false);
     }
   };
 
@@ -572,8 +655,29 @@ function CheckoutPage() {
                       <p className="text-sm font-bold">New delivery address</p>
 
                       <p className="mt-1 text-xs text-muted-foreground">
-                        Enter the address details and select the exact delivery location on the map.
+                        Enter your address manually, or use your current location to fill it
+                        automatically.
                       </p>
+
+                      <div className="mt-3">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={useCurrentLocationForNewAddress}
+                          disabled={isLocatingNewAddress}
+                        >
+                          {isLocatingNewAddress ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <MapPin className="size-4" />
+                          )}
+
+                          {isLocatingNewAddress
+                            ? "Detecting location..."
+                            : "Use My Current Location"}
+                        </Button>
+                      </div>
 
                       <div className="mt-4 grid gap-4 sm:grid-cols-2">
                         <TextField
@@ -597,31 +701,66 @@ function CheckoutPage() {
                         <TextField
                           label="Street address"
                           value={draft.line1}
-                          onChange={(v) => setDraft((d) => ({ ...d, line1: v }))}
+                          onChange={(v) =>
+                            setDraft((d) => ({
+                              ...d,
+                              line1: v,
+                              latitude: null,
+                              longitude: null,
+                            }))
+                          }
                         />
 
                         <TextField
                           label="Barangay"
                           value={draft.barangay}
-                          onChange={(v) => setDraft((d) => ({ ...d, barangay: v }))}
+                          onChange={(v) =>
+                            setDraft((d) => ({
+                              ...d,
+                              barangay: v,
+                              latitude: null,
+                              longitude: null,
+                            }))
+                          }
                         />
 
                         <TextField
                           label="City / municipality"
                           value={draft.city}
-                          onChange={(v) => setDraft((d) => ({ ...d, city: v }))}
+                          onChange={(v) =>
+                            setDraft((d) => ({
+                              ...d,
+                              city: v,
+                              latitude: null,
+                              longitude: null,
+                            }))
+                          }
                         />
 
                         <TextField
                           label="Province"
                           value={draft.province}
-                          onChange={(v) => setDraft((d) => ({ ...d, province: v }))}
+                          onChange={(v) =>
+                            setDraft((d) => ({
+                              ...d,
+                              province: v,
+                              latitude: null,
+                              longitude: null,
+                            }))
+                          }
                         />
 
                         <TextField
                           label="Postal code"
                           value={draft.postal_code}
-                          onChange={(v) => setDraft((d) => ({ ...d, postal_code: v }))}
+                          onChange={(v) =>
+                            setDraft((d) => ({
+                              ...d,
+                              postal_code: v,
+                              latitude: null,
+                              longitude: null,
+                            }))
+                          }
                         />
                       </div>
 
@@ -629,7 +768,8 @@ function CheckoutPage() {
                         <div>
                           <p className="text-sm font-semibold">Delivery map location</p>
                           <p className="mt-1 text-xs text-muted-foreground">
-                            We’ll automatically find the map coordinates from your address.
+                            Coordinates are generated automatically when you save the address. You
+                            can also find the location now.
                           </p>
                         </div>
 
@@ -683,18 +823,11 @@ function CheckoutPage() {
 
                         <Button
                           type="button"
-                          onClick={() => {
-                            if (draft.latitude == null || draft.longitude == null) {
-                              toast.error("Set your delivery location first.");
-                              return;
-                            }
-
-                            saveAddress.mutate();
-                          }}
+                          onClick={() => saveAddress.mutate()}
                           disabled={
                             saveAddress.isPending ||
-                            draft.latitude == null ||
-                            draft.longitude == null
+                            draft.line1.trim().length < 4 ||
+                            draft.city.trim().length < 2
                           }
                         >
                           {saveAddress.isPending ? (
