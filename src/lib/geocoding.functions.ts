@@ -273,7 +273,17 @@ export const reverseGeocodeFn = createServerFn({ method: "POST" })
     });
 
     if (!response.ok) {
-      throw new Error("Unable to determine the address for this location.");
+      const responseText = await response.text();
+
+      console.error("Nominatim reverse geocoding failed:", {
+        status: response.status,
+        statusText: response.statusText,
+        response: responseText,
+      });
+
+      throw new Error(
+        `Unable to determine the address for this location. HTTP ${response.status}.`,
+      );
     }
 
     const result = (await response.json()) as NominatimResult;
