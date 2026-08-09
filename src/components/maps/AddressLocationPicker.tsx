@@ -51,9 +51,7 @@ export default function AddressLocationPicker({
 }: AddressLocationPickerProps) {
   const coordinate = useMemo<Coordinate>(
     () =>
-      latitude != null && longitude != null
-        ? { lat: latitude, lng: longitude }
-        : DEFAULT_CENTER,
+      latitude != null && longitude != null ? { lat: latitude, lng: longitude } : DEFAULT_CENTER,
     [latitude, longitude],
   );
 
@@ -114,7 +112,7 @@ export default function AddressLocationPicker({
           className="h-[320px] w-full"
         >
           <TileLayer
-            attribution='&copy; OpenStreetMap contributors'
+            attribution="&copy; OpenStreetMap contributors"
             url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
           />
 

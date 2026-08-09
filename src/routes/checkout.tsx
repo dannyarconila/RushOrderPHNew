@@ -19,6 +19,7 @@ import {
   updateAddressLocation,
 } from "@/lib/addresses";
 import { peso } from "@/lib/currency";
+import { geocodeAddressFn } from "@/lib/geocoding.functions";
 import { dispatchSettingsQuery } from "@/lib/dispatch";
 import { publicSettingsQuery, storeQuery } from "@/lib/marketplace";
 import {
@@ -93,6 +94,7 @@ function CheckoutPage() {
   const [showNew, setShowNew] = useState(false);
   const [draft, setDraft] = useState(EMPTY_ADDRESS);
   const [editingAddressLocation, setEditingAddressLocation] = useState<string | null>(null);
+  const [isLocatingSelectedAddress, setIsLocatingSelectedAddress] = useState(false);
   const [editingAddressCoords, setEditingAddressCoords] = useState<{
     lat: number | null;
     lng: number | null;
@@ -101,8 +103,16 @@ function CheckoutPage() {
 
   const selectedAddress =
     (addresses.data ?? []).find((a) => a.id === addressId) ?? (addresses.data ?? [])[0] ?? null;
+  const selectedAddressLat = toNumber(selectedAddress?.latitude);
+  const selectedAddressLng = toNumber(selectedAddress?.longitude);
+
   const selectedAddressHasCoords =
-    selectedAddress?.latitude != null && selectedAddress?.longitude != null;
+    selectedAddressLat !== null &&
+    selectedAddressLng !== null &&
+    selectedAddressLat >= -90 &&
+    selectedAddressLat <= 90 &&
+    selectedAddressLng >= -180 &&
+    selectedAddressLng <= 180;
 
   const distanceKm = useMemo(() => {
     const addressLat = toNumber(selectedAddress?.latitude);
@@ -168,6 +178,40 @@ function CheckoutPage() {
     }
     setIdempotencyKey(getOrderIdempotencyKey(intentSignature));
   }, [intentSignature]);
+
+  const geocodeAddress = useMutation({
+    mutationFn: () =>
+      geocodeAddressFn({
+        data: {
+          line1: draft.line1,
+          barangay: draft.barangay,
+          city: draft.city,
+          province: draft.province,
+          postal_code: draft.postal_code,
+        },
+      }),
+    onSuccess: (result) => {
+      setEditingAddressCoords({
+        lat: result.latitude,
+        lng: result.longitude,
+      });
+
+      setDraft((current) => ({
+        ...current,
+        latitude: result.latitude,
+        longitude: result.longitude,
+      }));
+
+      toast.success("Delivery location found.", {
+        description: result.place_name,
+      });
+    },
+    onError: (error: Error) => {
+      toast.error("Could not find this address.", {
+        description: error.message,
+      });
+    },
+  });
 
   const saveAddress = useMutation({
     mutationFn: async () => {
@@ -237,6 +281,57 @@ function CheckoutPage() {
         description: error.message,
       }),
   });
+
+  const useCurrentLocationForSelectedAddress = () => {
+    if (!user) {
+      toast.error("Please sign in first.");
+      return;
+    }
+
+    if (!selectedAddress) {
+      toast.error("Please select or add a delivery address first.");
+      return;
+    }
+
+    if (!navigator.geolocation) {
+      toast.error("Location is not supported by this browser.");
+      return;
+    }
+
+    setIsLocatingSelectedAddress(true);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        updateAddressLocationMutation.mutate(
+          {
+            addressId: selectedAddress.id,
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          },
+          {
+            onSettled: () => {
+              setIsLocatingSelectedAddress(false);
+            },
+          },
+        );
+      },
+      (error) => {
+        setIsLocatingSelectedAddress(false);
+
+        toast.error("Could not get your current location.", {
+          description:
+            error.code === error.PERMISSION_DENIED
+              ? "Please allow location access for RushOrder PH."
+              : "Please try again or check your GPS connection.",
+        });
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 0,
+      },
+    );
+  };
 
   const clearAddressesMutation = useMutation({
     mutationFn: async () => {
@@ -354,7 +449,16 @@ function CheckoutPage() {
                     <div className="mt-4 flex flex-col gap-2">
                       {(addresses.data ?? []).map((address) => {
                         const active = selectedAddress?.id === address.id;
-                        const hasCoords = address.latitude != null && address.longitude != null;
+                        const addressLat = toNumber(address.latitude);
+                        const addressLng = toNumber(address.longitude);
+
+                        const hasCoords =
+                          addressLat !== null &&
+                          addressLng !== null &&
+                          addressLat >= -90 &&
+                          addressLat <= 90 &&
+                          addressLng >= -180 &&
+                          addressLng <= 180;
 
                         return (
                           <div
@@ -371,8 +475,8 @@ function CheckoutPage() {
                                 setShowNew(false);
                                 setEditingAddressLocation(null);
                                 setEditingAddressCoords({
-                                  lat: hasCoords ? Number(address.latitude) : null,
-                                  lng: hasCoords ? Number(address.longitude) : null,
+                                  lat: hasCoords ? addressLat : null,
+                                  lng: hasCoords ? addressLng : null,
                                 });
                               }}
                               className="w-full text-left"
@@ -453,51 +557,24 @@ function CheckoutPage() {
                     <Button
                       type="button"
                       variant="outline"
-                      onClick={() => {
-                        setShowNew(true);
-                        setEditingAddressLocation(null);
-
-                        if (!navigator.geolocation) {
-                          toast.error("Location is not supported by this browser.");
-                          return;
-                        }
-
-                        navigator.geolocation.getCurrentPosition(
-                          (position) => {
-                            const latitude = position.coords.latitude;
-                            const longitude = position.coords.longitude;
-
-                            setEditingAddressCoords({
-                              lat: latitude,
-                              lng: longitude,
-                            });
-
-                            setDraft((current) => ({
-                              ...current,
-                              latitude,
-                              longitude,
-                            }));
-
-                            toast.success("Current location detected.");
-                          },
-                          (error) => {
-                            toast.error("Could not get your current location.", {
-                              description: error.message,
-                            });
-                          },
-                          {
-                            enableHighAccuracy: true,
-                            timeout: 15000,
-                            maximumAge: 30000,
-                          },
-                        );
-                      }}
+                      onClick={useCurrentLocationForSelectedAddress}
+                      disabled={
+                        isLocatingSelectedAddress ||
+                        updateAddressLocationMutation.isPending ||
+                        !selectedAddress
+                      }
                     >
-                      <MapPin className="size-4" />
-                      Use My Current Location
+                      {isLocatingSelectedAddress || updateAddressLocationMutation.isPending ? (
+                        <Loader2 className="size-4 animate-spin" />
+                      ) : (
+                        <MapPin className="size-4" />
+                      )}
+
+                      {isLocatingSelectedAddress || updateAddressLocationMutation.isPending
+                        ? "Getting location..."
+                        : "Use My Current Location"}
                     </Button>
                   </div>
-
                   {showNew ? (
                     <div className="mt-4 rounded-xl border border-border p-4">
                       <p className="text-sm font-bold">New delivery address</p>
@@ -554,6 +631,34 @@ function CheckoutPage() {
                           value={draft.postal_code}
                           onChange={(v) => setDraft((d) => ({ ...d, postal_code: v }))}
                         />
+                      </div>
+
+                      <div className="mt-4 flex items-center justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 p-4">
+                        <div>
+                          <p className="text-sm font-semibold">Delivery map location</p>
+                          <p className="mt-1 text-xs text-muted-foreground">
+                            We’ll automatically find the map coordinates from your address.
+                          </p>
+                        </div>
+
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => geocodeAddress.mutate()}
+                          disabled={
+                            geocodeAddress.isPending ||
+                            draft.line1.trim().length < 4 ||
+                            draft.city.trim().length < 2 ||
+                            draft.province.trim().length < 2
+                          }
+                        >
+                          {geocodeAddress.isPending ? (
+                            <Loader2 className="size-4 animate-spin" />
+                          ) : (
+                            <MapPin className="size-4" />
+                          )}
+                          {geocodeAddress.isPending ? "Finding..." : "Find Location"}
+                        </Button>
                       </div>
 
                       <div className="mt-4">
@@ -768,11 +873,23 @@ function CheckoutPage() {
             <Button
               block
               className="mt-5"
-              disabled={submit.isPending || !user || !selectedAddress || storeClosed}
+              disabled={
+                submit.isPending ||
+                !user ||
+                !selectedAddress ||
+                !selectedAddressHasCoords ||
+                storeClosed
+              }
               onClick={() => submit.mutate()}
             >
               {submit.isPending ? <Loader2 className="size-4 animate-spin" /> : null}
-              {storeClosed ? "Store closed" : "Place order"}
+              {storeClosed
+                ? "Store closed"
+                : !selectedAddress
+                  ? "Select address"
+                  : !selectedAddressHasCoords
+                    ? "Set delivery location"
+                    : "Place order"}
             </Button>
 
             <p className="mt-2 text-center text-xs text-muted-foreground">

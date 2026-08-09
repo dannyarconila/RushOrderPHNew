@@ -85,10 +85,7 @@ export async function updateAddressLocation(
   return data;
 }
 
-export async function deleteAddress(
-  userId: string,
-  addressId: string,
-): Promise<void> {
+export async function deleteAddress(userId: string, addressId: string): Promise<void> {
   const { error } = await supabase
     .from("addresses")
     .delete()
@@ -99,10 +96,7 @@ export async function deleteAddress(
 }
 
 export async function deleteAllAddresses(userId: string): Promise<void> {
-  const { error } = await supabase
-    .from("addresses")
-    .delete()
-    .eq("user_id", userId);
+  const { error } = await supabase.from("addresses").delete().eq("user_id", userId);
 
   if (error) throw error;
 }
