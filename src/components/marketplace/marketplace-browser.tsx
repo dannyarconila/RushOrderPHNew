@@ -232,7 +232,7 @@ export function MarketplaceBrowser({
           <Input
             value={term}
             onChange={(event) => setTerm(event.target.value)}
-            placeholder="Search stores, dishes, groceries, medicines…"
+            placeholder="Search product"
             className="h-12 rounded-full pl-11"
             aria-label="Search stores and products"
           />
