@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Save } from "lucide-react";
+import { LocateFixed, Loader2, Save } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -21,6 +21,7 @@ import {
   type BusinessHours,
   type ManagedStore,
 } from "@/lib/stores";
+import { getCurrentLocation } from "@/lib/geolocation";
 
 interface AddressShape {
   line1: string;
@@ -61,6 +62,7 @@ export function StoreEditor({ store, userId }: { store: ManagedStore; userId: st
   const [longitude, setLongitude] = useState(
     store.longitude != null ? String(store.longitude) : "",
   );
+  const [isLocating, setIsLocating] = useState(false);
   const [hours, setHours] = useState<BusinessHours>(() => parseBusinessHours(store.business_hours));
   const [radius, setRadius] = useState(String(store.delivery_radius_km ?? 8));
   const [minOrder, setMinOrder] = useState(String(store.minimum_order ?? 0));
@@ -74,6 +76,38 @@ export function StoreEditor({ store, userId }: { store: ManagedStore; userId: st
   const isVerified = store.verification_status === "verified";
   const availability = storeAvailability(store);
   const walletBalanceLow = minimumBalance != null && (wallet?.balance ?? 0) < minimumBalance;
+  const useCurrentLocation = async () => {
+    setIsLocating(true);
+
+    try {
+      const coords = await getCurrentLocation();
+
+      setLatitude(coords.latitude.toFixed(6));
+      setLongitude(coords.longitude.toFixed(6));
+
+      toast.success("Store location detected", {
+        description: `${coords.latitude.toFixed(6)}, ${coords.longitude.toFixed(6)}`,
+      });
+    } catch (error) {
+      const geolocationError = error as GeolocationPositionError;
+
+      let description = "Please try again or check your browser location settings.";
+
+      if (geolocationError?.code === geolocationError.PERMISSION_DENIED) {
+        description = "Please allow location access for RushOrder PH.";
+      } else if (geolocationError?.code === geolocationError.POSITION_UNAVAILABLE) {
+        description = "Your current location could not be determined.";
+      } else if (geolocationError?.code === geolocationError.TIMEOUT) {
+        description = "Location request timed out. Please try again.";
+      }
+
+      toast.error("Could not get store location", {
+        description,
+      });
+    } finally {
+      setIsLocating(false);
+    }
+  };
 
   const save = useMutation({
     mutationFn: async () => {
@@ -86,6 +120,21 @@ export function StoreEditor({ store, userId }: { store: ManagedStore; userId: st
         const parsed = Number(value);
         return Number.isFinite(parsed) ? parsed : null;
       };
+      const latitudeValue = optionalNum(latitude);
+      const longitudeValue = optionalNum(longitude);
+
+      if (latitudeValue == null || longitudeValue == null) {
+        throw new Error("Please set the store location using your current location.");
+      }
+
+      if (
+        latitudeValue < -90 ||
+        latitudeValue > 90 ||
+        longitudeValue < -180 ||
+        longitudeValue > 180
+      ) {
+        throw new Error("The store coordinates are invalid.");
+      }
 
       const { error } = await supabase
         .from("stores")
@@ -98,8 +147,8 @@ export function StoreEditor({ store, userId }: { store: ManagedStore; userId: st
           banner_url: banner,
           cover_url: cover,
           address: address as unknown as never,
-          latitude: optionalNum(latitude),
-          longitude: optionalNum(longitude),
+          latitude: latitudeValue,
+          longitude: longitudeValue,
           business_hours: hours as unknown as never,
           delivery_radius_km: num(radius, 8),
           minimum_order: num(minOrder, 0),
@@ -269,20 +318,58 @@ export function StoreEditor({ store, userId }: { store: ManagedStore; userId: st
             onChange={(v) => setAddress((a) => ({ ...a, postal_code: v }))}
           />
         </div>
-        <div className="mt-4 grid gap-4 sm:grid-cols-2">
-          <TextField
-            label="Latitude"
-            value={latitude}
-            onChange={setLatitude}
-            placeholder="14.5995"
-            hint="Optional — improves rider matching accuracy."
-          />
-          <TextField
-            label="Longitude"
-            value={longitude}
-            onChange={setLongitude}
-            placeholder="120.9842"
-          />
+        <div className="mt-4">
+          <div className="flex flex-col gap-3 rounded-xl border border-border bg-muted/30 p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div>
+              <p className="text-sm font-semibold">Store location</p>
+              <p className="text-xs text-muted-foreground">
+                Automatically detect the store's exact location using your browser GPS.
+              </p>
+            </div>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={useCurrentLocation}
+              disabled={isLocating}
+            >
+              {isLocating ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <LocateFixed className="size-4" />
+              )}
+              {isLocating ? "Detecting location…" : "Use My Current Location"}
+            </Button>
+          </div>
+
+          <div className="mt-4 grid gap-4 sm:grid-cols-2">
+            <TextField
+              label="Latitude"
+              value={latitude}
+              onChange={setLatitude}
+              placeholder="e.g. 8.5350"
+              hint="Automatically filled from your current location."
+            />
+
+            <TextField
+              label="Longitude"
+              value={longitude}
+              onChange={setLongitude}
+              placeholder="e.g. 124.5220"
+              hint="Automatically filled from your current location."
+            />
+          </div>
+
+          {latitude.trim() && longitude.trim() ? (
+            <p className="mt-2 text-xs text-muted-foreground">
+              Store coordinates: {latitude}, {longitude}
+            </p>
+          ) : (
+            <p className="mt-2 text-xs font-medium text-destructive">
+              Store coordinates are not set. Use your current location before saving.
+            </p>
+          )}
         </div>
       </Panel>
 
