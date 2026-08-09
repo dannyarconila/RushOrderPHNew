@@ -359,13 +359,8 @@ function CheckoutPage() {
       const latitude = coords.latitude;
       const longitude = coords.longitude;
 
-      const result = await reverseGeocodeFn({
-        data: {
-          latitude,
-          longitude,
-        },
-      });
-
+      // Save the exact GPS coordinates immediately.
+      // Even if reverse geocoding fails, the location remains usable.
       setEditingAddressCoords({
         lat: latitude,
         lng: longitude,
@@ -373,18 +368,44 @@ function CheckoutPage() {
 
       setDraft((current) => ({
         ...current,
-        line1: result.address.line1 || current.line1,
-        barangay: result.address.barangay || current.barangay,
-        city: result.address.city || current.city,
-        province: result.address.province || current.province,
-        postal_code: result.address.postal_code || current.postal_code,
         latitude,
         longitude,
       }));
 
-      toast.success("Current location detected", {
-        description: result.place_name || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
-      });
+      try {
+        const result = await reverseGeocodeFn({
+          data: {
+            latitude,
+            longitude,
+          },
+        });
+
+        setDraft((current) => ({
+          ...current,
+          line1: result.address.line1 || current.line1,
+          barangay: result.address.barangay || current.barangay,
+          city: result.address.city || current.city,
+          province: result.address.province || current.province,
+          postal_code: result.address.postal_code || current.postal_code,
+          latitude,
+          longitude,
+        }));
+
+        toast.success("Current location detected", {
+          description: result.place_name || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+        });
+      } catch (reverseError) {
+        // GPS is still valid even when reverse geocoding fails.
+        toast.success("Current location detected", {
+          description: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+        });
+
+        console.error("Reverse geocoding failed:", reverseError);
+
+        toast.warning("Address details could not be filled automatically", {
+          description: "Your exact coordinates were saved. You can enter the address manually.",
+        });
+      }
     } catch (error) {
       const geolocationError = error as GeolocationPositionError;
 
