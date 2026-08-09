@@ -22,6 +22,7 @@ import {
   type ManagedStore,
 } from "@/lib/stores";
 import { getCurrentLocation } from "@/lib/geolocation";
+import { reverseGeocodeFn } from "@/lib/geocoding.functions";
 
 interface AddressShape {
   line1: string;
@@ -82,23 +83,47 @@ export function StoreEditor({ store, userId }: { store: ManagedStore; userId: st
     try {
       const coords = await getCurrentLocation();
 
-      setLatitude(coords.latitude.toFixed(6));
-      setLongitude(coords.longitude.toFixed(6));
+      const latitudeValue = coords.latitude;
+      const longitudeValue = coords.longitude;
+
+      // Always save the exact browser GPS coordinates first.
+      setLatitude(latitudeValue.toFixed(6));
+      setLongitude(longitudeValue.toFixed(6));
+
+      // Convert the GPS coordinates into a readable address.
+      const result = await reverseGeocodeFn({
+        data: {
+          latitude: latitudeValue,
+          longitude: longitudeValue,
+        },
+      });
+
+      setAddress((current) => ({
+        ...current,
+        line1: result.address.line1 || current.line1,
+        barangay: result.address.barangay || current.barangay,
+        city: result.address.city || current.city,
+        province: result.address.province || current.province,
+        postal_code: result.address.postal_code || current.postal_code,
+      }));
 
       toast.success("Store location detected", {
-        description: `${coords.latitude.toFixed(6)}, ${coords.longitude.toFixed(6)}`,
+        description:
+          result.place_name || `${latitudeValue.toFixed(6)}, ${longitudeValue.toFixed(6)}`,
       });
     } catch (error) {
       const geolocationError = error as GeolocationPositionError;
 
       let description = "Please try again or check your browser location settings.";
 
-      if (geolocationError?.code === geolocationError.PERMISSION_DENIED) {
+      if (geolocationError?.code === GeolocationPositionError.PERMISSION_DENIED) {
         description = "Please allow location access for RushOrder PH.";
-      } else if (geolocationError?.code === geolocationError.POSITION_UNAVAILABLE) {
+      } else if (geolocationError?.code === GeolocationPositionError.POSITION_UNAVAILABLE) {
         description = "Your current location could not be determined.";
-      } else if (geolocationError?.code === geolocationError.TIMEOUT) {
+      } else if (geolocationError?.code === GeolocationPositionError.TIMEOUT) {
         description = "Location request timed out. Please try again.";
+      } else if (error instanceof Error) {
+        description = error.message;
       }
 
       toast.error("Could not get store location", {
