@@ -219,17 +219,22 @@ function CheckoutPage() {
     mutationFn: async () => {
       if (!user) throw new Error("Please sign in first.");
 
-      if (draft.line1.trim().length < 4) {
-        throw new Error("Enter a complete street address.");
+      if (draft.recipient_name.trim().length < 2) {
+        throw new Error("Enter the recipient name.");
       }
 
-      if (draft.city.trim().length < 2) {
-        throw new Error("Enter your city or municipality.");
+      if (draft.phone.trim().length < 7) {
+        throw new Error("Enter the recipient phone number.");
       }
 
       let addressToSave = draft;
 
-      if (draft.latitude == null || draft.longitude == null) {
+      // If the address already has coordinates, trust the selected/current
+      // map location even when street or city fields are blank.
+      if (draft.latitude != null && draft.longitude != null) {
+        addressToSave = draft;
+      } else {
+        // Manual address entry still needs coordinates.
         const result = await geocodeAddressFn({
           data: {
             line1: draft.line1,
