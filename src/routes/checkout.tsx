@@ -852,8 +852,8 @@ function CheckoutPage() {
                           onClick={() => saveAddress.mutate()}
                           disabled={
                             saveAddress.isPending ||
-                            draft.line1.trim().length < 4 ||
-                            draft.city.trim().length < 2
+                            draft.recipient_name.trim().length < 2 ||
+                            draft.phone.trim().length < 7
                           }
                         >
                           {saveAddress.isPending ? (
