@@ -103,13 +103,12 @@ export function categoriesQuery(serviceType?: ServiceType) {
   return queryOptions({
     queryKey: ["categories", serviceType ?? "all"],
     queryFn: async () => {
-      let q = supabase
+      const { data, error } = await supabase
         .from("categories")
-        .select("id,name,slug,service_type,image_url")
+        .select("id,name,slug,image_url")
         .eq("is_active", true)
         .order("sort_order");
-      if (serviceType) q = q.eq("service_type", serviceType);
-      const { data, error } = await q;
+
       if (error) throw error;
       return data ?? [];
     },
