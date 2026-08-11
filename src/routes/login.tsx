@@ -11,7 +11,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { getDashboardRoute } from "@/lib/dashboard-route";
-import { legalVersionSnapshotQuery } from "@/lib/legal/public";
+import { LegalModal } from "@/components/legal/legal-modal";
+import { legalDocumentQuery, legalVersionSnapshotQuery } from "@/lib/legal/public";
 
 const APP_ORIGIN = import.meta.env.VITE_APP_ORIGIN || window.location.origin;
 
@@ -49,6 +50,12 @@ function LoginPage() {
   const { user, primaryRole, loading } = useAuth();
   const navigate = useNavigate();
   const versions = useQuery(legalVersionSnapshotQuery());
+  const [showLegalModal, setShowLegalModal] = useState(false);
+  const [selectedLegalSlug, setSelectedLegalSlug] = useState("");
+  const { data: legalDocument } = useQuery({
+    ...legalDocumentQuery(selectedLegalSlug),
+    enabled: showLegalModal && selectedLegalSlug.length > 0,
+  });
   const { next, oauth } = Route.useSearch();
 
   useEffect(() => {
@@ -175,21 +182,27 @@ function LoginPage() {
             />
             <span>
               I agree to the{" "}
-              <Link
-                to="/legal/$slug"
-                params={{ slug: "terms-conditions" }}
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedLegalSlug("terms-conditions");
+                  setShowLegalModal(true);
+                }}
                 className="font-semibold text-primary hover:underline"
               >
                 Terms & Conditions
-              </Link>{" "}
+              </button>
               and{" "}
-              <Link
-                to="/legal/$slug"
-                params={{ slug: "privacy-policy" }}
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedLegalSlug("privacy-policy");
+                  setShowLegalModal(true);
+                }}
                 className="font-semibold text-primary hover:underline"
               >
                 Privacy Policy
-              </Link>
+              </button>
               .
             </span>
           </label>
@@ -234,6 +247,14 @@ function LoginPage() {
           ready.
         </p>
       </aside>
+      <LegalModal
+        open={showLegalModal}
+        document={legalDocument ?? null}
+        onClose={() => {
+          setShowLegalModal(false);
+          setSelectedLegalSlug("");
+        }}
+      />
     </div>
   );
 }
