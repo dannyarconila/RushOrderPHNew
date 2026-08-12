@@ -108,8 +108,10 @@ function LandingPage() {
             </h2>
 
             <p className="mt-5 max-w-xl text-base leading-relaxed text-ink-foreground/75 sm:text-lg">
-              RushOrder PH is the Philippine platform where customers shop local, sellers grow
-              beyond Facebook posts, and riders earn on their own schedule.
+              RushOrder PH is a Philippine online marketplace and delivery platform that connects
+              customers with local stores and delivery riders. Customers can browse products, place
+              orders, and have their purchases delivered to their location, while sellers manage
+              their stores and riders accept delivery bookings.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row">
               <Button asChild size="lg">
