@@ -52,6 +52,10 @@ const LABELS: Record<string, string> = {
   dispatch_auto_expand: "Auto-expand radius between retries (true/false)",
   dispatch_radius_expansion_km: "Radius added per retry (km)",
   dispatch_strategy: "Strategy (nearest_first | wave | broadcast)",
+
+  rider_platform_fee: "Rider platform base fee (PHP)",
+  rider_platform_fee_included_km: "Distance included in base fee (km)",
+  rider_platform_fee_per_excess_km: "Excess distance fee (PHP/km)",
 };
 
 function dispatchJobsQuery() {
@@ -113,7 +117,18 @@ function dispatchSettingsRowsQuery() {
       const result = await adminReadFn({
         data: {
           table: "system_settings",
-          filters: [{ column: "key", op: "in", value: [...DISPATCH_SETTING_KEYS] }],
+          filters: [
+            {
+              column: "key",
+              op: "in",
+              value: [
+                ...DISPATCH_SETTING_KEYS,
+                "rider_platform_fee",
+                "rider_platform_fee_included_km",
+                "rider_platform_fee_per_excess_km",
+              ],
+            },
+          ],
           order: [{ column: "key", ascending: true }],
         },
       });

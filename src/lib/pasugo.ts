@@ -402,9 +402,19 @@ export function activePasugoJobForRiderQuery(riderId: string | undefined) {
 export async function acceptPasugoDispatch(
   jobId: string,
 ): Promise<{ ok: boolean; booking_id?: string | null; reason?: string | null }> {
-  const { data, error } = await supabase.rpc("pasugo_dispatch_accept", { _job_id: jobId });
+  const { data, error } = await supabase.rpc("pasugo_dispatch_accept", {
+    _job_id: jobId,
+  });
+
   if (error) throw error;
-  return data ?? { ok: false };
+
+  return (
+    (data as {
+      ok: boolean;
+      booking_id?: string | null;
+      reason?: string | null;
+    } | null) ?? { ok: false }
+  );
 }
 
 export async function declinePasugoDispatch(jobId: string) {

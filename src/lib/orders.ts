@@ -67,7 +67,10 @@ export function quoteOrder({
   const surgeFee = round(deliveryFee * Math.max(0, surgeRate - 1));
   const tax = round(subtotal * num(settings, "tax_rate", 0));
   const sellerCommission = round(subtotal * num(settings, "seller_commission_rate", 0.1));
-  const riderCommission = round(num(settings, "rider_delivery_fee", 5));
+  // Rider earnings are not generated from the platform commission model.
+  // The rider platform fee is calculated and deducted server-side when
+  // the rider accepts the delivery.
+  const riderCommission = 0;
   return {
     subtotal: round(subtotal),
     deliveryFee,

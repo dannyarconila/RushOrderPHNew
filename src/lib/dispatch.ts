@@ -12,7 +12,9 @@ import type { Database } from "@/integrations/supabase/types";
 
 type Tables = Database["public"]["Tables"];
 
-export type DispatchJob = Tables["dispatch_jobs"]["Row"] & {
+type DispatchJobRow = Tables["dispatch_jobs"]["Row"];
+
+export type DispatchJob = Omit<DispatchJobRow, "dispatch_type"> & {
   dispatch_type?: "marketplace" | "pasugo";
   customer_notes?: string | null;
 };
@@ -229,8 +231,13 @@ export function riderHistoryQuery(riderId: string | undefined) {
         .eq("status", "delivered")
         .order("delivered_at", { ascending: false })
         .limit(50);
+
       if (error) throw error;
-      return data ?? [];
+
+      return (data ?? []).map((job) => ({
+        ...job,
+        dispatch_type: job.dispatch_type === "pasugo" ? "pasugo" : "marketplace",
+      })) as DispatchJob[];
     },
   });
 }

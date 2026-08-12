@@ -71,7 +71,7 @@ export async function buildOverview(): Promise<AdminOverview> {
 
   const { data: monthOrders } = await supabaseAdmin
     .from("orders")
-    .select("created_at,total,seller_commission,rider_commission,status,payment_status")
+    .select("created_at,total,seller_commission,rider_platform_fee,status,payment_status")
     .gte("created_at", startOfMonth.toISOString())
     .is("deleted_at", null);
 
@@ -96,10 +96,7 @@ export async function buildOverview(): Promise<AdminOverview> {
     ordersToday: todays.length,
     revenueToday: todays.reduce((sum, o) => sum + Number(o.total ?? 0), 0),
     revenueMonth: billable.reduce((sum, o) => sum + Number(o.total ?? 0), 0),
-    commissionMonth: billable.reduce(
-      (sum, o) => sum + Number(o.seller_commission ?? 0) + Number(o.rider_commission ?? 0),
-      0,
-    ),
+    commissionMonth: billable.reduce((sum, o) => sum + Number(o.seller_commission ?? 0), 0),
     walletBalance: (wallets ?? []).reduce((sum, w) => sum + Number(w.balance ?? 0), 0),
     walletPending: (wallets ?? []).reduce((sum, w) => sum + Number(w.pending_balance ?? 0), 0),
     walletCount: (wallets ?? []).length,

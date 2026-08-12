@@ -4,7 +4,32 @@ export type Database = {
   // Allows to automatically instantiate createClient with right options
   // instead of createClient<Database, { PostgrestVersion: 'XX' }>(URL, KEY)
   __InternalSupabase: {
-    PostgrestVersion: "14.5";
+    PostgrestVersion: "14.15";
+  };
+  graphql_public: {
+    Tables: {
+      [_ in never]: never;
+    };
+    Views: {
+      [_ in never]: never;
+    };
+    Functions: {
+      graphql: {
+        Args: {
+          extensions?: Json;
+          operationName?: string;
+          query?: string;
+          variables?: Json;
+        };
+        Returns: Json;
+      };
+    };
+    Enums: {
+      [_ in never]: never;
+    };
+    CompositeTypes: {
+      [_ in never]: never;
+    };
   };
   public: {
     Tables: {
@@ -165,42 +190,6 @@ export type Database = {
           },
         ];
       };
-      audit_logs: {
-        Row: {
-          action: string;
-          actor_id: string | null;
-          after_data: Json | null;
-          before_data: Json | null;
-          created_at: string;
-          entity_id: string | null;
-          entity_type: string;
-          id: string;
-          ip_address: string | null;
-        };
-        Insert: {
-          action: string;
-          actor_id?: string | null;
-          after_data?: Json | null;
-          before_data?: Json | null;
-          created_at?: string;
-          entity_id?: string | null;
-          entity_type: string;
-          id?: string;
-          ip_address?: string | null;
-        };
-        Update: {
-          action?: string;
-          actor_id?: string | null;
-          after_data?: Json | null;
-          before_data?: Json | null;
-          created_at?: string;
-          entity_id?: string | null;
-          entity_type?: string;
-          id?: string;
-          ip_address?: string | null;
-        };
-        Relationships: [];
-      };
       categories: {
         Row: {
           created_at: string;
@@ -209,7 +198,6 @@ export type Database = {
           image_url: string | null;
           is_active: boolean;
           name: string;
-          service_type: string;
           slug: string;
           sort_order: number;
         };
@@ -220,7 +208,6 @@ export type Database = {
           image_url?: string | null;
           is_active?: boolean;
           name: string;
-          service_type?: string;
           slug: string;
           sort_order?: number;
         };
@@ -231,7 +218,6 @@ export type Database = {
           image_url?: string | null;
           is_active?: boolean;
           name?: string;
-          service_type?: string;
           slug?: string;
           sort_order?: number;
         };
@@ -299,14 +285,51 @@ export type Database = {
           },
         ];
       };
+      dispatch_chat_messages: {
+        Row: {
+          created_at: string;
+          id: string;
+          message: string;
+          order_id: string;
+          recipient_id: string;
+          sender_id: string;
+        };
+        Insert: {
+          created_at?: string;
+          id?: string;
+          message: string;
+          order_id: string;
+          recipient_id: string;
+          sender_id: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          message?: string;
+          order_id?: string;
+          recipient_id?: string;
+          sender_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "dispatch_chat_messages_order_id_fkey";
+            columns: ["order_id"];
+            isOneToOne: false;
+            referencedRelation: "orders";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       dispatch_jobs: {
         Row: {
           assigned_at: string | null;
           assigned_rider_id: string | null;
           attempt: number;
           created_at: string;
+          customer_notes: string | null;
           delivered_at: string | null;
           delivery_fee: number;
+          dispatch_type: string;
           distance_km: number;
           dropoff_address: string | null;
           dropoff_lat: number | null;
@@ -331,8 +354,10 @@ export type Database = {
           assigned_rider_id?: string | null;
           attempt?: number;
           created_at?: string;
+          customer_notes?: string | null;
           delivered_at?: string | null;
           delivery_fee?: number;
+          dispatch_type?: string;
           distance_km?: number;
           dropoff_address?: string | null;
           dropoff_lat?: number | null;
@@ -357,8 +382,10 @@ export type Database = {
           assigned_rider_id?: string | null;
           attempt?: number;
           created_at?: string;
+          customer_notes?: string | null;
           delivered_at?: string | null;
           delivery_fee?: number;
+          dispatch_type?: string;
           distance_km?: number;
           dropoff_address?: string | null;
           dropoff_lat?: number | null;
@@ -582,232 +609,6 @@ export type Database = {
         };
         Relationships: [];
       };
-      pasugo_bookings: {
-        Row: {
-          assigned_rider_id: string | null;
-          created_at: string;
-          customer_id: string;
-          customer_name: string | null;
-          customer_phone: string | null;
-          dropoff_address: string;
-          dropoff_lat: number | null;
-          dropoff_lng: number | null;
-          estimated_distance_km: number;
-          estimated_fare: number;
-          id: string;
-          notes: string | null;
-          pickup_address: string;
-          pickup_lat: number | null;
-          pickup_lng: number | null;
-          rider_fee_deducted_at: string | null;
-          rider_fee_per_booking: number | null;
-          status: string;
-          updated_at: string;
-        };
-        Insert: {
-          assigned_rider_id?: string | null;
-          created_at?: string;
-          customer_id: string;
-          customer_name?: string | null;
-          customer_phone?: string | null;
-          dropoff_address: string;
-          dropoff_lat?: number | null;
-          dropoff_lng?: number | null;
-          estimated_distance_km?: number;
-          estimated_fare?: number;
-          id?: string;
-          notes?: string | null;
-          pickup_address: string;
-          pickup_lat?: number | null;
-          pickup_lng?: number | null;
-          rider_fee_deducted_at?: string | null;
-          rider_fee_per_booking?: number | null;
-          status?: string;
-          updated_at?: string;
-        };
-        Update: {
-          assigned_rider_id?: string | null;
-          created_at?: string;
-          customer_id?: string;
-          customer_name?: string | null;
-          customer_phone?: string | null;
-          dropoff_address?: string;
-          dropoff_lat?: number | null;
-          dropoff_lng?: number | null;
-          estimated_distance_km?: number;
-          estimated_fare?: number;
-          id?: string;
-          notes?: string | null;
-          pickup_address?: string;
-          pickup_lat?: number | null;
-          pickup_lng?: number | null;
-          rider_fee_deducted_at?: string | null;
-          rider_fee_per_booking?: number | null;
-          status?: string;
-          updated_at?: string;
-        };
-        Relationships: [];
-      };
-      pasugo_chat_messages: {
-        Row: {
-          booking_id: string;
-          created_at: string;
-          id: string;
-          message: string;
-          recipient_id: string;
-          sender_id: string;
-        };
-        Insert: {
-          booking_id: string;
-          created_at?: string;
-          id?: string;
-          message: string;
-          recipient_id: string;
-          sender_id: string;
-        };
-        Update: {
-          booking_id?: string;
-          created_at?: string;
-          id?: string;
-          message?: string;
-          recipient_id?: string;
-          sender_id?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "pasugo_chat_messages_booking_id_fkey";
-            columns: ["booking_id"];
-            isOneToOne: false;
-            referencedRelation: "pasugo_bookings";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      pasugo_dispatch_jobs: {
-        Row: {
-          assigned_at: string | null;
-          assigned_rider_id: string | null;
-          attempt: number;
-          booking_id: string;
-          created_at: string;
-          delivered_at: string | null;
-          delivery_fee: number;
-          distance_km: number;
-          dropoff_address: string | null;
-          dropoff_lat: number | null;
-          dropoff_lng: number | null;
-          expires_at: string | null;
-          id: string;
-          max_attempts: number;
-          pickup_address: string | null;
-          pickup_lat: number | null;
-          pickup_lng: number | null;
-          radius_km: number;
-          status: string;
-          updated_at: string;
-        };
-        Insert: {
-          assigned_at?: string | null;
-          assigned_rider_id?: string | null;
-          attempt?: number;
-          booking_id: string;
-          created_at?: string;
-          delivered_at?: string | null;
-          delivery_fee?: number;
-          distance_km?: number;
-          dropoff_address?: string | null;
-          dropoff_lat?: number | null;
-          dropoff_lng?: number | null;
-          expires_at?: string | null;
-          id?: string;
-          max_attempts?: number;
-          pickup_address?: string | null;
-          pickup_lat?: number | null;
-          pickup_lng?: number | null;
-          radius_km?: number;
-          status?: string;
-          updated_at?: string;
-        };
-        Update: {
-          assigned_at?: string | null;
-          assigned_rider_id?: string | null;
-          attempt?: number;
-          booking_id?: string;
-          created_at?: string;
-          delivered_at?: string | null;
-          delivery_fee?: number;
-          distance_km?: number;
-          dropoff_address?: string | null;
-          dropoff_lat?: number | null;
-          dropoff_lng?: number | null;
-          expires_at?: string | null;
-          id?: string;
-          max_attempts?: number;
-          pickup_address?: string | null;
-          pickup_lat?: number | null;
-          pickup_lng?: number | null;
-          radius_km?: number;
-          status?: string;
-          updated_at?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "pasugo_dispatch_jobs_booking_id_fkey";
-            columns: ["booking_id"];
-            isOneToOne: false;
-            referencedRelation: "pasugo_bookings";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
-      pasugo_dispatch_offers: {
-        Row: {
-          booking_id: string;
-          created_at: string;
-          distance_km: number | null;
-          expires_at: string;
-          id: string;
-          job_id: string;
-          rider_id: string;
-          status: string;
-        };
-        Insert: {
-          booking_id: string;
-          created_at?: string;
-          distance_km?: number | null;
-          expires_at: string;
-          id?: string;
-          job_id: string;
-          rider_id: string;
-          status?: string;
-        };
-        Update: {
-          booking_id?: string;
-          created_at?: string;
-          distance_km?: number | null;
-          expires_at?: string;
-          id?: string;
-          job_id?: string;
-          rider_id?: string;
-          status?: string;
-        };
-        Relationships: [
-          {
-            foreignKeyName: "pasugo_dispatch_offers_booking_id_fkey";
-            columns: ["booking_id"];
-            isOneToOne: false;
-            referencedRelation: "pasugo_bookings";
-            referencedColumns: ["id"];
-          },
-          {
-            foreignKeyName: "pasugo_dispatch_offers_job_id_fkey";
-            columns: ["job_id"];
-            isOneToOne: false;
-            referencedRelation: "pasugo_dispatch_jobs";
-            referencedColumns: ["id"];
-          },
-        ];
-      };
       order_items: {
         Row: {
           created_at: string;
@@ -873,6 +674,9 @@ export type Database = {
           payment_status: Database["public"]["Enums"]["payment_status"];
           rider_commission: number;
           rider_id: string | null;
+          rider_platform_fee: number;
+          rider_platform_fee_deducted_at: string | null;
+          rider_platform_fee_refunded_at: string | null;
           seller_commission: number;
           status: Database["public"]["Enums"]["order_status"];
           store_id: string | null;
@@ -898,6 +702,9 @@ export type Database = {
           payment_status?: Database["public"]["Enums"]["payment_status"];
           rider_commission?: number;
           rider_id?: string | null;
+          rider_platform_fee?: number;
+          rider_platform_fee_deducted_at?: string | null;
+          rider_platform_fee_refunded_at?: string | null;
           seller_commission?: number;
           status?: Database["public"]["Enums"]["order_status"];
           store_id?: string | null;
@@ -923,6 +730,9 @@ export type Database = {
           payment_status?: Database["public"]["Enums"]["payment_status"];
           rider_commission?: number;
           rider_id?: string | null;
+          rider_platform_fee?: number;
+          rider_platform_fee_deducted_at?: string | null;
+          rider_platform_fee_refunded_at?: string | null;
           seller_commission?: number;
           status?: Database["public"]["Enums"]["order_status"];
           store_id?: string | null;
@@ -945,6 +755,253 @@ export type Database = {
             columns: ["store_id"];
             isOneToOne: false;
             referencedRelation: "stores";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      pasugo_bookings: {
+        Row: {
+          assigned_rider_id: string | null;
+          cancelled_at: string | null;
+          completed_at: string | null;
+          created_at: string;
+          customer_id: string;
+          customer_name: string | null;
+          customer_phone: string | null;
+          dropoff_address: string;
+          dropoff_lat: number | null;
+          dropoff_lng: number | null;
+          estimated_distance_km: number;
+          estimated_fare: number;
+          id: string;
+          notes: string | null;
+          pickup_address: string;
+          pickup_lat: number | null;
+          pickup_lng: number | null;
+          rider_fee_deducted_at: string | null;
+          rider_fee_per_booking: number;
+          status: Database["public"]["Enums"]["pasugo_booking_status"];
+          updated_at: string;
+        };
+        Insert: {
+          assigned_rider_id?: string | null;
+          cancelled_at?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          customer_id: string;
+          customer_name?: string | null;
+          customer_phone?: string | null;
+          dropoff_address: string;
+          dropoff_lat?: number | null;
+          dropoff_lng?: number | null;
+          estimated_distance_km?: number;
+          estimated_fare?: number;
+          id?: string;
+          notes?: string | null;
+          pickup_address: string;
+          pickup_lat?: number | null;
+          pickup_lng?: number | null;
+          rider_fee_deducted_at?: string | null;
+          rider_fee_per_booking?: number;
+          status?: Database["public"]["Enums"]["pasugo_booking_status"];
+          updated_at?: string;
+        };
+        Update: {
+          assigned_rider_id?: string | null;
+          cancelled_at?: string | null;
+          completed_at?: string | null;
+          created_at?: string;
+          customer_id?: string;
+          customer_name?: string | null;
+          customer_phone?: string | null;
+          dropoff_address?: string;
+          dropoff_lat?: number | null;
+          dropoff_lng?: number | null;
+          estimated_distance_km?: number;
+          estimated_fare?: number;
+          id?: string;
+          notes?: string | null;
+          pickup_address?: string;
+          pickup_lat?: number | null;
+          pickup_lng?: number | null;
+          rider_fee_deducted_at?: string | null;
+          rider_fee_per_booking?: number;
+          status?: Database["public"]["Enums"]["pasugo_booking_status"];
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      pasugo_chat_messages: {
+        Row: {
+          booking_id: string;
+          created_at: string;
+          id: string;
+          message: string;
+          recipient_id: string;
+          sender_id: string;
+        };
+        Insert: {
+          booking_id: string;
+          created_at?: string;
+          id?: string;
+          message: string;
+          recipient_id: string;
+          sender_id: string;
+        };
+        Update: {
+          booking_id?: string;
+          created_at?: string;
+          id?: string;
+          message?: string;
+          recipient_id?: string;
+          sender_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "pasugo_chat_messages_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "pasugo_bookings";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      pasugo_dispatch_jobs: {
+        Row: {
+          assigned_at: string | null;
+          assigned_rider_id: string | null;
+          attempt: number;
+          booking_id: string;
+          created_at: string;
+          delivered_at: string | null;
+          delivery_fee: number;
+          distance_km: number;
+          dropoff_address: string | null;
+          dropoff_lat: number | null;
+          dropoff_lng: number | null;
+          expires_at: string | null;
+          id: string;
+          last_attempt_at: string | null;
+          max_attempts: number;
+          picked_up_at: string | null;
+          pickup_address: string | null;
+          pickup_lat: number | null;
+          pickup_lng: number | null;
+          radius_km: number;
+          status: Database["public"]["Enums"]["dispatch_status"];
+          updated_at: string;
+        };
+        Insert: {
+          assigned_at?: string | null;
+          assigned_rider_id?: string | null;
+          attempt?: number;
+          booking_id: string;
+          created_at?: string;
+          delivered_at?: string | null;
+          delivery_fee?: number;
+          distance_km?: number;
+          dropoff_address?: string | null;
+          dropoff_lat?: number | null;
+          dropoff_lng?: number | null;
+          expires_at?: string | null;
+          id?: string;
+          last_attempt_at?: string | null;
+          max_attempts?: number;
+          picked_up_at?: string | null;
+          pickup_address?: string | null;
+          pickup_lat?: number | null;
+          pickup_lng?: number | null;
+          radius_km?: number;
+          status?: Database["public"]["Enums"]["dispatch_status"];
+          updated_at?: string;
+        };
+        Update: {
+          assigned_at?: string | null;
+          assigned_rider_id?: string | null;
+          attempt?: number;
+          booking_id?: string;
+          created_at?: string;
+          delivered_at?: string | null;
+          delivery_fee?: number;
+          distance_km?: number;
+          dropoff_address?: string | null;
+          dropoff_lat?: number | null;
+          dropoff_lng?: number | null;
+          expires_at?: string | null;
+          id?: string;
+          last_attempt_at?: string | null;
+          max_attempts?: number;
+          picked_up_at?: string | null;
+          pickup_address?: string | null;
+          pickup_lat?: number | null;
+          pickup_lng?: number | null;
+          radius_km?: number;
+          status?: Database["public"]["Enums"]["dispatch_status"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "pasugo_dispatch_jobs_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: true;
+            referencedRelation: "pasugo_bookings";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      pasugo_dispatch_offers: {
+        Row: {
+          attempt: number;
+          booking_id: string;
+          created_at: string;
+          distance_km: number | null;
+          expires_at: string;
+          id: string;
+          job_id: string;
+          responded_at: string | null;
+          rider_id: string;
+          status: Database["public"]["Enums"]["dispatch_offer_status"];
+          updated_at: string;
+        };
+        Insert: {
+          attempt: number;
+          booking_id: string;
+          created_at?: string;
+          distance_km?: number | null;
+          expires_at: string;
+          id?: string;
+          job_id: string;
+          responded_at?: string | null;
+          rider_id: string;
+          status?: Database["public"]["Enums"]["dispatch_offer_status"];
+          updated_at?: string;
+        };
+        Update: {
+          attempt?: number;
+          booking_id?: string;
+          created_at?: string;
+          distance_km?: number | null;
+          expires_at?: string;
+          id?: string;
+          job_id?: string;
+          responded_at?: string | null;
+          rider_id?: string;
+          status?: Database["public"]["Enums"]["dispatch_offer_status"];
+          updated_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "pasugo_dispatch_offers_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "pasugo_bookings";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "pasugo_dispatch_offers_job_id_fkey";
+            columns: ["job_id"];
+            isOneToOne: false;
+            referencedRelation: "pasugo_dispatch_jobs";
             referencedColumns: ["id"];
           },
         ];
@@ -1282,48 +1339,48 @@ export type Database = {
       };
       profiles: {
         Row: {
-          account_status: Database["public"]["Enums"]["account_status"];
           accepted_terms: boolean;
           accepted_terms_at: string | null;
+          account_status: Database["public"]["Enums"]["account_status"];
           avatar_url: string | null;
           city: string | null;
           created_at: string;
           full_name: string | null;
           id: string;
-          privacy_version: string | null;
           phone: string | null;
+          privacy_version: string | null;
           status_changed_at: string | null;
           status_note: string | null;
           terms_version: string | null;
           updated_at: string;
         };
         Insert: {
-          account_status?: Database["public"]["Enums"]["account_status"];
           accepted_terms?: boolean;
           accepted_terms_at?: string | null;
+          account_status?: Database["public"]["Enums"]["account_status"];
           avatar_url?: string | null;
           city?: string | null;
           created_at?: string;
           full_name?: string | null;
           id: string;
-          privacy_version?: string | null;
           phone?: string | null;
+          privacy_version?: string | null;
           status_changed_at?: string | null;
           status_note?: string | null;
           terms_version?: string | null;
           updated_at?: string;
         };
         Update: {
-          account_status?: Database["public"]["Enums"]["account_status"];
           accepted_terms?: boolean;
           accepted_terms_at?: string | null;
+          account_status?: Database["public"]["Enums"]["account_status"];
           avatar_url?: string | null;
           city?: string | null;
           created_at?: string;
           full_name?: string | null;
           id?: string;
-          privacy_version?: string | null;
           phone?: string | null;
+          privacy_version?: string | null;
           status_changed_at?: string | null;
           status_note?: string | null;
           terms_version?: string | null;
@@ -1451,8 +1508,8 @@ export type Database = {
           emergency_contact: Json;
           id: string;
           ip_address: string | null;
-          privacy_version: string | null;
           personal_info: Json;
+          privacy_version: string | null;
           review_notes: string | null;
           reviewed_at: string | null;
           status: Database["public"]["Enums"]["application_status"];
@@ -1471,8 +1528,8 @@ export type Database = {
           emergency_contact?: Json;
           id?: string;
           ip_address?: string | null;
-          privacy_version?: string | null;
           personal_info?: Json;
+          privacy_version?: string | null;
           review_notes?: string | null;
           reviewed_at?: string | null;
           status?: Database["public"]["Enums"]["application_status"];
@@ -1491,8 +1548,8 @@ export type Database = {
           emergency_contact?: Json;
           id?: string;
           ip_address?: string | null;
-          privacy_version?: string | null;
           personal_info?: Json;
+          privacy_version?: string | null;
           review_notes?: string | null;
           reviewed_at?: string | null;
           status?: Database["public"]["Enums"]["application_status"];
@@ -1844,6 +1901,35 @@ export type Database = {
           },
         ];
       };
+      wallet_transaction_hides: {
+        Row: {
+          hidden_at: string;
+          id: string;
+          user_id: string;
+          wallet_transaction_id: string;
+        };
+        Insert: {
+          hidden_at?: string;
+          id?: string;
+          user_id: string;
+          wallet_transaction_id: string;
+        };
+        Update: {
+          hidden_at?: string;
+          id?: string;
+          user_id?: string;
+          wallet_transaction_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "wallet_transaction_hides_wallet_transaction_id_fkey";
+            columns: ["wallet_transaction_id"];
+            isOneToOne: false;
+            referencedRelation: "wallet_transactions";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       wallet_transactions: {
         Row: {
           amount: number;
@@ -1951,10 +2037,18 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
+      accept_customer_legal: {
+        Args: { _privacy_version: string; _terms_version: string };
+        Returns: undefined;
+      };
       admin_bootstrap_available: { Args: never; Returns: boolean };
       admin_portal_approve_topup: {
         Args: { _notes?: string; _topup_id: string };
         Returns: string;
+      };
+      admin_portal_reject_topup: {
+        Args: { _reason: string; _topup_id: string };
+        Returns: boolean;
       };
       admin_portal_review_application: {
         Args: {
@@ -1965,10 +2059,6 @@ export type Database = {
           _notes?: string;
         };
         Returns: Json;
-      };
-      admin_portal_reject_topup: {
-        Args: { _reason: string; _topup_id: string };
-        Returns: boolean;
       };
       admin_portal_set_account_status: {
         Args: {
@@ -1989,6 +2079,10 @@ export type Database = {
       approve_wallet_topup: {
         Args: { _notes?: string; _topup_id: string };
         Returns: string;
+      };
+      calculate_rider_platform_fee: {
+        Args: { _distance_km: number };
+        Returns: number;
       };
       claim_first_admin: { Args: never; Returns: boolean };
       create_order_secure: {
@@ -2012,20 +2106,11 @@ export type Database = {
       dispatch_retry: { Args: { _job_id: string }; Returns: boolean };
       dispatch_settings: { Args: never; Returns: Json };
       dispatch_start: { Args: { _order_id: string }; Returns: string };
-      minimum_wallet_balance_for_role: { Args: { _role: string }; Returns: number };
-      pasugo_available_riders_count: { Args: { _job_id: string }; Returns: number };
-      pasugo_cancel: { Args: { _booking_id: string }; Returns: boolean };
-      pasugo_dispatch_accept: {
-        Args: { _job_id: string };
-        Returns: { booking_id: string | null; ok: boolean; reason: string | null };
+      enforce_wallet_thresholds_from_settings: {
+        Args: never;
+        Returns: undefined;
       };
-      pasugo_dispatch_advance: {
-        Args: { _job_id: string; _step: string };
-        Returns: boolean;
-      };
-      pasugo_dispatch_decline: { Args: { _job_id: string }; Returns: boolean };
-      pasugo_dispatch_retry: { Args: { _job_id: string }; Returns: boolean };
-      store_set_online: { Args: { _store_id: string; _online: boolean }; Returns: boolean };
+      generate_order_claim_number: { Args: never; Returns: string };
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"];
@@ -2038,12 +2123,41 @@ export type Database = {
         Returns: number;
       };
       is_portal_admin: { Args: never; Returns: boolean };
+      minimum_wallet_balance_for_role: {
+        Args: { _role: string };
+        Returns: number;
+      };
+      pasugo_available_riders_count: {
+        Args: { _job_id: string };
+        Returns: number;
+      };
+      pasugo_cancel: { Args: { _booking_id: string }; Returns: boolean };
+      pasugo_dispatch_accept: { Args: { _job_id: string }; Returns: Json };
+      pasugo_dispatch_advance: {
+        Args: { _job_id: string; _step: string };
+        Returns: boolean;
+      };
+      pasugo_dispatch_broadcast: { Args: { _job_id: string }; Returns: number };
+      pasugo_dispatch_decline: { Args: { _job_id: string }; Returns: boolean };
+      pasugo_dispatch_retry: { Args: { _job_id: string }; Returns: boolean };
+      pasugo_start: { Args: { _booking_id: string }; Returns: string };
+      refresh_store_rating: { Args: { _store_id: string }; Returns: undefined };
       reject_wallet_topup: {
         Args: { _reason: string; _topup_id: string };
         Returns: boolean;
       };
+      request_client_ip: { Args: never; Returns: string };
+      retry_expired_dispatches: { Args: { _limit?: number }; Returns: number };
       rider_set_presence: {
         Args: { _lat?: number; _lng?: number; _online: boolean };
+        Returns: boolean;
+      };
+      store_is_open_now: {
+        Args: { _at?: string; _hours: Json };
+        Returns: boolean;
+      };
+      store_set_online: {
+        Args: { _online: boolean; _store_id: string };
         Returns: boolean;
       };
       transition_order_status: {
@@ -2065,6 +2179,17 @@ export type Database = {
         "searching" | "assigned" | "picked_up" | "delivered" | "cancelled" | "failed";
       order_status:
         "pending" | "confirmed" | "preparing" | "ready" | "picked_up" | "delivered" | "cancelled";
+      pasugo_booking_status:
+        | "requested"
+        | "finding_rider"
+        | "accepted"
+        | "rider_arriving"
+        | "picked_up"
+        | "on_the_way"
+        | "delivered"
+        | "completed"
+        | "cancelled"
+        | "failed";
       payment_method: "cod" | "gcash" | "wallet" | "maya" | "card" | "bank_transfer" | "qrph";
       payment_status: "pending" | "processing" | "succeeded" | "failed" | "expired" | "refunded";
       seller_business_type: "registered" | "home_based";
@@ -2190,6 +2315,9 @@ export type CompositeTypes<
     : never;
 
 export const Constants = {
+  graphql_public: {
+    Enums: {},
+  },
   public: {
     Enums: {
       account_status: ["active", "suspended", "banned"],
@@ -2207,6 +2335,18 @@ export const Constants = {
         "picked_up",
         "delivered",
         "cancelled",
+      ],
+      pasugo_booking_status: [
+        "requested",
+        "finding_rider",
+        "accepted",
+        "rider_arriving",
+        "picked_up",
+        "on_the_way",
+        "delivered",
+        "completed",
+        "cancelled",
+        "failed",
       ],
       payment_method: ["cod", "gcash", "wallet", "maya", "card", "bank_transfer", "qrph"],
       payment_status: ["pending", "processing", "succeeded", "failed", "expired", "refunded"],

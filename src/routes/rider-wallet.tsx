@@ -39,7 +39,7 @@ function RiderWalletPage() {
       workspace="Rider workspace"
       items={[
         { to: "/rider", label: "Overview", icon: Bike },
-        { to: "/customer", label: "My orders", icon: PackageCheck },
+        { to: "/rider-orders", label: "My orders", icon: PackageCheck },
         { to: "/rider-wallet", label: "Wallet", icon: Wallet },
       ]}
     >
