@@ -95,9 +95,18 @@ function LandingPage() {
               <Sparkles className="size-3.5" /> Marketplace + Delivery
             </span>
             <h1 className="mt-6 text-4xl font-extrabold leading-[1.05] sm:text-5xl lg:text-6xl">
+              RushOrder PH
+            </h1>
+
+            <p className="mt-3 text-lg font-semibold text-ink-foreground/80">
+              Marketplace & Delivery for the Philippines
+            </p>
+
+            <h2 className="mt-6 text-4xl font-extrabold leading-[1.05] sm:text-5xl lg:text-6xl">
               Everything your <span className="text-ember">neighbourhood sells</span>, delivered in
               a rush.
-            </h1>
+            </h2>
+
             <p className="mt-5 max-w-xl text-base leading-relaxed text-ink-foreground/75 sm:text-lg">
               RushOrder PH is the Philippine platform where customers shop local, sellers grow
               beyond Facebook posts, and riders earn on their own schedule.
