@@ -31,6 +31,7 @@ import { Route as PasugoRouteImport } from './routes/pasugo'
 import { Route as PharmacyRouteImport } from './routes/pharmacy'
 import { Route as RegisterRouteImport } from './routes/register'
 import { Route as RiderRouteImport } from './routes/rider'
+import { Route as RiderOrdersRouteImport } from './routes/rider-orders'
 import { Route as RiderWalletRouteImport } from './routes/rider-wallet'
 import { Route as SellerRouteImport } from './routes/seller'
 import { Route as SellerWalletRouteImport } from './routes/seller-wallet'
@@ -174,6 +175,11 @@ const RegisterRoute = RegisterRouteImport.update({
 const RiderRoute = RiderRouteImport.update({
   id: '/rider',
   path: '/rider',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RiderOrdersRoute = RiderOrdersRouteImport.update({
+  id: '/rider-orders',
+  path: '/rider-orders',
   getParentRoute: () => rootRouteImport,
 } as any)
 const RiderWalletRoute = RiderWalletRouteImport.update({
@@ -377,6 +383,7 @@ export interface FileRoutesByFullPath {
   '/pharmacy': typeof PharmacyRoute
   '/register': typeof RegisterRoute
   '/rider': typeof RiderRoute
+  '/rider-orders': typeof RiderOrdersRoute
   '/rider-wallet': typeof RiderWalletRoute
   '/seller': typeof SellerRoute
   '/seller-wallet': typeof SellerWalletRoute
@@ -433,6 +440,7 @@ export interface FileRoutesByTo {
   '/pharmacy': typeof PharmacyRoute
   '/register': typeof RegisterRoute
   '/rider': typeof RiderRoute
+  '/rider-orders': typeof RiderOrdersRoute
   '/rider-wallet': typeof RiderWalletRoute
   '/seller': typeof SellerRoute
   '/seller-wallet': typeof SellerWalletRoute
@@ -492,6 +500,7 @@ export interface FileRoutesById {
   '/pharmacy': typeof PharmacyRoute
   '/register': typeof RegisterRoute
   '/rider': typeof RiderRoute
+  '/rider-orders': typeof RiderOrdersRoute
   '/rider-wallet': typeof RiderWalletRoute
   '/seller': typeof SellerRoute
   '/seller-wallet': typeof SellerWalletRoute
@@ -552,6 +561,7 @@ export interface FileRouteTypes {
     | '/pharmacy'
     | '/register'
     | '/rider'
+    | '/rider-orders'
     | '/rider-wallet'
     | '/seller'
     | '/seller-wallet'
@@ -608,6 +618,7 @@ export interface FileRouteTypes {
     | '/pharmacy'
     | '/register'
     | '/rider'
+    | '/rider-orders'
     | '/rider-wallet'
     | '/seller'
     | '/seller-wallet'
@@ -666,6 +677,7 @@ export interface FileRouteTypes {
     | '/pharmacy'
     | '/register'
     | '/rider'
+    | '/rider-orders'
     | '/rider-wallet'
     | '/seller'
     | '/seller-wallet'
@@ -725,6 +737,7 @@ export interface RootRouteChildren {
   PharmacyRoute: typeof PharmacyRoute
   RegisterRoute: typeof RegisterRoute
   RiderRoute: typeof RiderRoute
+  RiderOrdersRoute: typeof RiderOrdersRoute
   RiderWalletRoute: typeof RiderWalletRoute
   SellerRoute: typeof SellerRoute
   SellerWalletRoute: typeof SellerWalletRoute
@@ -894,6 +907,13 @@ declare module '@tanstack/react-router' {
       path: '/rider'
       fullPath: '/rider'
       preLoaderRoute: typeof RiderRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rider-orders': {
+      id: '/rider-orders'
+      path: '/rider-orders'
+      fullPath: '/rider-orders'
+      preLoaderRoute: typeof RiderOrdersRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/rider-wallet': {
@@ -1229,6 +1249,7 @@ const rootRouteChildren: RootRouteChildren = {
   PharmacyRoute: PharmacyRoute,
   RegisterRoute: RegisterRoute,
   RiderRoute: RiderRoute,
+  RiderOrdersRoute: RiderOrdersRoute,
   RiderWalletRoute: RiderWalletRoute,
   SellerRoute: SellerRoute,
   SellerWalletRoute: SellerWalletRoute,
