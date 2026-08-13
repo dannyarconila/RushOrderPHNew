@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ClipboardList } from "lucide-react";
 import { useMemo, useState, type ReactNode } from "react";
 import { toast } from "sonner";
+import { settingsQuery } from "@/lib/admin/queries";
 
 import {
   ActionDialog,
@@ -121,6 +122,11 @@ export function ApplicationReview({ kind }: { kind: "seller" | "rider" }) {
   const [details, setDetails] = useState<AnyApplication | null>(null);
   const [pending, setPending] = useState<{ app: AnyApplication; next: ApplicationStatus } | null>(
     null,
+  );
+  const { data: settings } = useQuery(settingsQuery());
+
+  const welcomeWalletBonus = Number(
+    settings?.find((setting) => setting.key === "welcome_wallet_bonus")?.value ?? 0,
   );
 
   const sellerQuery = useQuery({ ...sellerApplicationsQuery(status), enabled: kind === "seller" });
@@ -256,7 +262,7 @@ export function ApplicationReview({ kind }: { kind: "seller" | "rider" }) {
         noteLabel="Review note"
         requireNote={pending?.next === "rejected"}
         amountLabel={pending?.next === "approved" ? "Wallet approval bonus (PHP)" : undefined}
-        defaultAmount={50}
+        defaultAmount={welcomeWalletBonus}
         pending={mutation.isPending}
         onConfirm={(note, approvalBonus) =>
           pending &&
