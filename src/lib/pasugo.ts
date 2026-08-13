@@ -103,18 +103,6 @@ async function loadDispatchSettings() {
   return (data ?? {}) as Record<string, unknown>;
 }
 
-async function loadRiderDeliveryFee() {
-  const { data, error } = await supabase
-    .from("system_settings")
-    .select("value")
-    .eq("key", "rider_delivery_fee")
-    .maybeSingle();
-  if (error) throw error;
-  const raw = data?.value;
-  const num = typeof raw === "number" ? raw : Number(raw);
-  return Number.isFinite(num) ? Math.max(0, num) : 0;
-}
-
 function splitLineAddress(line: string) {
   const [line1, barangay, city, province] = line
     .split(",")
@@ -140,7 +128,6 @@ export async function createPasugoBooking(input: CreatePasugoInput): Promise<str
       : 0;
 
   const settings = await loadDispatchSettings();
-  const riderDeliveryFee = await loadRiderDeliveryFee();
   const deliveryFee = estimateDeliveryFee(distanceKm, settings);
 
   const slug = `pasugo-pickup-${input.userId.slice(0, 8)}`;
@@ -239,7 +226,7 @@ export async function createPasugoBooking(input: CreatePasugoInput): Promise<str
       tax: 0,
       total: deliveryFee,
       seller_commission: 0,
-      rider_commission: riderDeliveryFee,
+      rider_commission: 0,
       distance_km: distanceKm,
       claim_number: claimNumber(),
       notes,
