@@ -85,7 +85,9 @@ export function LegalDocumentView({
           <div className="space-y-8">
             {doc.sections.map((section) => (
               <section key={section.id} id={section.id} className="scroll-mt-28">
-                <h2 className="font-display text-xl font-bold tracking-tight">{section.title}</h2>
+                {section.title ? (
+                  <h2 className="font-display text-xl font-bold tracking-tight">{section.title}</h2>
+                ) : null}
                 <div className="mt-3 space-y-3 text-sm leading-relaxed text-muted-foreground">
                   {section.body.map((line, index) => (
                     <p key={`${section.id}-${index}`}>{line}</p>

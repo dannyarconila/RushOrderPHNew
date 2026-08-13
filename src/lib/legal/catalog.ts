@@ -484,14 +484,17 @@ export function mergeLegalDocument(
     content: null,
   };
 
-  const contentSections =
-    resolvedVersion.content && resolvedVersion.content.trim().length > 0
-      ? resolvedVersion.content.split("\n\n").map((block, index) => ({
-          id: `custom-${index + 1}`,
-          title: index === 0 ? "Policy" : `Policy ${index + 1}`,
-          body: [block.trim()],
-        }))
-      : base.sections;
+  const customContent = resolvedVersion.content?.trim();
+
+  const contentSections: LegalSection[] = customContent
+    ? [
+        {
+          id: "custom-content",
+          title: "",
+          body: customContent.split(/\n\s*\n/).map((block) => block.trim()),
+        },
+      ]
+    : base.sections;
 
   return {
     ...base,
