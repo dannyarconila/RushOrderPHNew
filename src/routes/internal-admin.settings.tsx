@@ -13,6 +13,13 @@ export const Route = createFileRoute("/internal-admin/settings")({
   component: SettingsPage,
 });
 
+const CUSTOMER_SERVICE_KEYS = [
+  "customer_service_email",
+  "customer_service_phone",
+  "customer_service_hours",
+  "customer_service_enabled",
+] as const;
+
 function SettingsPage() {
   const { data: settings, isLoading } = useQuery(settingsQuery());
   const byKey = new Map((settings ?? []).map((setting) => [setting.key, setting]));
@@ -21,10 +28,40 @@ function SettingsPage() {
     <>
       <PageHeader
         title="Platform settings"
-        description="Commission rates, delivery fees and operational toggles used across the marketplace."
+        description="Control pricing, wallets, marketplace behavior, customer service, and operational settings used across the platform."
       />
 
-      <div className="grid gap-4 mb-6 md:grid-cols-4">
+      <section className="mb-6">
+        <Panel
+          title="Customer service"
+          description="Public support information shown to customers, sellers, and riders."
+        >
+          <div className="grid gap-4 md:grid-cols-2">
+            {CUSTOMER_SERVICE_KEYS.map((key) => (
+              <SettingCard
+                key={key}
+                setting={
+                  byKey.get(key) ?? {
+                    key,
+                    value:
+                      key === "customer_service_email"
+                        ? "support@rushorderph.online"
+                        : key === "customer_service_phone"
+                          ? ""
+                          : key === "customer_service_hours"
+                            ? "8:00 AM - 10:00 PM daily"
+                            : true,
+                    description: customerServiceDescription(key),
+                    is_public: true,
+                  }
+                }
+              />
+            ))}
+          </div>
+        </Panel>
+      </section>
+
+      <div className="mb-6 grid gap-4 md:grid-cols-4">
         <SettingCard
           setting={{
             key: "minimum_seller_wallet_balance",
@@ -72,11 +109,12 @@ function SettingsPage() {
             .filter(
               (setting) =>
                 ![
+                  ...CUSTOMER_SERVICE_KEYS,
                   "minimum_seller_wallet_balance",
                   "minimum_rider_wallet_balance",
                   "welcome_wallet_bonus",
                   "marketplace_customer_radius_km",
-                ].includes(setting.key),
+                ].includes(setting.key as (typeof CUSTOMER_SERVICE_KEYS)[number]),
             )
             .map((setting) => (
               <SettingCard key={setting.key} setting={setting} />
@@ -85,6 +123,19 @@ function SettingsPage() {
       )}
     </>
   );
+}
+
+function customerServiceDescription(key: (typeof CUSTOMER_SERVICE_KEYS)[number]): string {
+  switch (key) {
+    case "customer_service_email":
+      return "Public support email displayed across customer, seller, and rider workspaces.";
+    case "customer_service_phone":
+      return "Public support phone number displayed across customer, seller, and rider workspaces.";
+    case "customer_service_hours":
+      return "Public customer service operating hours.";
+    case "customer_service_enabled":
+      return "Enable or disable customer service contact information across the platform.";
+  }
 }
 
 function SettingCard({
@@ -109,13 +160,18 @@ function SettingCard({
 
   function save() {
     let parsed: unknown;
+
     try {
       parsed = JSON.parse(draft);
     } catch {
       toast.error('Enter a valid JSON value (e.g. 12, true or "text").');
       return;
     }
-    mutation.mutate({ key: setting.key, value: parsed });
+
+    mutation.mutate({
+      key: setting.key,
+      value: parsed,
+    });
   }
 
   return (
@@ -126,10 +182,12 @@ function SettingCard({
           onChange={(event) => setDraft(event.target.value)}
           className="min-w-[12rem] flex-1 font-mono text-sm"
         />
+
         <Button size="sm" onClick={save} disabled={draft === initial || mutation.isPending}>
           {mutation.isPending ? "Saving…" : "Save"}
         </Button>
       </div>
+
       <p className="mt-2 text-xs text-muted-foreground">
         {setting.is_public ? "Visible to the app" : "Internal only"}
       </p>

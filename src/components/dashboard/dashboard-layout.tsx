@@ -1,5 +1,5 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
-import { LogOut, Menu, X, type LucideIcon } from "lucide-react";
+import { CircleHelp, LogOut, Menu, X, type LucideIcon } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -48,28 +48,53 @@ export function DashboardLayout({
     navigate({ to: "/", replace: true });
   }
 
+  const supportItem: NavItem = {
+    to: "/contact",
+    label: "Help & Support",
+    icon: CircleHelp,
+  };
+
   const nav = (
-    <nav className="flex flex-1 flex-col gap-1">
-      {items.map((item) => {
-        const active = pathname === item.to;
-        return (
-          <Link
-            key={item.to}
-            to={item.to}
-            onClick={() => setOpen(false)}
-            className={cn(
-              "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-colors",
-              active
-                ? "bg-primary text-primary-foreground shadow-[var(--shadow-glow)]"
-                : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-foreground",
-            )}
-          >
-            <item.icon className="size-4 shrink-0" />
-            {item.label}
-          </Link>
-        );
-      })}
-    </nav>
+    <>
+      <nav className="flex flex-1 flex-col gap-1">
+        {items.map((item) => {
+          const active = pathname === item.to;
+
+          return (
+            <Link
+              key={item.to}
+              to={item.to}
+              onClick={() => setOpen(false)}
+              className={cn(
+                "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-colors",
+                active
+                  ? "bg-primary text-primary-foreground shadow-[var(--shadow-glow)]"
+                  : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+              )}
+            >
+              <item.icon className="size-4 shrink-0" />
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
+
+      <div className="mt-2 border-t border-sidebar-border pt-2">
+        <Link
+          to="/contact"
+          onClick={() => setOpen(false)}
+          className={cn(
+            "flex items-center gap-3 rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-colors",
+            pathname === "/contact"
+              ? "bg-primary text-primary-foreground shadow-[var(--shadow-glow)]"
+              : "text-sidebar-foreground/75 hover:bg-sidebar-accent hover:text-sidebar-foreground",
+          )}
+        >
+          <CircleHelp className="size-4 shrink-0" />
+          Help & Support
+        </Link>
+      </div>
+    </>
   );
 
   return (
