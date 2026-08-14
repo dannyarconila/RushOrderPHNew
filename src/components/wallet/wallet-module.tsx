@@ -160,7 +160,7 @@ export function WalletModule({ walletType }: { walletType: WalletType }) {
 
       <Panel
         title="Top up your wallet"
-        description="Pay through an approved channel, upload your receipt and we credit your wallet after verification."
+        description="Pay through an approved channel, upload your receipt screenshot, and your payment will be automatically verified."
         className="mt-6"
         action={
           <Button onClick={() => setTopupOpen(true)}>
@@ -396,10 +396,14 @@ function TopupDialog({
       });
     },
     onSuccess: () => {
-      toast.success("Top-up request submitted", {
-        description: "We'll credit your wallet once an administrator verifies your payment.",
+      toast.success("Top-up approved", {
+        description: "Your payment was automatically verified and your wallet has been credited.",
       });
+
       void queryClient.invalidateQueries({ queryKey: ["wallet-topups"] });
+      void queryClient.invalidateQueries({ queryKey: ["wallet"] });
+      void queryClient.invalidateQueries({ queryKey: ["wallet-balance"] });
+
       reset();
       onOpenChange(false);
     },
@@ -419,8 +423,8 @@ function TopupDialog({
         <DialogHeader>
           <DialogTitle>Top-up wallet</DialogTitle>
           <DialogDescription>
-            Pay using one of the channels below, then submit your receipt. Requests stay pending
-            until an administrator approves them.
+            Pay using one of the channels below, then upload your receipt screenshot. Your payment
+            will be automatically verified and your wallet will be credited if all details match.
           </DialogDescription>
         </DialogHeader>
 
@@ -578,23 +582,54 @@ function ProofUpload({
 
   async function handleFile(file: File | undefined) {
     if (!file || !userId) return;
+
+    // Screenshot/image only — PDF and other documents are not allowed.
+    if (!file.type.startsWith("image/")) {
+      toast.error("Screenshot only", {
+        description: "Please upload a screenshot of your GCash receipt.",
+      });
+      return;
+    }
+
     if (file.size > 8 * 1024 * 1024) {
-      toast.error("File is too large", { description: "Please upload a file smaller than 8 MB." });
+      toast.error("Screenshot is too large", {
+        description: "Please upload an image smaller than 8 MB.",
+      });
       return;
     }
+
     setBusy(true);
-    const ext = (file.name.split(".").pop() ?? "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
-    const path = `${userId}/topups/${crypto.randomUUID()}.${ext || "jpg"}`;
-    const { error } = await supabase.storage
-      .from(BUCKETS.paymentProofs)
-      .upload(path, file, { upsert: false, contentType: file.type });
-    setBusy(false);
-    if (error) {
-      toast.error("Upload failed", { description: error.message });
-      return;
+
+    try {
+      const ext = (file.name.split(".").pop() ?? "jpg").toLowerCase().replace(/[^a-z0-9]/g, "");
+
+      const path = `${userId}/topups/${crypto.randomUUID()}.${ext || "jpg"}`;
+
+      const { error } = await supabase.storage.from(BUCKETS.paymentProofs).upload(path, file, {
+        upsert: false,
+        contentType: file.type,
+      });
+
+      if (error) {
+        toast.error("Screenshot upload failed", {
+          description: error.message,
+        });
+        return;
+      }
+
+      onUploaded(path);
+
+      toast.success("Receipt screenshot uploaded", {
+        description: "Your GCash receipt is ready for verification.",
+      });
+    } finally {
+      setBusy(false);
+
+      // Allow selecting the same screenshot again.
+      if (inputRef.current) {
+        inputRef.current.value = "";
+      }
     }
-    onUploaded(path);
-    toast.success("Proof uploaded securely");
   }
 
   return (
@@ -611,26 +646,36 @@ function ProofUpload({
         <span className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-card text-primary">
           {busy ? <Loader2 className="size-4 animate-spin" /> : <ReceiptText className="size-4" />}
         </span>
+
         <span className="min-w-0">
           <span className="block font-semibold">
             {busy
-              ? "Uploading…"
+              ? "Uploading screenshot…"
               : value
-                ? "Receipt uploaded — tap to replace"
-                : "Upload receipt screenshot"}
+                ? "Receipt screenshot uploaded — tap to replace"
+                : "Upload GCash receipt screenshot"}
           </span>
-          <span className="block truncate text-xs text-muted-foreground">
-            {value ? value.split("/").pop() : "JPG, PNG or PDF up to 8 MB"}
+
+          <span className="block text-xs text-muted-foreground">
+            {value
+              ? value.split("/").pop()
+              : "Screenshot only — show amount, reference, recipient & status"}
           </span>
         </span>
       </button>
+
       <input
         ref={inputRef}
         type="file"
-        accept="image/*,application/pdf"
+        accept="image/png,image/jpeg,image/webp"
         className="hidden"
         onChange={(e) => void handleFile(e.target.files?.[0])}
       />
+
+      <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+        Upload a clear screenshot of your successful GCash payment. Make sure the screenshot clearly
+        shows the amount, reference number, recipient, and transaction status.
+      </p>
     </>
   );
 }

@@ -222,22 +222,58 @@ export async function submitTopup(input: SubmitTopupInput) {
   if (!Number.isFinite(input.amount) || input.amount < MIN_TOPUP) {
     throw new Error(`Minimum top-up amount is ₱${MIN_TOPUP}.`);
   }
+
   if (input.amount > MAX_TOPUP) {
     throw new Error(`Maximum top-up amount is ₱${MAX_TOPUP.toLocaleString("en-PH")}.`);
   }
-  if (!input.referenceNumber.trim()) throw new Error("Enter the payment reference number.");
-  if (!input.proofPath) throw new Error("Upload a screenshot of your payment receipt.");
 
-  const { error } = await supabase.from("wallet_topups").insert({
-    user_id: input.userId,
-    wallet_type: input.walletType,
-    payment_method_id: input.method.id,
-    payment_method_name: input.method.name,
-    amount: input.amount,
-    reference_number: input.referenceNumber.trim(),
-    proof_path: input.proofPath,
-  });
-  if (error) throw error;
+  if (!input.referenceNumber.trim()) {
+    throw new Error("Enter the payment reference number.");
+  }
+
+  if (!input.proofPath) {
+    throw new Error("Upload a screenshot of your payment receipt.");
+  }
+
+  const { data: topup, error: insertError } = await supabase
+    .from("wallet_topups")
+    .insert({
+      user_id: input.userId,
+      wallet_type: input.walletType,
+      payment_method_id: input.method.id,
+      payment_method_name: input.method.name,
+      amount: input.amount,
+      reference_number: input.referenceNumber.trim(),
+      proof_path: input.proofPath,
+    })
+    .select("id")
+    .single();
+
+  if (insertError) throw insertError;
+
+  const { data: verification, error: verificationError } = await supabase.functions.invoke(
+    "verify-wallet-topup",
+    {
+      body: {
+        topup_id: topup.id,
+      },
+    },
+  );
+
+  if (verificationError) {
+    // The top-up remains pending if the verifier is temporarily unavailable.
+    throw new Error(
+      "Your top-up was submitted, but automatic verification is temporarily unavailable. Please try again shortly.",
+    );
+  }
+
+  if (verification?.decision === "rejected") {
+    throw new Error(verification.reason ?? "The payment receipt could not be verified.");
+  }
+
+  if (verification?.decision !== "approved") {
+    throw new Error("Your top-up was submitted and is still being verified.");
+  }
 }
 
 /** Owners may withdraw a request while it is still pending. */
