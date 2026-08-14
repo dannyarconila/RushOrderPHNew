@@ -1517,6 +1517,7 @@ export type Database = {
           updated_at: string;
           user_id: string;
           vehicle_info: Json;
+          welcome_bonus_credited_at: string | null;
         };
         Insert: {
           accepted_terms?: boolean;
@@ -1537,6 +1538,7 @@ export type Database = {
           updated_at?: string;
           user_id: string;
           vehicle_info?: Json;
+          welcome_bonus_credited_at?: string | null;
         };
         Update: {
           accepted_terms?: boolean;
@@ -1557,6 +1559,7 @@ export type Database = {
           updated_at?: string;
           user_id?: string;
           vehicle_info?: Json;
+          welcome_bonus_credited_at?: string | null;
         };
         Relationships: [];
       };
@@ -1623,6 +1626,7 @@ export type Database = {
           terms_version: string | null;
           updated_at: string;
           user_id: string;
+          welcome_bonus_credited_at: string | null;
         };
         Insert: {
           accepted_terms?: boolean;
@@ -1644,6 +1648,7 @@ export type Database = {
           terms_version?: string | null;
           updated_at?: string;
           user_id: string;
+          welcome_bonus_credited_at?: string | null;
         };
         Update: {
           accepted_terms?: boolean;
@@ -1665,6 +1670,7 @@ export type Database = {
           terms_version?: string | null;
           updated_at?: string;
           user_id?: string;
+          welcome_bonus_credited_at?: string | null;
         };
         Relationships: [];
       };
@@ -2111,6 +2117,35 @@ export type Database = {
         Returns: undefined;
       };
       generate_order_claim_number: { Args: never; Returns: string };
+      get_marketplace_stores: {
+        Args: {
+          _customer_lat?: number;
+          _customer_lng?: number;
+          _service_type?: string;
+        };
+        Returns: {
+          address: Json;
+          banner_url: string;
+          business_hours: Json;
+          category_id: string;
+          delivery_fee_override: number;
+          description: string;
+          distance_km: number;
+          id: string;
+          is_featured: boolean;
+          is_online: boolean;
+          latitude: number;
+          logo_url: string;
+          longitude: number;
+          minimum_order: number;
+          name: string;
+          prep_time_minutes: number;
+          rating: number;
+          rating_count: number;
+          service_type: string;
+          slug: string;
+        }[];
+      };
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"];

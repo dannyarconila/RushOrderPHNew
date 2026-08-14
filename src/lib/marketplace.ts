@@ -43,23 +43,22 @@ const STORE_FIELDS =
 const PRODUCT_FIELDS =
   "id,store_id,name,description,price,compare_at_price,stock,images,is_available";
 
-export function storesQuery(serviceType?: ServiceType) {
+export function storesQuery(
+  serviceType?: ServiceType,
+  customerLat?: number | null,
+  customerLng?: number | null,
+) {
   return queryOptions({
-    queryKey: ["stores", serviceType ?? "all"],
+    queryKey: ["stores", serviceType ?? "all", customerLat ?? null, customerLng ?? null],
     queryFn: async (): Promise<StoreCard[]> => {
-      let q = supabase
-        .from("stores")
-        .select(STORE_FIELDS)
-        .eq("is_active", true)
-        .eq("is_approved", true)
-        .eq("verification_status", "verified")
-        .is("deleted_at", null)
-        .order("is_featured", { ascending: false })
-        .order("rating", { ascending: false })
-        .limit(60);
-      if (serviceType) q = q.eq("service_type", serviceType);
-      const { data, error } = await q;
+      const { data, error } = await supabase.rpc("get_marketplace_stores", {
+        _customer_lat: customerLat ?? undefined,
+        _customer_lng: customerLng ?? undefined,
+        _service_type: serviceType ?? undefined,
+      });
+
       if (error) throw error;
+
       return (data ?? []) as StoreCard[];
     },
   });

@@ -27,19 +27,6 @@ const toNumber = (value: unknown): number | null => {
   return Number.isFinite(parsed) ? parsed : null;
 };
 
-const haversineKm = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-
-  const dLat = toRad(lat2 - lat1);
-  const dLon = toRad(lon2 - lon1);
-
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLon / 2) ** 2;
-
-  return 6371 * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a)));
-};
-
 export function MarketplaceBrowser({
   serviceType,
   emptyLabel = "No stores are open in this lane yet. Check back shortly.",
@@ -59,7 +46,6 @@ export function MarketplaceBrowser({
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const [locationError, setLocationError] = useState<string | null>(null);
 
-  const stores = useQuery(storesQuery(serviceType));
   const settings = useQuery(publicSettingsQuery());
   const addresses = useQuery(myAddressesQuery(user?.id));
   const categories = useQuery(categoriesQuery(serviceType));
@@ -147,6 +133,10 @@ export function MarketplaceBrowser({
     return gpsCoords;
   }, [preferredAddress, gpsCoords]);
 
+  const stores = useQuery(
+    storesQuery(serviceType, customerCoords?.lat ?? null, customerCoords?.lng ?? null),
+  );
+
   const locationRequired = Boolean(user) && Boolean(radiusKm) && !customerCoords;
   const detectCurrentLocation = async () => {
     if (!isLocationSupported()) {
@@ -180,26 +170,7 @@ export function MarketplaceBrowser({
     }
   };
 
-  const visibleStores = useMemo(() => {
-    const list = stores.data ?? [];
-
-    // Guests or customers without a configured radius/location
-    // can still browse the marketplace.
-    if (!radiusKm || !customerCoords) {
-      return list;
-    }
-
-    return list.filter((store) => {
-      const storeLat = toNumber(store.latitude);
-      const storeLng = toNumber(store.longitude);
-
-      if (storeLat == null || storeLng == null) {
-        return false;
-      }
-
-      return haversineKm(customerCoords.lat, customerCoords.lng, storeLat, storeLng) <= radiusKm;
-    });
-  }, [stores.data, customerCoords, radiusKm]);
+  const visibleStores = stores.data ?? [];
 
   const results = useMemo(() => {
     const list = visibleStores;
