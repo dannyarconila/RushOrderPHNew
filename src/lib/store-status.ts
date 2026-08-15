@@ -60,7 +60,7 @@ export function storeAvailability(
 ): StoreAvailability {
   const hours = parseBusinessHours(store.business_hours);
   const withinHours = isWithinBusinessHours(hours, now);
-  const accepting = store.is_online !== false;
+  const accepting = store.is_online === true;
 
   if (accepting && withinHours) {
     const key = WEEKDAYS[(now.getDay() + 6) % 7].key;
