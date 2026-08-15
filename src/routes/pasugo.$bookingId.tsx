@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bike, Loader2 } from "lucide-react";
+import { Bike, Loader2, MapPin } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
@@ -12,11 +12,13 @@ import { supabase } from "@/integrations/supabase/client";
 import { peso } from "@/lib/currency";
 import {
   cancelPasugoBooking,
+  expirePasugoSelectedRider,
+  pasugoAvailableRidersQuery,
   pasugoBookingQuery,
   pasugoJobQuery,
-  retryPasugoDispatch,
+  selectPasugoRider,
 } from "@/lib/pasugo";
-import { secondsLeft, watchAssignedRider } from "@/lib/dispatch";
+import { watchAssignedRider } from "@/lib/dispatch";
 
 export const Route = createFileRoute("/pasugo/$bookingId")({
   head: () => ({
@@ -78,18 +80,6 @@ function PasugoTrackingPage() {
     }
   }, [booking.data, bookingId, navigate, user]);
 
-  useEffect(() => {
-    if (!job.data || job.data.status !== "searching") return;
-    const tick = () => {
-      if (!job.data) return;
-      if (secondsLeft(job.data.expires_at) === 0) {
-        void retryPasugoDispatch(job.data.id).catch(() => undefined);
-      }
-    };
-    const timer = window.setInterval(tick, 3000);
-    return () => window.clearInterval(timer);
-  }, [job.data]);
-
   const [riderLocation, setRiderLocation] = useState<{ lat: number; lng: number } | null>(null);
 
   useEffect(() => {
@@ -114,19 +104,149 @@ function PasugoTrackingPage() {
       toast.error("Could not cancel booking", { description: error.message }),
   });
 
-  const availableCount = useQuery({
-    queryKey: ["pasugo-available-riders", bookingId, job.data?.id ?? null],
-    enabled: Boolean(job.data && job.data.status === "searching"),
-    queryFn: async () => {
-      if (!job.data) return null;
-      const { data, error } = await supabase.rpc("pasugo_available_riders_count", {
-        _job_id: job.data.id,
-      });
-      if (error) throw error;
-      return Number(data ?? 0);
-    },
-    staleTime: 10_000,
+  const [selectedRiderId, setSelectedRiderId] = useState<string | null>(null);
+  const [requestPending, setRequestPending] = useState(false);
+
+  const availableRiders = useQuery({
+    ...pasugoAvailableRidersQuery(job.data?.status === "searching" ? job.data.id : undefined),
   });
+
+  const riders = availableRiders.data ?? [];
+
+  const selectRider = useMutation({
+    mutationFn: async (riderId: string) => {
+      if (!job.data) throw new Error("Pasugo dispatch job is not ready.");
+
+      return selectPasugoRider(job.data.id, riderId);
+    },
+    onMutate: (riderId) => {
+      setSelectedRiderId(riderId);
+      setRequestPending(true);
+    },
+    onSuccess: (result) => {
+      if (!result.ok) {
+        setSelectedRiderId(null);
+        setRequestPending(false);
+        toast.error("Could not request rider");
+        return;
+      }
+
+      void queryClient.invalidateQueries({
+        queryKey: ["pasugo-available-riders", job.data?.id],
+      });
+
+      toast.success("Rider request sent", {
+        description: "Waiting for the selected rider to accept your Pasugo request.",
+      });
+    },
+    onError: (error: Error) => {
+      setSelectedRiderId(null);
+      setRequestPending(false);
+
+      toast.error("Could not select rider", {
+        description: error.message,
+      });
+
+      void queryClient.invalidateQueries({
+        queryKey: ["pasugo-available-riders", job.data?.id],
+      });
+    },
+  });
+
+  const expireSelectedRider = useMutation({
+    mutationFn: async () => {
+      if (!job.data) throw new Error("Pasugo dispatch job is not ready.");
+
+      return expirePasugoSelectedRider(job.data.id);
+    },
+    onSuccess: (changed) => {
+      if (!changed) return;
+
+      setSelectedRiderId(null);
+      setRequestPending(false);
+
+      toast.error("Rider request expired", {
+        description: "The rider did not respond. Please choose another available rider.",
+      });
+
+      void queryClient.invalidateQueries({
+        queryKey: ["pasugo-available-riders", job.data?.id],
+      });
+
+      void queryClient.invalidateQueries({
+        queryKey: ["pasugo-job", bookingId],
+      });
+    },
+    onError: (error: Error) => {
+      toast.error("Could not update rider request", {
+        description: error.message,
+      });
+    },
+  });
+
+  useEffect(() => {
+    if (!requestPending || !job.data?.expires_at) return;
+
+    const expiresAt = new Date(job.data.expires_at).getTime();
+
+    const checkExpiry = () => {
+      if (Date.now() >= expiresAt && !expireSelectedRider.isPending) {
+        expireSelectedRider.mutate();
+      }
+    };
+
+    checkExpiry();
+
+    const timer = window.setInterval(checkExpiry, 1000);
+
+    return () => window.clearInterval(timer);
+  }, [requestPending, job.data?.expires_at, expireSelectedRider.isPending]);
+
+  useEffect(() => {
+    const channel = supabase
+      .channel(`pasugo-offers-${bookingId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "pasugo_dispatch_offers",
+          filter: `booking_id=eq.${bookingId}`,
+        },
+        (payload) => {
+          const row = payload.new as {
+            rider_id?: string;
+            status?: string;
+          };
+
+          if (
+            requestPending &&
+            row.rider_id === selectedRiderId &&
+            (row.status === "declined" || row.status === "expired")
+          ) {
+            const declined = row.status === "declined";
+
+            setSelectedRiderId(null);
+            setRequestPending(false);
+
+            toast.error(declined ? "Rider declined" : "Rider request expired", {
+              description: declined
+                ? "Please choose another available rider."
+                : "The rider did not respond. Please choose another available rider.",
+            });
+
+            void queryClient.invalidateQueries({
+              queryKey: ["pasugo-available-riders", job.data?.id],
+            });
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [bookingId, job.data?.id, queryClient, requestPending, selectedRiderId]);
 
   const statusText = useMemo(() => {
     if (!booking.data) return "Loading booking";
@@ -194,12 +314,6 @@ function PasugoTrackingPage() {
                   : "Pending (applied on successful delivery)"}
               </dd>
             </div>
-            {availableCount.data != null ? (
-              <div className="flex justify-between gap-3">
-                <dt className="text-muted-foreground">Available riders</dt>
-                <dd className="font-medium">{availableCount.data}</dd>
-              </div>
-            ) : null}
           </dl>
 
           {booking.data?.status === "finding_rider" || booking.data?.status === "requested" ? (
@@ -211,6 +325,97 @@ function PasugoTrackingPage() {
             >
               Cancel booking
             </Button>
+          ) : null}
+
+          {job.data?.status === "searching" && !requestPending ? (
+            <div className="mt-6 rounded-xl border border-border bg-muted/30 p-4">
+              <div className="flex items-start justify-between gap-4">
+                <div>
+                  <h2 className="font-semibold">Choose a rider</h2>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Available online riders are sorted from nearest to farthest from your pickup.
+                  </p>
+                </div>
+                <Bike className="size-5 shrink-0 text-muted-foreground" />
+              </div>
+
+              {availableRiders.isLoading ? (
+                <div className="mt-5 flex items-center justify-center gap-2 py-8 text-sm text-muted-foreground">
+                  <Loader2 className="size-4 animate-spin" />
+                  Finding available riders...
+                </div>
+              ) : availableRiders.error ? (
+                <div className="mt-5 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">
+                  <p className="font-medium">Could not load available riders.</p>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-3"
+                    onClick={() => void availableRiders.refetch()}
+                  >
+                    Try again
+                  </Button>
+                </div>
+              ) : riders.length === 0 ? (
+                <div className="mt-5 rounded-lg border border-border bg-background p-5 text-center">
+                  <Bike className="mx-auto size-8 text-muted-foreground" />
+                  <p className="mt-2 font-medium">No riders available right now</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Please wait for an online rider or try again shortly.
+                  </p>
+                </div>
+              ) : (
+                <div className="mt-4 space-y-3">
+                  {riders.map((rider) => (
+                    <div
+                      key={rider.rider_id}
+                      className="flex items-center justify-between gap-4 rounded-xl border bg-background p-4"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-2">
+                          <Bike className="size-4 shrink-0 text-muted-foreground" />
+                          <p className="truncate font-semibold">{rider.rider_name}</p>
+                        </div>
+
+                        <div className="mt-1 flex items-center gap-1.5 text-sm text-muted-foreground">
+                          <MapPin className="size-3.5" />
+                          <span>{rider.distance_km.toFixed(2)} km away</span>
+                        </div>
+                      </div>
+
+                      <Button
+                        onClick={() => selectRider.mutate(rider.rider_id)}
+                        disabled={selectRider.isPending}
+                      >
+                        {selectRider.isPending && selectRider.variables === rider.rider_id ? (
+                          <>
+                            <Loader2 className="size-4 animate-spin" />
+                            Sending...
+                          </>
+                        ) : (
+                          "Choose Rider"
+                        )}
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : null}
+
+          {job.data?.status === "searching" && requestPending ? (
+            <div className="mt-6 rounded-xl border border-primary/30 bg-primary/5 p-5">
+              <div className="flex items-center gap-3">
+                <Loader2 className="size-5 animate-spin" />
+                <div>
+                  <p className="font-semibold">Waiting for rider response</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    The selected rider has received your Pasugo request. If the rider rejects it,
+                    you can choose another rider.
+                  </p>
+                </div>
+              </div>
+            </div>
           ) : null}
 
           {job.data ? (

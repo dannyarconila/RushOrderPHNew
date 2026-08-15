@@ -422,6 +422,16 @@ export async function retryPasugoDispatch(jobId: string) {
   if (error) throw error;
 }
 
+export async function expirePasugoSelectedRider(jobId: string) {
+  const { data, error } = await supabase.rpc("pasugo_expire_selected_rider", {
+    _job_id: jobId,
+  });
+
+  if (error) throw error;
+
+  return Boolean(data);
+}
+
 export async function cancelPasugoBooking(bookingId: string) {
   const { error } = await supabase.rpc("pasugo_cancel", { _booking_id: bookingId });
   if (error) throw error;
@@ -460,4 +470,76 @@ export function customerPasugoBookingsQuery(userId: string | undefined, limit = 
       return (data ?? []) as PasugoBooking[];
     },
   });
+}
+
+export interface PasugoAvailableRider {
+  rider_id: string;
+  rider_name: string;
+  distance_km: number;
+  latitude: number;
+  longitude: number;
+  last_seen_at: string | null;
+}
+
+export function pasugoAvailableRidersQuery(jobId: string | undefined) {
+  return queryOptions({
+    queryKey: ["pasugo-available-riders", jobId ?? null],
+    enabled: Boolean(jobId),
+    staleTime: 5_000,
+    queryFn: async (): Promise<PasugoAvailableRider[]> => {
+      if (!jobId) return [];
+
+      const { data, error } = await supabase.rpc("pasugo_available_riders", {
+        _job_id: jobId,
+      });
+
+      if (error) throw error;
+
+      return (
+        (data ?? []) as Array<{
+          rider_id: string;
+          rider_name: string;
+          distance_km: number | string;
+          latitude: number | string;
+          longitude: number | string;
+          last_seen_at: string | null;
+        }>
+      ).map((rider) => ({
+        rider_id: rider.rider_id,
+        rider_name: rider.rider_name || "RushOrder Rider",
+        distance_km: Number(rider.distance_km),
+        latitude: Number(rider.latitude),
+        longitude: Number(rider.longitude),
+        last_seen_at: rider.last_seen_at,
+      }));
+    },
+  });
+}
+
+export async function selectPasugoRider(
+  jobId: string,
+  riderId: string,
+): Promise<{
+  ok: boolean;
+  offer_id?: string;
+  rider_id?: string;
+  distance_km?: number;
+  expires_at?: string;
+}> {
+  const { data, error } = await supabase.rpc("pasugo_select_rider", {
+    _job_id: jobId,
+    _rider_id: riderId,
+  });
+
+  if (error) throw error;
+
+  return (
+    (data as {
+      ok: boolean;
+      offer_id?: string;
+      rider_id?: string;
+      distance_km?: number;
+      expires_at?: string;
+    } | null) ?? { ok: false }
+  );
 }

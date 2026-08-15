@@ -2168,12 +2168,34 @@ export type Database = {
       };
       pasugo_cancel: { Args: { _booking_id: string }; Returns: boolean };
       pasugo_dispatch_accept: { Args: { _job_id: string }; Returns: Json };
+      pasugo_available_riders: {
+        Args: { _job_id: string };
+        Returns: {
+          rider_id: string;
+          rider_name: string;
+          distance_km: number;
+          latitude: number;
+          longitude: number;
+          last_seen_at: string | null;
+        }[];
+      };
+      pasugo_select_rider: {
+        Args: { _job_id: string; _rider_id: string };
+        Returns: {
+          ok: boolean;
+          offer_id?: string;
+          rider_id?: string;
+          distance_km?: number;
+          expires_at?: string;
+        };
+      };
       pasugo_dispatch_advance: {
         Args: { _job_id: string; _step: string };
         Returns: boolean;
       };
       pasugo_dispatch_broadcast: { Args: { _job_id: string }; Returns: number };
       pasugo_dispatch_decline: { Args: { _job_id: string }; Returns: boolean };
+      pasugo_expire_selected_rider: { Args: { _job_id: string }; Returns: boolean };
       pasugo_dispatch_retry: { Args: { _job_id: string }; Returns: boolean };
       pasugo_start: { Args: { _booking_id: string }; Returns: string };
       refresh_store_rating: { Args: { _store_id: string }; Returns: undefined };
