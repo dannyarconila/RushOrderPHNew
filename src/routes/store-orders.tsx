@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ClipboardList, Package, Store } from "lucide-react";
 import { useEffect } from "react";
 import { toast } from "sonner";
@@ -114,9 +114,14 @@ function StoreOrdersPage() {
                   className="flex flex-wrap items-center justify-between gap-3 py-4"
                 >
                   <div className="min-w-0">
-                    <p className="text-sm font-bold">
-                      {order.claim_number ?? `Order #${order.id.slice(0, 8)}`}
-                    </p>
+                    <Link to="/order/$orderId" params={{ orderId: order.id }} className="group">
+                      <p className="text-sm font-bold group-hover:underline">
+                        {order.order_items?.[0]?.product_name ?? `Order #${order.id.slice(0, 8)}`}
+                        {order.order_items && order.order_items.length > 1
+                          ? ` + ${order.order_items.length - 1} more`
+                          : ""}
+                      </p>
+                    </Link>
                     <p className="text-xs text-muted-foreground">
                       {new Date(order.created_at).toLocaleString("en-PH")} ·{" "}
                       {ORDER_LABELS[order.status]} · {order.payment_method.toUpperCase()}
@@ -134,6 +139,11 @@ function StoreOrdersPage() {
                     ) : null}
                   </div>
                   <div className="flex items-center gap-3">
+                    <Button asChild size="sm" variant="outline">
+                      <Link to="/order/$orderId" params={{ orderId: order.id }}>
+                        Track Order
+                      </Link>
+                    </Button>
                     <span className="font-display text-lg font-extrabold">
                       {peso(Number(order.total))}
                     </span>

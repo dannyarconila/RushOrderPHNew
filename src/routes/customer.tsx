@@ -90,12 +90,14 @@ function CustomerDashboard() {
           <ul className="divide-y divide-border">
             {recent.map((order) => (
               <li key={order.id} className="flex items-center justify-between py-3">
-                <Link
-                  to="/order/$orderId"
-                  params={{ orderId: order.id }}
-                  className="hover:underline"
-                >
-                  <p className="text-sm font-semibold">Order #{order.id.slice(0, 8)}</p>
+                <Link to="/order/$orderId" params={{ orderId: order.id }} className="group">
+                  <p className="text-sm font-semibold group-hover:underline">
+                    {order.order_items?.[0]?.product_name ?? `Order #${order.id.slice(0, 8)}`}
+                    {order.order_items && order.order_items.length > 1
+                      ? ` + ${order.order_items.length - 1} more`
+                      : ""}
+                  </p>
+
                   <p className="text-xs text-muted-foreground">
                     {new Date(order.created_at).toLocaleString("en-PH")}
                   </p>
