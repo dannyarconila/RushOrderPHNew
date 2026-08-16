@@ -7,6 +7,7 @@ const SUPABASE_SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!;
 const VAPID_PUBLIC_KEY = Deno.env.get("VAPID_PUBLIC_KEY")!;
 const VAPID_PRIVATE_KEY = Deno.env.get("VAPID_PRIVATE_KEY")!;
 const VAPID_SUBJECT = Deno.env.get("VAPID_SUBJECT")!;
+const PUSH_WEBHOOK_SECRET = Deno.env.get("PUSH_WEBHOOK_SECRET")!;
 
 const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 
@@ -18,6 +19,22 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
+type NotificationRecord = {
+  id?: string;
+  user_id: string;
+  title: string;
+  body?: string | null;
+  kind?: string | null;
+};
+
+type WebhookPayload = {
+  type: "INSERT" | "UPDATE" | "DELETE";
+  table: string;
+  schema: string;
+  record: NotificationRecord | null;
+  old_record: NotificationRecord | null;
+};
+
 type PushRequest = {
   user_id?: string;
   title?: string;
@@ -25,6 +42,18 @@ type PushRequest = {
   action_url?: string;
   tag?: string;
 };
+
+function hasValidWebhookSecret(req: Request) {
+  const authHeader = req.headers.get("Authorization");
+
+  if (!authHeader?.startsWith("Bearer ")) {
+    return false;
+  }
+
+  const token = authHeader.slice("Bearer ".length).trim();
+
+  return Boolean(PUSH_WEBHOOK_SECRET && token && token === PUSH_WEBHOOK_SECRET);
+}
 
 async function getAuthenticatedUser(req: Request) {
   const authHeader = req.headers.get("Authorization");
@@ -36,6 +65,11 @@ async function getAuthenticatedUser(req: Request) {
   const token = authHeader.slice("Bearer ".length).trim();
 
   if (!token) {
+    return null;
+  }
+
+  // Do not try to authenticate the webhook secret as a Supabase JWT.
+  if (PUSH_WEBHOOK_SECRET && token === PUSH_WEBHOOK_SECRET) {
     return null;
   }
 
@@ -63,7 +97,95 @@ async function isAdmin(userId: string) {
   return Boolean(data);
 }
 
-Deno.serve(async (req) => {
+async function sendPushToUser(
+  targetUserId: string,
+  title: string,
+  notificationBody: string,
+  actionUrl: string,
+  tag: string,
+) {
+  const { data: subscriptions, error: subscriptionError } = await supabaseAdmin
+    .from("push_subscriptions")
+    .select("id, endpoint, p256dh, auth")
+    .eq("user_id", targetUserId);
+
+  if (subscriptionError) {
+    throw subscriptionError;
+  }
+
+  if (!subscriptions?.length) {
+    return {
+      sent: 0,
+      removed: 0,
+      failed: 0,
+      errors: [] as string[],
+    };
+  }
+
+  const payload = JSON.stringify({
+    title,
+    body: notificationBody,
+    action_url: actionUrl,
+    tag,
+  });
+
+  let sent = 0;
+  let removed = 0;
+  const errors: string[] = [];
+
+  for (const subscription of subscriptions) {
+    try {
+      await webpush.sendNotification(
+        {
+          endpoint: subscription.endpoint,
+          keys: {
+            p256dh: subscription.p256dh,
+            auth: subscription.auth,
+          },
+        },
+        payload,
+      );
+
+      sent += 1;
+    } catch (error) {
+      const statusCode =
+        typeof error === "object" &&
+        error !== null &&
+        "statusCode" in error &&
+        typeof error.statusCode === "number"
+          ? error.statusCode
+          : null;
+
+      if (statusCode === 404 || statusCode === 410) {
+        const { error: deleteError } = await supabaseAdmin
+          .from("push_subscriptions")
+          .delete()
+          .eq("id", subscription.id);
+
+        if (deleteError) {
+          errors.push(
+            `Failed to remove expired subscription ${subscription.id}: ${deleteError.message}`,
+          );
+        } else {
+          removed += 1;
+        }
+
+        continue;
+      }
+
+      errors.push(error instanceof Error ? error.message : String(error));
+    }
+  }
+
+  return {
+    sent,
+    removed,
+    failed: errors.length,
+    errors,
+  };
+}
+
+Deno.serve(async (req: Request) => {
   if (req.method === "OPTIONS") {
     return new Response("ok", {
       headers: corsHeaders,
@@ -81,9 +203,11 @@ Deno.serve(async (req) => {
       );
     }
 
-    const user = await getAuthenticatedUser(req);
+    const webhookAuthenticated = hasValidWebhookSecret(req);
 
-    if (!user) {
+    const user = webhookAuthenticated ? null : await getAuthenticatedUser(req);
+
+    if (!user && !webhookAuthenticated) {
       return Response.json(
         { error: "Authentication required." },
         {
@@ -93,14 +217,64 @@ Deno.serve(async (req) => {
       );
     }
 
-    const body = (await req.json()) as PushRequest;
+    const incoming = await req.json();
 
-    const targetUserId = body.user_id || user.id;
-    const admin = await isAdmin(user.id);
+    // Database Webhook payload.
+    if (webhookAuthenticated) {
+      const payload = incoming as WebhookPayload;
 
-    if (targetUserId !== user.id && !admin) {
+      if (
+        payload.type !== "INSERT" ||
+        payload.schema !== "public" ||
+        payload.table !== "notifications" ||
+        !payload.record
+      ) {
+        return Response.json(
+          {
+            sent: 0,
+            message: "Ignored non-notification webhook event.",
+          },
+          {
+            status: 200,
+            headers: corsHeaders,
+          },
+        );
+      }
+
+      const notification = payload.record;
+
+      const result = await sendPushToUser(
+        notification.user_id,
+        notification.title || "RushOrder PH",
+        notification.body || "You have a new notification.",
+        "/",
+        notification.kind || "notification",
+      );
+
       return Response.json(
-        { error: "You can only send push notifications to your own account." },
+        {
+          ...result,
+          source: "database_webhook",
+          notification_id: notification.id ?? null,
+        },
+        {
+          status: 200,
+          headers: corsHeaders,
+        },
+      );
+    }
+
+    // Normal authenticated manual/admin request.
+    const body = incoming as PushRequest;
+
+    const targetUserId = body.user_id || user!.id;
+    const admin = await isAdmin(user!.id);
+
+    if (targetUserId !== user!.id && !admin) {
+      return Response.json(
+        {
+          error: "You can only send push notifications to your own account.",
+        },
         {
           status: 403,
           headers: corsHeaders,
@@ -113,98 +287,12 @@ Deno.serve(async (req) => {
     const actionUrl = body.action_url?.trim() || "/";
     const tag = body.tag?.trim() || "rushorder-notification";
 
-    const { data: subscriptions, error: subscriptionError } = await supabaseAdmin
-      .from("push_subscriptions")
-      .select("id, endpoint, p256dh, auth")
-      .eq("user_id", targetUserId);
+    const result = await sendPushToUser(targetUserId, title, notificationBody, actionUrl, tag);
 
-    if (subscriptionError) {
-      throw subscriptionError;
-    }
-
-    if (!subscriptions?.length) {
-      return Response.json(
-        {
-          sent: 0,
-          removed: 0,
-          message: "No push subscriptions found for this user.",
-        },
-        {
-          status: 200,
-          headers: corsHeaders,
-        },
-      );
-    }
-
-    const payload = JSON.stringify({
-      title,
-      body: notificationBody,
-      action_url: actionUrl,
-      tag,
+    return Response.json(result, {
+      status: 200,
+      headers: corsHeaders,
     });
-
-    let sent = 0;
-    let removed = 0;
-    const errors: string[] = [];
-
-    for (const subscription of subscriptions) {
-      try {
-        await webpush.sendNotification(
-          {
-            endpoint: subscription.endpoint,
-            keys: {
-              p256dh: subscription.p256dh,
-              auth: subscription.auth,
-            },
-          },
-          payload,
-        );
-
-        sent += 1;
-      } catch (error) {
-        const statusCode =
-          typeof error === "object" &&
-          error !== null &&
-          "statusCode" in error &&
-          typeof error.statusCode === "number"
-            ? error.statusCode
-            : null;
-
-        if (statusCode === 404 || statusCode === 410) {
-          const { error: deleteError } = await supabaseAdmin
-            .from("push_subscriptions")
-            .delete()
-            .eq("id", subscription.id);
-
-          if (deleteError) {
-            errors.push(
-              `Failed to remove expired subscription ${subscription.id}: ${deleteError.message}`,
-            );
-          } else {
-            removed += 1;
-          }
-
-          continue;
-        }
-
-        const message = error instanceof Error ? error.message : String(error);
-
-        errors.push(message);
-      }
-    }
-
-    return Response.json(
-      {
-        sent,
-        removed,
-        failed: errors.length,
-        errors,
-      },
-      {
-        status: 200,
-        headers: corsHeaders,
-      },
-    );
   } catch (error) {
     console.error("send-push error:", error);
 
