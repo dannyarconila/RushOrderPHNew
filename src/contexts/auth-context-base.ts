@@ -12,6 +12,7 @@ export interface AuthContextValue {
   hasRole: (role: AppRole) => boolean;
   primaryRole: AppRole;
   refreshRoles: () => Promise<void>;
+  enablePushNotifications: (userId: string) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextValue | undefined>(undefined);
