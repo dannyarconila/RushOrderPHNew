@@ -16,6 +16,7 @@ import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { PageHeader, Panel, StatCard, StatusBadge } from "@/components/dashboard/primitives";
 import { RoleGate } from "@/components/dashboard/role-gate";
 import { BookingPopup } from "@/components/rider/booking-popup";
+import { PasugoBookingPopup } from "@/components/rider/pasugo-booking-popup";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/use-auth";
@@ -32,6 +33,7 @@ import {
   watchRiderLocation,
   stopWatchingLocation,
 } from "@/lib/dispatch";
+import { activePasugoJobForRiderQuery, riderPendingPasugoOfferQuery } from "@/lib/pasugo";
 import { minimumWalletBalanceQuery, myWalletQuery } from "@/lib/wallet";
 import { getCurrentLocation } from "@/lib/geolocation";
 
@@ -94,12 +96,20 @@ function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
   const { data: status } = useQuery(riderStatusQuery(user?.id));
   const { data: history } = useQuery(riderHistoryQuery(user?.id));
   const { data: activeJob } = useQuery(activeJobQuery(user?.id));
+  const { data: activePasugoJob } = useQuery(activePasugoJobForRiderQuery(user?.id));
+
   const online = Boolean(status?.is_online);
 
   const { data: offer } = useQuery({
     ...pendingOfferQuery(user?.id),
-    enabled: Boolean(user) && online && !activeJob,
-    refetchInterval: online && !activeJob ? 5000 : false,
+    enabled: Boolean(user) && online && !activeJob && !activePasugoJob,
+    refetchInterval: online && !activeJob && !activePasugoJob ? 5000 : false,
+  });
+
+  const { data: pasugoOffer } = useQuery({
+    ...riderPendingPasugoOfferQuery(user?.id),
+    enabled: Boolean(user) && online && !activeJob && !activePasugoJob,
+    refetchInterval: online && !activeJob && !activePasugoJob ? 3000 : false,
   });
 
   const { data: application } = useQuery({
@@ -121,6 +131,9 @@ function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
     void queryClient.invalidateQueries({ queryKey: ["dispatch-active-job"] });
     void queryClient.invalidateQueries({ queryKey: ["dispatch-history"] });
     void queryClient.invalidateQueries({ queryKey: ["rider-status"] });
+
+    void queryClient.invalidateQueries({ queryKey: ["pasugo-offer"] });
+    void queryClient.invalidateQueries({ queryKey: ["pasugo-active-job"] });
   }, [queryClient]);
 
   // Live booking requests and assignment changes for this rider.
@@ -144,6 +157,26 @@ function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
           event: "*",
           schema: "public",
           table: "dispatch_jobs",
+          filter: `assigned_rider_id=eq.${user.id}`,
+        },
+        refreshDispatch,
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "pasugo_dispatch_offers",
+          filter: `rider_id=eq.${user.id}`,
+        },
+        refreshDispatch,
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "pasugo_dispatch_jobs",
           filter: `assigned_rider_id=eq.${user.id}`,
         },
         refreshDispatch,
@@ -413,6 +446,14 @@ function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
 
       {showOffer ? (
         <BookingPopup data={offer} onClose={() => setDismissedOffer(offer.offer.id)} />
+      ) : null}
+      {pasugoOffer ? (
+        <PasugoBookingPopup
+          data={pasugoOffer}
+          onClose={() => {
+            void queryClient.invalidateQueries({ queryKey: ["pasugo-offer"] });
+          }}
+        />
       ) : null}
     </>
   );
