@@ -73,7 +73,7 @@ export function isWithinBusinessHours(hours: BusinessHours, now = new Date()): b
 }
 
 export const MANAGED_STORE_FIELDS =
-  "id,owner_id,name,slug,description,phone,logo_url,banner_url,cover_url,service_type,address,latitude,longitude,business_hours,delivery_radius_km,minimum_order,delivery_fee_override,prep_time_minutes,is_online,is_active,is_approved,is_featured,wallet_hold,rating,rating_count,verification_status,verification_notes,verified_at,created_at" as const;
+  "id,owner_id,name,slug,description,phone,logo_url,banner_url,cover_url,service_type,address,latitude,longitude,business_hours,delivery_radius_km,minimum_order,delivery_fee_override,prep_time_minutes,is_online,is_active,is_visible,is_approved,is_featured,wallet_hold,rating,rating_count,verification_status,verification_notes,verified_at,created_at" as const;
 
 export type ManagedStore = Pick<
   Database["public"]["Tables"]["stores"]["Row"],
@@ -97,6 +97,7 @@ export type ManagedStore = Pick<
   | "prep_time_minutes"
   | "is_online"
   | "is_active"
+  | "is_visible"
   | "is_approved"
   | "is_featured"
   | "wallet_hold"

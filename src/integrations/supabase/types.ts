@@ -1729,6 +1729,7 @@ export type Database = {
           is_approved: boolean;
           is_featured: boolean;
           is_online: boolean;
+          is_visible: boolean;
           latitude: number | null;
           logo_url: string | null;
           longitude: number | null;
@@ -1763,6 +1764,7 @@ export type Database = {
           is_approved?: boolean;
           is_featured?: boolean;
           is_online?: boolean;
+          is_visible?: boolean;
           latitude?: number | null;
           logo_url?: string | null;
           longitude?: number | null;
@@ -1797,6 +1799,7 @@ export type Database = {
           is_approved?: boolean;
           is_featured?: boolean;
           is_online?: boolean;
+          is_visible?: boolean;
           latitude?: number | null;
           logo_url?: string | null;
           longitude?: number | null;
