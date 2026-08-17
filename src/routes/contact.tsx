@@ -177,9 +177,6 @@ function ContactPage() {
               <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
                 Office
               </p>
-              <p className="mt-1 text-sm font-semibold">
-                Bonifacio Global City, Taguig, Metro Manila
-              </p>
             </div>
           </div>
         </aside>

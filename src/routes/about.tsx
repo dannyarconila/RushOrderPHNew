@@ -70,9 +70,8 @@ function AboutPage() {
           <div>
             <h2 className="text-2xl font-extrabold sm:text-3xl">Our mission</h2>
             <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-              To make it as easy to run a business from a kitchen in Quezon City as it is to run one
-              from a mall kiosk — and as easy to earn a fair delivery income as it is to catch a
-              ride.
+              To make local commerce easier, more accessible, and more rewarding — helping anyone
+              sell, anyone earn, and anyone get what they need, wherever they are.
             </p>
           </div>
           <div>

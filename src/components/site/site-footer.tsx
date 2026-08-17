@@ -55,9 +55,6 @@ export function SiteFooter() {
             The Philippine marketplace and delivery platform built for local sellers, home-based
             entrepreneurs, riders and the customers who keep them busy.
           </p>
-          <p className="text-xs text-ink-foreground/50">
-            Serving Metro Manila, Cebu, Davao and growing.
-          </p>
         </div>
 
         {COLUMNS.map((col) => (
