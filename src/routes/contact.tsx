@@ -167,12 +167,6 @@ function ContactPage() {
               <p className="mt-1 text-sm text-muted-foreground">Please try again later.</p>
             </div>
           )}
-
-          <div className="flex items-start gap-4 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-soft)]">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-primary-soft text-primary">
-              <MapPin className="size-4" />
-            </span>
-          </div>
         </aside>
       </section>
     </PublicLayout>
