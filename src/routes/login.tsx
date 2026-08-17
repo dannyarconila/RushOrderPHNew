@@ -104,14 +104,56 @@ function LoginPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    setBusy(true);
-    const { error } = await supabase.auth.signInWithPassword({ email, password });
-    setBusy(false);
-    if (error) {
-      toast.error("Could not sign in", { description: error.message });
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      toast.error("Please enter your email address");
       return;
     }
-    toast.success("Welcome back");
+
+    if (!password) {
+      toast.error("Please enter your password");
+      return;
+    }
+
+    setBusy(true);
+
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: normalizedEmail,
+        password,
+      });
+
+      if (error) {
+        const message = error.message.toLowerCase();
+
+        if (message.includes("email not confirmed")) {
+          toast.error("Please confirm your email first", {
+            description:
+              "Check your inbox for the RushOrder PH confirmation email, then try logging in again.",
+          });
+          return;
+        }
+
+        if (message.includes("invalid login credentials")) {
+          toast.error("Could not sign in", {
+            description:
+              "The email or password is incorrect. If you created this account with Google, use Continue with Google instead.",
+          });
+          return;
+        }
+
+        toast.error("Could not sign in", {
+          description: error.message,
+        });
+        return;
+      }
+
+      toast.success("Welcome back");
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function handleGoogle() {

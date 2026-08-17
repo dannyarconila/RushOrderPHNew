@@ -51,37 +51,72 @@ function RegisterPage() {
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
     if (!acceptedLegal) {
       toast.error("Please accept the Terms & Conditions and Privacy Policy to continue.");
       return;
     }
+
     if (password.length < 6) {
       toast.error("Password must be at least 6 characters");
       return;
     }
-    const termsVersion = versions.data?.termsVersion ?? "1.0.0";
-    const privacyVersion = versions.data?.privacyVersion ?? "1.0.0";
-    setBusy(true);
-    const { error } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        emailRedirectTo: APP_ORIGIN,
-        data: {
-          full_name: fullName,
-          phone,
-          accepted_terms: true,
-          terms_version: termsVersion,
-          privacy_version: privacyVersion,
-        },
-      },
-    });
-    setBusy(false);
-    if (error) {
-      toast.error("Could not create account", { description: error.message });
+
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      toast.error("Please enter your email address");
       return;
     }
-    toast.success("Account created", { description: "You're all set to start ordering." });
+
+    const termsVersion = versions.data?.termsVersion ?? "1.0.0";
+    const privacyVersion = versions.data?.privacyVersion ?? "1.0.0";
+
+    setBusy(true);
+
+    try {
+      const { data, error } = await supabase.auth.signUp({
+        email: normalizedEmail,
+        password,
+        options: {
+          emailRedirectTo: APP_ORIGIN,
+          data: {
+            full_name: fullName.trim(),
+            phone: phone.trim(),
+            accepted_terms: true,
+            terms_version: termsVersion,
+            privacy_version: privacyVersion,
+          },
+        },
+      });
+
+      if (error) {
+        toast.error("Could not create account", {
+          description: error.message,
+        });
+        return;
+      }
+
+      if (data.user && data.user.identities?.length === 0) {
+        toast.error("An account already exists with this email", {
+          description: "Please sign in with your existing account or use Continue with Google.",
+        });
+        return;
+      }
+
+      if (data.session) {
+        toast.success("Account created", {
+          description: "Welcome to RushOrder PH!",
+        });
+        return;
+      }
+
+      toast.success("Account created successfully", {
+        description: "Please check your email and confirm your address before signing in.",
+      });
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function handleGoogle() {
