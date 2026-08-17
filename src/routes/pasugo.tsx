@@ -113,7 +113,7 @@ function PasugoPage() {
             </p>
 
             <Button asChild className="mt-3" size="sm" variant="outline">
-              <Link to="/pasugo/$bookingId" params={{ bookingId: latest.data.id }}>
+              <Link to="/order/$orderId" params={{ orderId: latest.data.id }}>
                 Continue tracking
               </Link>
             </Button>

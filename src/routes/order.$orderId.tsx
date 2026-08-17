@@ -1,6 +1,6 @@
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { Bike, CheckCircle2, Circle, Loader2, Package, Star } from "lucide-react";
+import { Bike, CheckCircle2, Circle, Loader2, Package, Star, XCircle } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { peso } from "@/lib/currency";
 import { orderDispatchQuery, watchAssignedRider, watchDispatchJob } from "@/lib/dispatch";
 import { ORDER_FLOW, ORDER_LABELS, orderItemsQuery, orderQuery } from "@/lib/orders";
+import { cancelPasugoBooking, pasugoBookingQuery, pasugoJobQuery } from "@/lib/pasugo";
 import { cn } from "@/lib/utils";
 import { LiveDeliveryMap } from "@/components/maps";
 
@@ -37,11 +38,43 @@ export const Route = createFileRoute("/order/$orderId")({
 function OrderTrackingPage() {
   const { orderId } = Route.useParams();
   const queryClient = useQueryClient();
+
   const order = useQuery(orderQuery(orderId));
   const items = useQuery(orderItemsQuery(orderId));
-  const isPasugo = Boolean(order.data?.notes?.startsWith("[PASUGO]"));
 
-  // Live status updates while the customer keeps the page open.
+  // Pasugo uses the booking ID as the tracking route ID.
+  // Marketplace continues to use the order ID.
+  const pasugo = useQuery({
+    ...pasugoBookingQuery(orderId),
+    enabled: !order.isLoading && !order.data,
+  });
+
+  const pasugoJob = useQuery({
+    ...pasugoJobQuery(orderId),
+    enabled: Boolean(pasugo.data),
+  });
+
+  const isPasugo = Boolean(!order.data && pasugo.data);
+  const cancelMutation = useMutation({
+    mutationFn: () => cancelPasugoBooking(orderId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["pasugo-booking", orderId] }),
+        queryClient.invalidateQueries({ queryKey: ["pasugo-job", orderId] }),
+        queryClient.invalidateQueries({ queryKey: ["pasugo-customer-latest"] }),
+        queryClient.invalidateQueries({ queryKey: ["pasugo-customer-list"] }),
+      ]);
+
+      toast.success("Pasugo request cancelled");
+    },
+    onError: (error) => {
+      toast.error("Could not cancel Pasugo request", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    },
+  });
+
+  // Live marketplace order updates.
   useEffect(() => {
     const channel = supabase
       .channel(`order-${orderId}`)
@@ -51,12 +84,59 @@ function OrderTrackingPage() {
         () => void queryClient.invalidateQueries({ queryKey: ["order", orderId] }),
       )
       .subscribe();
+
     return () => {
       void supabase.removeChannel(channel);
     };
   }, [orderId, queryClient]);
 
-  if (order.isLoading) {
+  // Live Pasugo booking + dispatch updates.
+  useEffect(() => {
+    if (!isPasugo) return;
+
+    const bookingChannel = supabase
+      .channel(`pasugo-booking-tracking-${orderId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "pasugo_bookings",
+          filter: `id=eq.${orderId}`,
+        },
+        () => {
+          void queryClient.invalidateQueries({
+            queryKey: ["pasugo-booking", orderId],
+          });
+        },
+      )
+      .subscribe();
+
+    const jobChannel = supabase
+      .channel(`pasugo-job-tracking-${orderId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "pasugo_dispatch_jobs",
+          filter: `booking_id=eq.${orderId}`,
+        },
+        () => {
+          void queryClient.invalidateQueries({
+            queryKey: ["pasugo-job", orderId],
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(bookingChannel);
+      void supabase.removeChannel(jobChannel);
+    };
+  }, [isPasugo, orderId, queryClient]);
+
+  if (order.isLoading || (!order.data && pasugo.isLoading)) {
     return (
       <PublicLayout>
         <div className="mx-auto flex max-w-3xl items-center justify-center px-4 py-24">
@@ -66,7 +146,7 @@ function OrderTrackingPage() {
     );
   }
 
-  if (!order.data) {
+  if (!order.data && !pasugo.data) {
     return (
       <PublicLayout>
         <div className="mx-auto max-w-2xl px-4 py-24 text-center">
@@ -82,7 +162,210 @@ function OrderTrackingPage() {
     );
   }
 
-  const current = order.data.status;
+  // ------------------------------------------------------------
+  // PASUGO TRACKING
+  // ------------------------------------------------------------
+  if (isPasugo && pasugo.data) {
+    const booking = pasugo.data;
+    const job = pasugoJob.data;
+
+    const pasugoFlow = [
+      "requested",
+      "finding_rider",
+      "accepted",
+      "rider_arriving",
+      "picked_up",
+      "on_the_way",
+      "delivered",
+      "completed",
+    ] as const;
+
+    const pasugoLabels: Record<(typeof pasugoFlow)[number], string> = {
+      requested: "Request submitted",
+      finding_rider: "Finding a rider",
+      accepted: "Rider accepted",
+      rider_arriving: "Rider arriving",
+      picked_up: "Picked up",
+      on_the_way: "On the way",
+      delivered: "Delivered",
+      completed: "Completed",
+    };
+
+    const currentIndex = pasugoFlow.indexOf(booking.status as (typeof pasugoFlow)[number]);
+
+    const cancelled = booking.status === "cancelled";
+    const failed = booking.status === "failed";
+
+    const canCancel = booking.status === "requested" || booking.status === "finding_rider";
+
+    async function handleCancel() {
+      if (!canCancel || cancelMutation.isPending) return;
+
+      const confirmed = window.confirm(
+        "Cancel this Pasugo request? This will close the current request.",
+      );
+
+      if (!confirmed) return;
+
+      cancelMutation.mutate();
+    }
+
+    return (
+      <PublicLayout>
+        <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6">
+          <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
+            Pasugo booking {booking.id.slice(0, 8)}
+          </p>
+
+          <h1 className="mt-2 font-display text-2xl font-extrabold tracking-tight sm:text-3xl">
+            {cancelled
+              ? "Request cancelled"
+              : failed
+                ? "Finding a rider"
+                : (pasugoLabels[booking.status as (typeof pasugoFlow)[number]] ?? "Pasugo request")}
+          </h1>
+
+          <p className="mt-1.5 text-sm text-muted-foreground">
+            Requested {new Date(booking.created_at).toLocaleString("en-PH")}
+          </p>
+
+          <section className="mt-8 rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
+            {cancelled ? (
+              <p className="flex items-center gap-2 text-sm font-semibold text-destructive">
+                <XCircle className="size-5" />
+                This Pasugo request was cancelled.
+              </p>
+            ) : failed ? (
+              <p className="text-sm font-semibold text-destructive">
+                No rider is currently available. We will continue retrying based on dispatch
+                settings.
+              </p>
+            ) : (
+              <ol className="flex flex-col gap-4">
+                {pasugoFlow.map((status, index) => {
+                  const done = currentIndex >= index;
+
+                  return (
+                    <li key={status} className="flex items-center gap-3">
+                      {done ? (
+                        <CheckCircle2 className="size-5 text-success" />
+                      ) : (
+                        <Circle className="size-5 text-muted-foreground/40" />
+                      )}
+
+                      <span
+                        className={cn(
+                          "text-sm",
+                          done ? "font-semibold text-foreground" : "text-muted-foreground",
+                        )}
+                      >
+                        {pasugoLabels[status]}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+          </section>
+
+          {job ? (
+            <PasugoTrackingPanel booking={booking} job={job} />
+          ) : (
+            <section className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
+              <h2 className="flex items-center gap-2 font-display text-base font-bold">
+                <Bike className="size-4 text-primary" />
+                Pasugo rider
+              </h2>
+
+              <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+                <Loader2 className="size-4 animate-spin" />
+                Preparing rider dispatch…
+              </p>
+            </section>
+          )}
+
+          <section className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
+            <h2 className="flex items-center gap-2 font-display text-base font-bold">
+              <Package className="size-4 text-primary" />
+              Booking details
+            </h2>
+
+            <dl className="mt-4 space-y-3 text-sm">
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Pickup
+                </dt>
+                <dd className="mt-1">{booking.pickup_address}</dd>
+              </div>
+
+              <div>
+                <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Drop-off
+                </dt>
+                <dd className="mt-1">{booking.dropoff_address}</dd>
+              </div>
+
+              {booking.notes ? (
+                <div>
+                  <dt className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Notes
+                  </dt>
+                  <dd className="mt-1 text-muted-foreground">{booking.notes}</dd>
+                </div>
+              ) : null}
+            </dl>
+
+            <dl className="mt-4 space-y-1.5 border-t border-border pt-4 text-sm">
+              <div className="flex justify-between">
+                <dt className="text-muted-foreground">Estimated distance</dt>
+                <dd className="font-semibold">
+                  {Number(booking.estimated_distance_km).toFixed(1)} km
+                </dd>
+              </div>
+
+              <div className="flex justify-between border-t border-border pt-2">
+                <dt className="font-bold">Estimated fare</dt>
+                <dd className="font-display text-lg font-extrabold">
+                  {peso(Number(booking.estimated_fare))}
+                </dd>
+              </div>
+            </dl>
+          </section>
+
+          {canCancel ? (
+            <Button
+              type="button"
+              variant="destructive"
+              className="mt-6 w-full"
+              disabled={cancelMutation.isPending}
+              onClick={handleCancel}
+            >
+              {cancelMutation.isPending ? (
+                <Loader2 className="size-4 animate-spin" />
+              ) : (
+                <XCircle className="size-4" />
+              )}
+              Cancel Pasugo Request
+            </Button>
+          ) : null}
+
+          <Button asChild variant="outline" className="mt-4 w-full">
+            <Link to="/customer">Back to my orders</Link>
+          </Button>
+        </div>
+      </PublicLayout>
+    );
+  }
+
+  // ------------------------------------------------------------
+  // EXISTING MARKETPLACE TRACKING
+  // ------------------------------------------------------------
+  if (!order.data) {
+    return null;
+  }
+
+  const marketplaceOrder = order.data;
+  const current = marketplaceOrder.status;
   const cancelled = current === "cancelled";
   const currentIndex = ORDER_FLOW.indexOf(current);
 
@@ -90,15 +373,17 @@ function OrderTrackingPage() {
     <PublicLayout>
       <div className="mx-auto w-full max-w-3xl px-4 py-10 sm:px-6">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
-          {isPasugo
-            ? `Pasugo booking ${order.data.claim_number ?? order.data.id.slice(0, 8)}`
-            : `Claim ${order.data.claim_number ?? order.data.id.slice(0, 8)}`}
+          {marketplaceOrder.notes?.startsWith("[PASUGO]")
+            ? `Pasugo booking ${marketplaceOrder.claim_number ?? marketplaceOrder.id.slice(0, 8)}`
+            : `Claim ${marketplaceOrder.claim_number ?? marketplaceOrder.id.slice(0, 8)}`}
         </p>
+
         <h1 className="mt-2 font-display text-2xl font-extrabold tracking-tight sm:text-3xl">
           {ORDER_LABELS[current]}
         </h1>
+
         <p className="mt-1.5 text-sm text-muted-foreground">
-          Placed {new Date(order.data.created_at).toLocaleString("en-PH")}
+          Placed {new Date(marketplaceOrder.created_at).toLocaleString("en-PH")}
         </p>
 
         <section className="mt-8 rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
@@ -108,6 +393,7 @@ function OrderTrackingPage() {
             <ol className="flex flex-col gap-4">
               {ORDER_FLOW.map((status, index) => {
                 const done = index <= currentIndex;
+
                 return (
                   <li key={status} className="flex items-center gap-3">
                     {done ? (
@@ -115,6 +401,7 @@ function OrderTrackingPage() {
                     ) : (
                       <Circle className="size-5 text-muted-foreground/40" />
                     )}
+
                     <span
                       className={cn(
                         "text-sm",
@@ -134,53 +421,50 @@ function OrderTrackingPage() {
 
         <section className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
           <h2 className="flex items-center gap-2 font-display text-base font-bold">
-            <Package className="size-4 text-primary" />{" "}
-            {isPasugo ? "Booking details" : "Order details"}
+            <Package className="size-4 text-primary" />
+            Order details
           </h2>
-          {isPasugo ? (
-            <p className="mt-4 text-sm text-muted-foreground">
-              {order.data.notes
-                ?.split("\n")
-                .filter((line) => !line.startsWith("[PASUGO]"))
-                .join(" · ") || "Standalone rider booking"}
-            </p>
-          ) : (
-            <ul className="mt-4 flex flex-col gap-2 text-sm">
-              {(items.data ?? []).map((item) => (
-                <li key={item.id} className="flex justify-between gap-3">
-                  <span className="min-w-0 truncate text-muted-foreground">
-                    {item.quantity} × {item.product_name}
-                  </span>
-                  <span className="font-semibold">
-                    {peso(Number(item.unit_price) * item.quantity)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          )}
+
+          <ul className="mt-4 flex flex-col gap-2 text-sm">
+            {(items.data ?? []).map((item) => (
+              <li key={item.id} className="flex justify-between gap-3">
+                <span className="min-w-0 truncate text-muted-foreground">
+                  {item.quantity} × {item.product_name}
+                </span>
+                <span className="font-semibold">
+                  {peso(Number(item.unit_price) * item.quantity)}
+                </span>
+              </li>
+            ))}
+          </ul>
+
           <dl className="mt-4 space-y-1.5 border-t border-border pt-4 text-sm">
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Subtotal</dt>
-              <dd className="font-semibold">{peso(Number(order.data.subtotal))}</dd>
+              <dd className="font-semibold">{peso(Number(marketplaceOrder.subtotal))}</dd>
             </div>
+
             <div className="flex justify-between">
               <dt className="text-muted-foreground">Delivery fee</dt>
-              <dd className="font-semibold">{peso(Number(order.data.delivery_fee))}</dd>
+              <dd className="font-semibold">{peso(Number(marketplaceOrder.delivery_fee))}</dd>
             </div>
+
             <div className="flex justify-between border-t border-border pt-2">
               <dt className="font-bold">Total</dt>
               <dd className="font-display text-lg font-extrabold">
-                {peso(Number(order.data.total))}
+                {peso(Number(marketplaceOrder.total))}
               </dd>
             </div>
           </dl>
+
           <p className="mt-3 text-xs text-muted-foreground">
-            Payment: {order.data.payment_method.toUpperCase()} · {order.data.payment_status}
+            Payment: {marketplaceOrder.payment_method.toUpperCase()} ·{" "}
+            {marketplaceOrder.payment_status}
           </p>
         </section>
 
-        {order.data.status === "delivered" && !isPasugo ? (
-          <OrderReview orderId={orderId} storeId={order.data.store_id} />
+        {marketplaceOrder.status === "delivered" ? (
+          <OrderReview orderId={orderId} storeId={marketplaceOrder.store_id} />
         ) : null}
 
         <Button asChild variant="outline" className="mt-6">
@@ -188,6 +472,95 @@ function OrderTrackingPage() {
         </Button>
       </div>
     </PublicLayout>
+  );
+}
+
+function PasugoTrackingPanel({
+  booking,
+  job,
+}: {
+  booking: import("@/lib/pasugo").PasugoBooking;
+  job: import("@/lib/pasugo").PasugoDispatchJob;
+}) {
+  const [riderLocation, setRiderLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+
+  useEffect(() => {
+    if (!job.assigned_rider_id) {
+      setRiderLocation(null);
+      return;
+    }
+
+    const sub = watchAssignedRider(job.assigned_rider_id, (location) => {
+      setRiderLocation(location);
+    });
+
+    return () => {
+      void supabase.removeChannel(sub);
+    };
+  }, [job.assigned_rider_id]);
+
+  const searching =
+    job.status === "searching" ||
+    booking.status === "finding_rider" ||
+    booking.status === "requested";
+
+  const assigned =
+    job.status === "assigned" || job.status === "picked_up" || job.status === "delivered";
+
+  return (
+    <section className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
+      <h2 className="flex items-center gap-2 font-display text-base font-bold">
+        <Bike className="size-4 text-primary" />
+        Pasugo rider
+      </h2>
+
+      {searching ? (
+        <p className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+          <Loader2 className="size-4 animate-spin" />
+          Finding a rider for your booking…
+        </p>
+      ) : job.status === "failed" ? (
+        <p className="mt-3 text-sm text-destructive">
+          No rider was available yet. We will keep retrying based on dispatch settings.
+        </p>
+      ) : assigned ? (
+        <p className="mt-3 text-sm text-muted-foreground">
+          {job.status === "delivered"
+            ? "Your Pasugo request has been delivered."
+            : job.status === "picked_up"
+              ? "Your rider is on the way to the destination."
+              : "A rider is assigned and heading to the pickup point."}
+        </p>
+      ) : (
+        <p className="mt-3 text-sm text-muted-foreground">
+          Your Pasugo request is being processed.
+        </p>
+      )}
+
+      <p className="mt-2 text-xs text-muted-foreground">
+        {Number(job.distance_km).toFixed(1)} km · estimated fare {peso(Number(job.delivery_fee))}
+      </p>
+
+      {booking.notes ? (
+        <p className="mt-2 text-xs text-muted-foreground">Notes: {booking.notes}</p>
+      ) : null}
+
+      {job.assigned_rider_id &&
+      (job.status === "assigned" || job.status === "picked_up" || job.status === "delivered") ? (
+        <Button asChild variant="outline" className="mt-4">
+          <Link to="/booking-chat/$orderId" params={{ orderId: job.id }}>
+            Chat with rider
+          </Link>
+        </Button>
+      ) : null}
+
+      <div className="mt-4 overflow-hidden rounded-xl border">
+        <LiveDeliveryMap dispatchJob={job} riderLocation={riderLocation} />
+      </div>
+    </section>
   );
 }
 

@@ -13,8 +13,16 @@ interface Coordinate {
   lng: number;
 }
 
+interface LiveDeliveryMapJob {
+  pickup_lat: number | null;
+  pickup_lng: number | null;
+  dropoff_lat: number | null;
+  dropoff_lng: number | null;
+  status: string;
+}
+
 interface LiveDeliveryMapProps {
-  dispatchJob?: DispatchJob | null;
+  dispatchJob?: LiveDeliveryMapJob | null;
   riderLocation?: Coordinate | null;
 }
 
