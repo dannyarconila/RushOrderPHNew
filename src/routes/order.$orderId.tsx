@@ -10,7 +10,12 @@ import { supabase } from "@/integrations/supabase/client";
 import { peso } from "@/lib/currency";
 import { orderDispatchQuery, watchAssignedRider, watchDispatchJob } from "@/lib/dispatch";
 import { ORDER_FLOW, ORDER_LABELS, orderItemsQuery, orderQuery } from "@/lib/orders";
-import { cancelPasugoBooking, pasugoBookingQuery, pasugoJobQuery } from "@/lib/pasugo";
+import {
+  cancelPasugoBooking,
+  pasugoBookingQuery,
+  pasugoJobQuery,
+  retryPasugoDispatch,
+} from "@/lib/pasugo";
 import { cn } from "@/lib/utils";
 import { LiveDeliveryMap } from "@/components/maps";
 
@@ -268,8 +273,13 @@ function OrderTrackingPage() {
             )}
           </section>
 
-          {job ? (
-            <PasugoTrackingPanel booking={booking} job={job} />
+          {job && pasugoJob.data ? (
+            <PasugoTrackingPanel
+              booking={pasugo.data}
+              job={pasugoJob.data}
+              queryClient={queryClient}
+              cancelMutation={cancelMutation}
+            />
           ) : (
             <section className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
               <h2 className="flex items-center gap-2 font-display text-base font-bold">
@@ -478,9 +488,16 @@ function OrderTrackingPage() {
 function PasugoTrackingPanel({
   booking,
   job,
+  queryClient,
+  cancelMutation,
 }: {
   booking: import("@/lib/pasugo").PasugoBooking;
   job: import("@/lib/pasugo").PasugoDispatchJob;
+  queryClient: ReturnType<typeof useQueryClient>;
+  cancelMutation: {
+    mutate: () => void;
+    isPending: boolean;
+  };
 }) {
   const [riderLocation, setRiderLocation] = useState<{
     lat: number;
@@ -507,8 +524,33 @@ function PasugoTrackingPanel({
     booking.status === "finding_rider" ||
     booking.status === "requested";
 
+  const failed = job.status === "failed";
+
   const assigned =
     job.status === "assigned" || job.status === "picked_up" || job.status === "delivered";
+
+  const retryMutation = useMutation({
+    mutationFn: () => retryPasugoDispatch(job.id),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["pasugo-job", booking.id],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["pasugo-booking", booking.id],
+        }),
+      ]);
+
+      toast.success("Rider search restarted", {
+        description: "We're looking for an available rider again.",
+      });
+    },
+    onError: (error) => {
+      toast.error("Could not restart rider search", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    },
+  });
 
   return (
     <section className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
@@ -522,10 +564,45 @@ function PasugoTrackingPanel({
           <Loader2 className="size-4 animate-spin" />
           Finding a rider for your booking…
         </p>
-      ) : job.status === "failed" ? (
-        <p className="mt-3 text-sm text-destructive">
-          No rider was available yet. We will keep retrying based on dispatch settings.
-        </p>
+      ) : failed ? (
+        <div className="mt-3">
+          <p className="text-sm font-semibold text-destructive">No available riders</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            We couldn't find an available rider for your Pasugo request right now.
+          </p>
+
+          <div className="mt-4 flex flex-wrap gap-2">
+            <Button
+              variant="outline"
+              onClick={() => retryMutation.mutate()}
+              disabled={retryMutation.isPending}
+            >
+              {retryMutation.isPending ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Searching…
+                </>
+              ) : (
+                "Try Again"
+              )}
+            </Button>
+
+            <Button
+              variant="destructive"
+              onClick={() => cancelMutation.mutate()}
+              disabled={cancelMutation.isPending}
+            >
+              {cancelMutation.isPending ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Cancelling…
+                </>
+              ) : (
+                "Cancel Request"
+              )}
+            </Button>
+          </div>
+        </div>
       ) : assigned ? (
         <p className="mt-3 text-sm text-muted-foreground">
           {job.status === "delivered"

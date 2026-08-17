@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { ClipboardList, Package, Store } from "lucide-react";
+import { ClipboardList, Loader2, Package, Store } from "lucide-react";
 import { useEffect } from "react";
 import { toast } from "sonner";
 
@@ -10,7 +10,14 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { peso } from "@/lib/currency";
-import { ORDER_LABELS, storeOrdersQuery, updateOrderStatus, type OrderStatus } from "@/lib/orders";
+import { orderDispatchQuery } from "@/lib/dispatch";
+import {
+  ORDER_LABELS,
+  storeOrdersQuery,
+  updateOrderStatus,
+  type OrderRow,
+  type OrderStatus,
+} from "@/lib/orders";
 import { myStoresQuery } from "@/lib/stores";
 
 export const Route = createFileRoute("/store-orders")({
@@ -37,6 +44,175 @@ const NEXT_STATUS: Partial<Record<OrderStatus, { next: OrderStatus; label: strin
   confirmed: { next: "preparing", label: "Start preparing" },
   preparing: { next: "ready", label: "Mark ready for pickup" },
 };
+function SellerOrderRow({
+  order,
+  action,
+  advance,
+  queryClient,
+}: {
+  order: OrderRow;
+  action: { next: OrderStatus; label: string } | undefined;
+  advance: {
+    isPending: boolean;
+    mutate: (variables: { id: string; status: OrderStatus }) => void;
+  };
+  queryClient: ReturnType<typeof useQueryClient>;
+}) {
+  const dispatch = useQuery(orderDispatchQuery(order.id));
+
+  const redispatch = useMutation({
+    mutationFn: async () => {
+      const { data, error } = await supabase.rpc("dispatch_start", {
+        _order_id: order.id,
+      });
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({
+          queryKey: ["dispatch-job", order.id],
+        }),
+        queryClient.invalidateQueries({
+          queryKey: ["store-orders"],
+        }),
+      ]);
+
+      toast.success("Rider search restarted", {
+        description: "We're looking for an available rider again.",
+      });
+    },
+    onError: (error) => {
+      toast.error("Could not re-dispatch rider", {
+        description: error instanceof Error ? error.message : "Please try again.",
+      });
+    },
+  });
+
+  const noRiderAvailable = dispatch.data?.status === "failed";
+
+  return (
+    <li key={order.id} className="flex flex-wrap items-center justify-between gap-3 py-4">
+      <div className="min-w-0">
+        <Link to="/order/$orderId" params={{ orderId: order.id }} className="group">
+          <p className="text-sm font-bold group-hover:underline">
+            {order.order_items?.[0]?.product_name ?? `Order #${order.id.slice(0, 8)}`}
+            {order.order_items && order.order_items.length > 1
+              ? ` + ${order.order_items.length - 1} more`
+              : ""}
+          </p>
+        </Link>
+
+        <p className="text-xs text-muted-foreground">
+          {new Date(order.created_at).toLocaleString("en-PH")} · {ORDER_LABELS[order.status]} ·{" "}
+          {order.payment_method.toUpperCase()}
+        </p>
+
+        {(order.order_items ?? []).length > 0 ? (
+          <p className="mt-1 text-xs text-muted-foreground">
+            {(order.order_items ?? [])
+              .map((item) =>
+                item.quantity > 1 ? `${item.quantity} x ${item.product_name}` : item.product_name,
+              )
+              .join(", ")}
+          </p>
+        ) : null}
+
+        {noRiderAvailable ? (
+          <div className="mt-3 rounded-xl border border-destructive/20 bg-destructive/5 p-3">
+            <p className="text-sm font-semibold text-destructive">No available riders</p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              No rider has accepted this delivery yet.
+            </p>
+
+            <Button
+              className="mt-3"
+              size="sm"
+              variant="outline"
+              disabled={redispatch.isPending || order.status !== "ready"}
+              onClick={() => redispatch.mutate()}
+            >
+              {redispatch.isPending ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  Finding rider…
+                </>
+              ) : (
+                "Re-dispatch Rider"
+              )}
+            </Button>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="flex items-center gap-3">
+        <Button asChild size="sm" variant="outline">
+          <Link to="/order/$orderId" params={{ orderId: order.id }}>
+            Track Order
+          </Link>
+        </Button>
+
+        <span className="font-display text-lg font-extrabold">{peso(Number(order.total))}</span>
+
+        {order.status === "cancelled" ? (
+          <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-600">
+            Cancelled
+          </span>
+        ) : (
+          <>
+            {action ? (
+              <Button
+                size="sm"
+                disabled={advance.isPending}
+                onClick={() =>
+                  advance.mutate({
+                    id: order.id,
+                    status: action.next,
+                  })
+                }
+              >
+                {action.label}
+              </Button>
+            ) : null}
+
+            {order.status === "pending" ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={advance.isPending}
+                onClick={() =>
+                  advance.mutate({
+                    id: order.id,
+                    status: "cancelled",
+                  })
+                }
+              >
+                Decline
+              </Button>
+            ) : null}
+
+            {(["confirmed", "preparing", "ready"] as OrderStatus[]).includes(order.status) ? (
+              <Button
+                size="sm"
+                variant="ghost"
+                disabled={advance.isPending}
+                onClick={() =>
+                  advance.mutate({
+                    id: order.id,
+                    status: "cancelled",
+                  })
+                }
+              >
+                Cancel order
+              </Button>
+            ) : null}
+          </>
+        )}
+      </div>
+    </li>
+  );
+}
 
 function StoreOrdersPage() {
   const { user, loading } = useAuth();
@@ -106,108 +282,15 @@ function StoreOrdersPage() {
       ) : (
         <Panel title="Incoming and recent orders">
           <ul className="divide-y divide-border">
-            {list.map((order) => {
-              const action = NEXT_STATUS[order.status];
-              return (
-                <li
-                  key={order.id}
-                  className="flex flex-wrap items-center justify-between gap-3 py-4"
-                >
-                  <div className="min-w-0">
-                    <Link to="/order/$orderId" params={{ orderId: order.id }} className="group">
-                      <p className="text-sm font-bold group-hover:underline">
-                        {order.order_items?.[0]?.product_name ?? `Order #${order.id.slice(0, 8)}`}
-                        {order.order_items && order.order_items.length > 1
-                          ? ` + ${order.order_items.length - 1} more`
-                          : ""}
-                      </p>
-                    </Link>
-                    <p className="text-xs text-muted-foreground">
-                      {new Date(order.created_at).toLocaleString("en-PH")} ·{" "}
-                      {ORDER_LABELS[order.status]} · {order.payment_method.toUpperCase()}
-                    </p>
-                    {(order.order_items ?? []).length > 0 ? (
-                      <p className="mt-1 text-xs text-muted-foreground">
-                        {(order.order_items ?? [])
-                          .map((item) =>
-                            item.quantity > 1
-                              ? `${item.quantity} x ${item.product_name}`
-                              : item.product_name,
-                          )
-                          .join(", ")}
-                      </p>
-                    ) : null}
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Button asChild size="sm" variant="outline">
-                      <Link to="/order/$orderId" params={{ orderId: order.id }}>
-                        Track Order
-                      </Link>
-                    </Button>
-                    <span className="font-display text-lg font-extrabold">
-                      {peso(Number(order.total))}
-                    </span>
-
-                    {order.status === "cancelled" ? (
-                      <span className="rounded-full bg-red-100 px-3 py-1 text-xs font-bold text-red-600">
-                        Cancelled
-                      </span>
-                    ) : (
-                      <>
-                        {action ? (
-                          <Button
-                            size="sm"
-                            disabled={advance.isPending}
-                            onClick={() =>
-                              advance.mutate({
-                                id: order.id,
-                                status: action.next,
-                              })
-                            }
-                          >
-                            {action.label}
-                          </Button>
-                        ) : null}
-
-                        {order.status === "pending" ? (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={advance.isPending}
-                            onClick={() =>
-                              advance.mutate({
-                                id: order.id,
-                                status: "cancelled",
-                              })
-                            }
-                          >
-                            Decline
-                          </Button>
-                        ) : null}
-
-                        {(["confirmed", "preparing", "ready"] as OrderStatus[]).includes(
-                          order.status,
-                        ) ? (
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            disabled={advance.isPending}
-                            onClick={() =>
-                              advance.mutate({
-                                id: order.id,
-                                status: "cancelled",
-                              })
-                            }
-                          >
-                            Cancel order
-                          </Button>
-                        ) : null}
-                      </>
-                    )}
-                  </div>
-                </li>
-              );
-            })}
+            {list.map((order) => (
+              <SellerOrderRow
+                key={order.id}
+                order={order}
+                action={NEXT_STATUS[order.status]}
+                advance={advance}
+                queryClient={queryClient}
+              />
+            ))}
           </ul>
         </Panel>
       )}
