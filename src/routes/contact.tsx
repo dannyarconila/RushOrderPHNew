@@ -172,12 +172,6 @@ function ContactPage() {
             <span className="flex size-10 items-center justify-center rounded-xl bg-primary-soft text-primary">
               <MapPin className="size-4" />
             </span>
-
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.16em] text-muted-foreground">
-                Office
-              </p>
-            </div>
           </div>
         </aside>
       </section>
