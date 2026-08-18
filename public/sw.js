@@ -15,8 +15,8 @@ self.addEventListener("push", (event) => {
   const title = data.title || "RushOrder PH";
   const options = {
     body: data.body || "You have a new notification.",
-    icon: "/favicon.ico",
-    badge: "/favicon.ico",
+    icon: "/icons/icon-192.png",
+    badge: "/icons/icon-192.png",
     data: {
       action_url: data.action_url || "/",
     },

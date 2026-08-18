@@ -15,6 +15,7 @@ import {
 import heroRider from "@/assets/hero-rider.jpg";
 import { PublicLayout } from "@/components/site/public-layout";
 import { Button } from "@/components/ui/button";
+import { InstallAppButton } from "@/components/site/install-app-button";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -113,12 +114,13 @@ function LandingPage() {
               orders, and have their purchases delivered to their location, while sellers manage
               their stores and riders accept delivery bookings.
             </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row">
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <Button asChild size="lg">
                 <Link to="/marketplace">
                   Start shopping <ArrowRight className="size-4" />
                 </Link>
               </Button>
+
               <Button
                 asChild
                 size="lg"
@@ -127,6 +129,8 @@ function LandingPage() {
               >
                 <Link to="/errands">Run Errands/Pasugo</Link>
               </Button>
+
+              <InstallAppButton />
             </div>
             <div className="mt-10 flex flex-wrap gap-6 text-sm text-ink-foreground/70">
               {WHY.map((item) => (
