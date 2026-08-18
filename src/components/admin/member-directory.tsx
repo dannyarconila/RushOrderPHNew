@@ -70,9 +70,13 @@ export function MemberDirectory({
   const mutation = useMutation({
     mutationFn: setAccountStatus,
     onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["admin", "members"],
+      });
+
       await queryClient.refetchQueries({
         queryKey: ["admin", "members", role],
-        type: "active",
+        type: "all",
       });
 
       toast.success("Account status updated successfully.");
