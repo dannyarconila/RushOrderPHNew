@@ -100,6 +100,32 @@ function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
 
   const online = Boolean(status?.is_online);
 
+  useEffect(() => {
+    if (!user?.id) return;
+
+    const channel = supabase
+      .channel(`rider-status-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "rider_status",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          void queryClient.invalidateQueries({
+            queryKey: ["rider-status", user.id],
+          });
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [user?.id, queryClient]);
+
   const { data: offer } = useQuery({
     ...pendingOfferQuery(user?.id),
     enabled: Boolean(user) && online && !activeJob && !activePasugoJob,
