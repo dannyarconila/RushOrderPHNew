@@ -237,17 +237,6 @@ export const adminMutateFn = createServerFn({ method: "POST" })
         });
         if (error) throw new Error(error.message);
 
-        const titles: Record<string, string> = {
-          active: "Your account has been reactivated",
-          suspended: "Your account has been suspended",
-          banned: "Your account has been banned",
-        };
-        await supabaseAdmin.from("notifications").insert({
-          user_id: data.userId,
-          title: titles[data.status] ?? "Your account status changed",
-          body: data.note ?? "Contact RushOrder PH support if you believe this is a mistake.",
-          kind: "account",
-        });
         await mod.audit({
           account,
           action: "member_status_changed",

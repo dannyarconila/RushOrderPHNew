@@ -25,7 +25,7 @@ import type { AppRole } from "@/types";
 import { Users } from "lucide-react";
 import { adjustWalletBalance } from "@/lib/admin/mutations";
 
-const STATUS_FILTERS: (AccountStatus | "all")[] = ["all", "active", "suspended"];
+const STATUS_FILTERS: (AccountStatus | "all")[] = ["all", "active", "suspended", "banned"];
 
 export function MemberDirectory({
   role,
@@ -69,12 +69,16 @@ export function MemberDirectory({
 
   const mutation = useMutation({
     mutationFn: setAccountStatus,
-    onSuccess: () => {
+    onSuccess: async () => {
+      await queryClient.refetchQueries({
+        queryKey: ["admin", "members", role],
+        type: "active",
+      });
+
       toast.success("Account status updated successfully.");
-      void queryClient.invalidateQueries({ queryKey: ["admin"] });
       setPending(null);
     },
-    onError: (error: Error) => toast.error(error.message),
+    onError: (err: Error) => toast.error(err.message),
   });
 
   const rows = useMemo(() => {
