@@ -122,11 +122,22 @@ async function sendPushToUser(
     };
   }
 
+  const { count: unreadCount, error: unreadError } = await supabaseAdmin
+    .from("notifications")
+    .select("id", { count: "exact", head: true })
+    .eq("user_id", targetUserId)
+    .eq("is_read", false);
+
+  if (unreadError) {
+    throw unreadError;
+  }
+
   const payload = JSON.stringify({
     title,
     body: notificationBody,
     action_url: actionUrl,
     tag,
+    unreadCount: unreadCount ?? 0,
   });
 
   let sent = 0;

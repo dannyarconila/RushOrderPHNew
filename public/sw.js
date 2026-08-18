@@ -13,6 +13,8 @@ self.addEventListener("push", (event) => {
   }
 
   const title = data.title || "RushOrder PH";
+  const unreadCount = Number(data.unreadCount) || 0;
+
   const options = {
     body: data.body || "You have a new notification.",
     icon: "/icons/icon-192.png",
@@ -23,7 +25,21 @@ self.addEventListener("push", (event) => {
     tag: data.tag || "rushorder-notification",
   };
 
-  event.waitUntil(self.registration.showNotification(title, options));
+  event.waitUntil(
+    (async () => {
+      try {
+        if (unreadCount > 0 && "setAppBadge" in navigator) {
+          await navigator.setAppBadge(unreadCount);
+        } else if (unreadCount === 0 && "clearAppBadge" in navigator) {
+          await navigator.clearAppBadge();
+        }
+      } catch (error) {
+        console.debug("Could not update app badge:", error);
+      }
+
+      await self.registration.showNotification(title, options);
+    })(),
+  );
 });
 
 self.addEventListener("notificationclick", (event) => {

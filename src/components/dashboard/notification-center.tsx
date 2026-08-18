@@ -31,6 +31,22 @@ export function NotificationCenter() {
 
   const unread = (notifications.data ?? []).filter((item) => !item.is_read).length;
 
+  useEffect(() => {
+    const updateAppBadge = async () => {
+      try {
+        if (unread > 0 && "setAppBadge" in navigator) {
+          await navigator.setAppBadge(unread);
+        } else if (unread === 0 && "clearAppBadge" in navigator) {
+          await navigator.clearAppBadge();
+        }
+      } catch (error) {
+        console.debug("Could not update app badge:", error);
+      }
+    };
+
+    void updateAppBadge();
+  }, [unread]);
+
   const markRead = useMutation({
     mutationFn: async (id: string) => {
       const { error } = await supabase
