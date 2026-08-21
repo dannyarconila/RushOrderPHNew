@@ -14,6 +14,7 @@ import { EmptyState } from "@/components/dashboard/primitives";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { formatPhilippineDate } from "@/lib/date";
 
 type Kind = "seller" | "rider";
 
@@ -107,11 +108,11 @@ export function RoleGate({ kind, children }: { kind: Kind; children: ReactNode }
           />
           <Detail
             label="Date submitted"
-            value={submitted.toLocaleDateString("en-PH", { dateStyle: "medium" })}
+            value={formatPhilippineDate(submitted)}
           />
           <Detail
             label="Estimated review"
-            value={`by ${estimate.toLocaleDateString("en-PH", { dateStyle: "medium" })}`}
+            value={`by ${formatPhilippineDate(estimate)}`}
           />
         </dl>
         <p className="mt-4 text-sm text-muted-foreground">

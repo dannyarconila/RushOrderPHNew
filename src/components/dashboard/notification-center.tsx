@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { formatPhilippineDateTime } from "@/lib/date";
 
 export function NotificationCenter() {
   const { user } = useAuth();
@@ -170,7 +171,7 @@ export function NotificationCenter() {
                         <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.body}</p>
                       ) : null}
                       <p className="mt-1 text-[11px] text-muted-foreground">
-                        {new Date(item.created_at).toLocaleString("en-PH")}
+                        {formatPhilippineDateTime(item.created_at)}
                       </p>
                     </div>
                   </div>
