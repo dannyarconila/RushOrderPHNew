@@ -234,53 +234,60 @@ function StoreOrdersPage() {
   useEffect(() => {
     if (storeIds.length === 0) return;
 
-    const channel = supabase
-      .channel(`seller-orders:${storeIds.join(",")}`)
-      .on(
-        "postgres_changes",
-        {
-          event: "INSERT",
-          schema: "public",
-          table: "orders",
-        },
-        (payload) => {
-          const order = payload.new as {
-            id?: string;
-            store_id?: string;
-            status?: string;
-          };
+    const channels = storeIds.map((storeId) => {
+      const channel = supabase
+        .channel(`seller-orders:${storeId}`)
+        .on(
+          "postgres_changes",
+          {
+            event: "INSERT",
+            schema: "public",
+            table: "orders",
+            filter: `store_id=eq.${storeId}`,
+          },
+          (payload) => {
+            const order = payload.new as {
+              id?: string;
+              store_id?: string;
+              status?: string;
+            };
 
-          if (
-            order.id &&
-            order.store_id &&
-            storeIds.includes(order.store_id) &&
-            order.status === "pending"
-          ) {
-            setIncomingOrderId(order.id);
-          }
+            console.log("[Seller realtime] New order:", order);
 
-          void queryClient.invalidateQueries({
-            queryKey: ["store-orders"],
-          });
-        },
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "UPDATE",
-          schema: "public",
-          table: "orders",
-        },
-        () => {
-          void queryClient.invalidateQueries({
-            queryKey: ["store-orders"],
-          });
-        },
-      )
-      .subscribe();
+            if (order.id && order.status === "pending") {
+              setIncomingOrderId(order.id);
+            }
+
+            void queryClient.invalidateQueries({
+              queryKey: ["store-orders"],
+            });
+          },
+        )
+        .on(
+          "postgres_changes",
+          {
+            event: "UPDATE",
+            schema: "public",
+            table: "orders",
+            filter: `store_id=eq.${storeId}`,
+          },
+          () => {
+            void queryClient.invalidateQueries({
+              queryKey: ["store-orders"],
+            });
+          },
+        )
+        .subscribe((status) => {
+          console.log(`[Seller realtime] ${storeId}: ${status}`);
+        });
+
+      return channel;
+    });
 
     return () => {
-      void supabase.removeChannel(channel);
+      for (const channel of channels) {
+        void supabase.removeChannel(channel);
+      }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storeIds.join(","), queryClient]);
