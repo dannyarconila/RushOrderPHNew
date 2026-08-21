@@ -1,172 +1,273 @@
 /**
- * Live booking request popup.
+ * Live marketplace delivery booking popup.
  *
- * Shown to an online rider the moment dispatch offers them a job. The countdown
- * mirrors the server-side expiry; accepting races other riders through the
- * `dispatch_accept` lock, so a lost race simply closes the card.
+ * Pasugo continues to use its own popup. This component is for normal
+ * marketplace dispatch offers.
  */
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
-import { Bike, Clock, MapPin, Navigation } from "lucide-react";
+import { Bike, Clock, MapPin, Navigation, Package, Phone, Store, User, X } from "lucide-react";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
 import { peso } from "@/lib/currency";
 import { acceptDispatch, declineDispatch, secondsLeft, type OfferWithJob } from "@/lib/dispatch";
+import { supabase } from "@/integrations/supabase/client";
+
+type DeliveryDetails = {
+  order_id: string;
+  claim_number: string | null;
+  customer_name: string;
+  customer_phone: string | null;
+  customer_address: string | null;
+  store_name: string | null;
+  store_address: string | null;
+  store_phone: string | null;
+  subtotal: number;
+  delivery_fee: number;
+  total: number;
+  distance_km: number | null;
+  pickup_address: string | null;
+  dropoff_address: string | null;
+  items: Array<{
+    id: string;
+    product_name: string;
+    quantity: number;
+    unit_price: number;
+    line_total: number;
+  }>;
+};
 
 export function BookingPopup({ data, onClose }: { data: OfferWithJob; onClose: () => void }) {
   const { offer, job } = data;
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [remaining, setRemaining] = useState(() => secondsLeft(offer.expires_at));
+
   const isPasugo = job.dispatch_type === "pasugo";
+
+  const details = useQuery({
+    queryKey: ["rider-delivery-details", job.order_id],
+    enabled: Boolean(job.order_id) && !isPasugo,
+    queryFn: async () => {
+      const { data: result, error } = await supabase.rpc("rider_delivery_details", {
+        _order_id: job.order_id,
+      });
+
+      if (error) throw error;
+      return result as unknown as DeliveryDetails;
+    },
+  });
 
   useEffect(() => {
     setRemaining(secondsLeft(offer.expires_at));
+
     const timer = window.setInterval(() => {
       const next = secondsLeft(offer.expires_at);
       setRemaining(next);
+
       if (next <= 0) {
         window.clearInterval(timer);
         onClose();
       }
     }, 250);
+
     return () => window.clearInterval(timer);
   }, [offer.expires_at, onClose]);
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ["dispatch-offer"] });
-    void queryClient.invalidateQueries({ queryKey: ["dispatch-active-job"] });
-    void queryClient.invalidateQueries({ queryKey: ["rider-status"] });
+    void queryClient.invalidateQueries({
+      queryKey: ["dispatch-active-job"],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ["rider-status"],
+    });
+    void queryClient.invalidateQueries({
+      queryKey: ["rider-delivery-details"],
+    });
   };
 
   const accept = useMutation({
     mutationFn: () => acceptDispatch(job.id),
     onSuccess: (result) => {
-      if (result.ok) {
-        toast.success("Delivery assigned to you");
-        navigate({ to: "/booking-chat/$orderId", params: { orderId: job.order_id } });
-      } else toast.info("Another rider accepted this booking first");
       refresh();
+
+      if (!result.ok) {
+        toast.error(result.reason ?? "This booking is no longer available.");
+        onClose();
+        return;
+      }
+
+      toast.success("Delivery accepted.");
+
+      navigate({
+        to: "/booking-chat/$orderId",
+        params: { orderId: job.order_id },
+      });
+
       onClose();
     },
-    onError: (error: Error) => toast.error("Could not accept", { description: error.message }),
+    onError: (error: Error) => toast.error(error.message),
   });
 
   const decline = useMutation({
     mutationFn: () => declineDispatch(job.id),
-    onSettled: () => {
+    onSuccess: () => {
       refresh();
+      toast.info("Booking declined.");
       onClose();
     },
+    onError: (error: Error) => toast.error(error.message),
   });
 
-  const total = Math.max(1, secondsLeft(offer.expires_at) || 30);
-  const progress = Math.min(100, Math.max(0, (remaining / total) * 100));
-  const busy = accept.isPending || decline.isPending;
+  const d = details.data;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/60 p-4 backdrop-blur-sm sm:items-center">
-      <div className="w-full max-w-md overflow-hidden rounded-3xl border border-border bg-card shadow-2xl">
-        <div className="flex items-center justify-between gap-3 bg-primary px-5 py-4 text-primary-foreground">
-          <span className="flex items-center gap-2 font-display text-lg font-extrabold">
-            <Bike className="size-5" />{" "}
-            {isPasugo ? "Incoming Pasugo Order!" : "Incoming Delivery Order"}
-          </span>
-          <span className="flex items-center gap-1 text-sm font-bold tabular-nums">
-            <Clock className="size-4" /> {remaining}s
-          </span>
-        </div>
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 p-4">
+      <div className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-3xl border border-border bg-card shadow-2xl">
+        <div className="sticky top-0 z-10 flex items-center justify-between border-b border-border bg-card px-5 py-4">
+          <div className="flex items-center gap-3">
+            <div className="flex size-10 items-center justify-center rounded-full bg-primary/10">
+              <Bike className="size-5 text-primary" />
+            </div>
 
-        <div className="h-1 w-full bg-muted">
-          <div
-            className="h-full bg-primary transition-[width] duration-200 ease-linear"
-            style={{ width: `${progress}%` }}
-          />
+            <div>
+              <p className="text-xs font-bold uppercase tracking-wide text-primary">
+                Incoming delivery
+              </p>
+              <h2 className="font-extrabold">
+                {d?.claim_number ?? job.store_name ?? "RushOrder delivery"}
+              </h2>
+            </div>
+          </div>
+
+          <Button type="button" variant="ghost" size="icon" onClick={onClose} aria-label="Close">
+            <X className="size-5" />
+          </Button>
         </div>
 
         <div className="space-y-4 p-5">
-          {isPasugo ? (
-            <p className="text-sm text-muted-foreground">Would you like to accept this booking?</p>
-          ) : null}
-          <div className="flex items-baseline justify-between gap-3">
+          <div className="flex items-center justify-between rounded-2xl border border-primary/20 bg-primary/5 p-4">
             <div>
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                {isPasugo ? "Estimated fare" : "Delivery earnings"}
+              <p className="text-xs font-bold uppercase tracking-wide text-muted-foreground">
+                Delivery earnings
               </p>
-              <p className="font-display text-3xl font-extrabold">
-                {peso(Number(job.delivery_fee))}
+              <p className="text-2xl font-black text-primary">{peso(Number(job.delivery_fee))}</p>
+            </div>
+
+            <div className="text-right">
+              <div className="flex items-center justify-end gap-1 text-sm font-bold">
+                <Clock className="size-4" />
+                {remaining}s
+              </div>
+              <p className="text-xs text-muted-foreground">
+                {d?.distance_km != null
+                  ? `${Number(d.distance_km).toFixed(2)} km`
+                  : "Distance unavailable"}
               </p>
             </div>
-            <p className="text-sm text-muted-foreground">
-              {Number(job.distance_km).toFixed(1)} km trip
+          </div>
+
+          <section className="rounded-2xl border border-border bg-background p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <Store className="size-5 text-primary" />
+              <p className="font-bold">Pickup from seller</p>
+            </div>
+
+            <p className="font-bold">{d?.store_name ?? job.store_name ?? "Store"}</p>
+
+            <p className="mt-1 flex items-start gap-2 text-sm leading-6 text-muted-foreground">
+              <MapPin className="mt-1 size-4 shrink-0" />
+              {d?.pickup_address ??
+                d?.store_address ??
+                job.pickup_address ??
+                "Pickup address unavailable"}
             </p>
-          </div>
 
-          <div className="space-y-3 rounded-2xl bg-muted/50 p-4">
-            <Row
-              icon={MapPin}
-              label="Pick up"
-              title={isPasugo ? "Pickup Address" : (job.store_name ?? "Store")}
-              detail={job.pickup_address}
-            />
-            <Row
-              icon={Navigation}
-              label="Drop off"
-              title={isPasugo ? "Destination" : "Customer"}
-              detail={job.dropoff_address}
-            />
-          </div>
-
-          {isPasugo && job.customer_notes ? (
-            <div className="rounded-2xl border border-border bg-muted/30 p-4">
-              <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                Customer notes
+            {d?.store_phone ? (
+              <p className="mt-2 flex items-center gap-2 text-sm text-muted-foreground">
+                <Phone className="size-4" />
+                {d.store_phone}
               </p>
-              <p className="mt-1 text-sm">{job.customer_notes}</p>
+            ) : null}
+          </section>
+
+          <section className="rounded-2xl border border-border bg-background p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <User className="size-5 text-primary" />
+              <p className="font-bold">Customer / drop-off</p>
             </div>
-          ) : null}
+
+            <p className="font-bold">{d?.customer_name ?? "Customer"}</p>
+
+            {d?.customer_phone ? (
+              <p className="mt-1 flex items-center gap-2 text-sm text-muted-foreground">
+                <Phone className="size-4" />
+                {d.customer_phone}
+              </p>
+            ) : null}
+
+            <p className="mt-2 flex items-start gap-2 text-sm leading-6 text-muted-foreground">
+              <Navigation className="mt-1 size-4 shrink-0" />
+              {d?.dropoff_address ??
+                d?.customer_address ??
+                job.dropoff_address ??
+                "Drop-off address unavailable"}
+            </p>
+          </section>
+
+          <section className="rounded-2xl border border-border bg-background p-4">
+            <div className="mb-3 flex items-center gap-2">
+              <Package className="size-5 text-primary" />
+              <p className="font-bold">Order</p>
+            </div>
+
+            {details.isLoading ? (
+              <p className="text-sm text-muted-foreground">Loading order details…</p>
+            ) : details.isError ? (
+              <p className="text-sm text-destructive">
+                Could not load the order details. The booking can still be accepted if the delivery
+                is valid.
+              </p>
+            ) : (
+              <div className="space-y-2">
+                {(d?.items ?? []).map((item) => (
+                  <div
+                    key={item.id}
+                    className="flex items-center justify-between gap-3 border-b border-border py-2 last:border-0"
+                  >
+                    <div>
+                      <p className="font-semibold">{item.product_name}</p>
+                      <p className="text-xs text-muted-foreground">Qty {item.quantity}</p>
+                    </div>
+                    <p className="font-semibold">{peso(Number(item.line_total))}</p>
+                  </div>
+                ))}
+              </div>
+            )}
+          </section>
 
           <div className="flex gap-3">
             <Button
               variant="outline"
-              className="flex-1"
-              disabled={busy}
+              className="h-12 flex-1 font-bold"
+              disabled={accept.isPending || decline.isPending}
               onClick={() => decline.mutate()}
             >
               Decline
             </Button>
-            <Button className="flex-1" disabled={busy} onClick={() => accept.mutate()}>
-              {accept.isPending ? "Accepting…" : "Accept booking"}
+
+            <Button
+              className="h-12 flex-1 font-bold"
+              disabled={accept.isPending || decline.isPending}
+              onClick={() => accept.mutate()}
+            >
+              {accept.isPending ? "Accepting…" : "Accept delivery"}
             </Button>
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
-
-function Row({
-  icon: Icon,
-  label,
-  title,
-  detail,
-}: {
-  icon: typeof MapPin;
-  label: string;
-  title: string;
-  detail: string | null;
-}) {
-  return (
-    <div className="flex gap-3">
-      <span className="mt-0.5 flex size-8 shrink-0 items-center justify-center rounded-full bg-background text-primary">
-        <Icon className="size-4" />
-      </span>
-      <div className="min-w-0">
-        <p className="text-xs uppercase tracking-wide text-muted-foreground">{label}</p>
-        <p className="truncate text-sm font-semibold">{title}</p>
-        <p className="text-xs text-muted-foreground">{detail ?? "Address shared after pickup"}</p>
       </div>
     </div>
   );

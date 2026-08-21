@@ -2144,6 +2144,14 @@ export type Database = {
         Returns: string;
       };
       dispatch_accept: { Args: { _job_id: string }; Returns: Json };
+      rider_delivery_details: {
+        Args: { _order_id: string };
+        Returns: Json;
+      };
+      seller_order_details: {
+        Args: { _order_id: string };
+        Returns: Json;
+      };
       dispatch_advance: {
         Args: { _job_id: string; _step: string };
         Returns: boolean;

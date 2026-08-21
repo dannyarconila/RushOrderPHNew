@@ -1,11 +1,12 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { ClipboardList, Loader2, Package, Store } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { EmptyState, PageHeader, Panel } from "@/components/dashboard/primitives";
+import { IncomingOrderPopup } from "@/components/seller/incoming-order-popup";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -227,16 +228,57 @@ function StoreOrdersPage() {
   const stores = useQuery(myStoresQuery(user?.id));
   const storeIds = (stores.data ?? []).map((s) => s.id);
   const orders = useQuery(storeOrdersQuery(storeIds));
+  const [incomingOrderId, setIncomingOrderId] = useState<string | null>(null);
 
   // Live incoming orders for the seller's stores.
   useEffect(() => {
     if (storeIds.length === 0) return;
+
     const channel = supabase
-      .channel("seller-orders")
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
-        void queryClient.invalidateQueries({ queryKey: ["store-orders"] });
-      })
+      .channel(`seller-orders:${storeIds.join(",")}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "orders",
+        },
+        (payload) => {
+          const order = payload.new as {
+            id?: string;
+            store_id?: string;
+            status?: string;
+          };
+
+          if (
+            order.id &&
+            order.store_id &&
+            storeIds.includes(order.store_id) &&
+            order.status === "pending"
+          ) {
+            setIncomingOrderId(order.id);
+          }
+
+          void queryClient.invalidateQueries({
+            queryKey: ["store-orders"],
+          });
+        },
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "orders",
+        },
+        () => {
+          void queryClient.invalidateQueries({
+            queryKey: ["store-orders"],
+          });
+        },
+      )
       .subscribe();
+
     return () => {
       void supabase.removeChannel(channel);
     };
@@ -294,6 +336,13 @@ function StoreOrdersPage() {
           </ul>
         </Panel>
       )}
+
+      {incomingOrderId ? (
+        <IncomingOrderPopup
+          orderId={incomingOrderId}
+          onClose={() => setIncomingOrderId(null)}
+        />
+      ) : null}
     </DashboardLayout>
   );
 }
