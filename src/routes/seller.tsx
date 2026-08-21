@@ -14,6 +14,7 @@ import { peso } from "@/lib/currency";
 import { myStoresQuery } from "@/lib/stores";
 import { storeAvailability } from "@/lib/store-status";
 import { minimumWalletBalanceQuery, myWalletQuery } from "@/lib/wallet";
+import { formatPhilippineDate } from "@/lib/date";
 
 export const Route = createFileRoute("/seller")({
   head: () => ({
@@ -275,7 +276,7 @@ function SellerOverview() {
               </p>
 
               <p className="text-xs text-muted-foreground">
-                Submitted {new Date(application.created_at).toLocaleDateString("en-PH")}
+                Submitted {formatPhilippineDate(application.created_at)}
               </p>
 
               {application.review_notes ? (
