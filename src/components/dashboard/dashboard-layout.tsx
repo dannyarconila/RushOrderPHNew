@@ -5,6 +5,7 @@ import { useQueryClient } from "@tanstack/react-query";
 
 import { Logo } from "@/components/brand/logo";
 import { NotificationCenter } from "@/components/dashboard/notification-center";
+import { SellerIncomingOrderListener } from "@/components/seller/seller-incoming-order-listener";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -209,7 +210,13 @@ export function DashboardLayout({
           </div>
         ) : null}
 
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 lg:px-8">{children}</main>
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 lg:px-8">
+          {children}
+        </main>
+
+        {workspace === "Partner workspace" ? (
+          <SellerIncomingOrderListener />
+        ) : null}
       </div>
     </div>
   );

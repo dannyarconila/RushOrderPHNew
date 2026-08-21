@@ -106,8 +106,8 @@ function SellerOrderRow({
         </Link>
 
         <p className="text-xs text-muted-foreground">
-          {new Date(order.created_at).toISOString().slice(0, 16).replace("T", " ")} · {ORDER_LABELS[order.status]} ·{" "}
-          {order.payment_method.toUpperCase()}
+          {new Date(order.created_at).toISOString().slice(0, 16).replace("T", " ")} ·{" "}
+          {ORDER_LABELS[order.status]} · {order.payment_method.toUpperCase()}
         </p>
 
         {(order.order_items ?? []).length > 0 ? (
@@ -347,10 +347,7 @@ function StoreOrdersPage() {
       )}
 
       {incomingOrderId ? (
-        <IncomingOrderPopup
-          orderId={incomingOrderId}
-          onClose={() => setIncomingOrderId(null)}
-        />
+        <IncomingOrderPopup orderId={incomingOrderId} onClose={() => setIncomingOrderId(null)} />
       ) : null}
     </DashboardLayout>
   );
