@@ -1,7 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { ClipboardList, Package, Store, Wallet } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
@@ -101,7 +101,11 @@ function SellerOverview() {
   const { data: stores } = useQuery(myStoresQuery(user?.id));
 
   const store = stores?.[0] ?? null;
-  const availability = store ? storeAvailability(store) : null;
+  const [availability, setAvailability] = useState<ReturnType<typeof storeAvailability> | null>(null);
+
+  useEffect(() => {
+    setAvailability(store ? storeAvailability(store) : null);
+  }, [store]);
 
   const storeForcedOffline = Boolean(store?.wallet_hold) && !store?.is_online;
 
