@@ -17,7 +17,17 @@ type SellerOrderDetails = {
   customer_phone: string | null;
   customer_address: string | null;
   store_name: string | null;
-  store_address: string | null;
+  store_address:
+    | string
+    | {
+        line1?: string | null;
+        line2?: string | null;
+        barangay?: string | null;
+        city?: string | null;
+        province?: string | null;
+        postal_code?: string | null;
+      }
+    | null;
   store_phone: string | null;
   subtotal: number;
   delivery_fee: number;
@@ -192,7 +202,20 @@ export function IncomingOrderPopup({ orderId, onClose }: { orderId: string; onCl
                   <p className="text-sm font-semibold">{d.store_name ?? "Your store"}</p>
 
                   {d.store_address ? (
-                    <p className="mt-1 text-xs text-muted-foreground">{d.store_address}</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      {typeof d.store_address === "string"
+                        ? d.store_address
+                        : [
+                            d.store_address.line1,
+                            d.store_address.line2,
+                            d.store_address.barangay,
+                            d.store_address.city,
+                            d.store_address.province,
+                            d.store_address.postal_code,
+                          ]
+                            .filter(Boolean)
+                            .join(", ")}
+                    </p>
                   ) : null}
                 </div>
               </div>
