@@ -243,7 +243,6 @@ function StoreOrdersPage() {
             event: "INSERT",
             schema: "public",
             table: "orders",
-            filter: `store_id=eq.${storeId}`,
           },
           (payload) => {
             const order = payload.new as {
@@ -255,7 +254,10 @@ function StoreOrdersPage() {
             console.log("[Seller realtime] New order:", order);
 
             if (order.id && order.status === "pending") {
+              console.log("[Seller realtime] OPENING INCOMING ORDER POPUP:", order.id);
               setIncomingOrderId(order.id);
+            } else {
+              console.warn("[Seller realtime] INSERT ignored:", order);
             }
 
             void queryClient.invalidateQueries({
