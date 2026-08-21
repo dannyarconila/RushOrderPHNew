@@ -36,13 +36,7 @@ type SellerOrderDetails = {
   }>;
 };
 
-export function IncomingOrderPopup({
-  orderId,
-  onClose,
-}: {
-  orderId: string;
-  onClose: () => void;
-}) {
+export function IncomingOrderPopup({ orderId, onClose }: { orderId: string; onClose: () => void }) {
   const queryClient = useQueryClient();
 
   const details = useQuery({
@@ -58,8 +52,7 @@ export function IncomingOrderPopup({
   });
 
   const advance = useMutation({
-    mutationFn: (status: "confirmed" | "cancelled") =>
-      transitionOrderStatus(orderId, status),
+    mutationFn: (status: "confirmed" | "cancelled") => transitionOrderStatus(orderId, status),
 
     onSuccess: async (_, status) => {
       await Promise.all([
@@ -155,10 +148,7 @@ export function IncomingOrderPopup({
 
                 <div className="space-y-2">
                   {d.items.map((item) => (
-                    <div
-                      key={item.id}
-                      className="flex items-start justify-between gap-3 text-sm"
-                    >
+                    <div key={item.id} className="flex items-start justify-between gap-3 text-sm">
                       <div className="min-w-0">
                         <p className="font-semibold">{item.product_name}</p>
 
@@ -167,9 +157,7 @@ export function IncomingOrderPopup({
                         </p>
                       </div>
 
-                      <span className="shrink-0 font-bold">
-                        {peso(Number(item.line_total))}
-                      </span>
+                      <span className="shrink-0 font-bold">{peso(Number(item.line_total))}</span>
                     </div>
                   ))}
                 </div>
@@ -201,14 +189,10 @@ export function IncomingOrderPopup({
                     <h3 className="font-bold">Store</h3>
                   </div>
 
-                  <p className="text-sm font-semibold">
-                    {d.store_name ?? "Your store"}
-                  </p>
+                  <p className="text-sm font-semibold">{d.store_name ?? "Your store"}</p>
 
                   {d.store_address ? (
-                    <p className="mt-1 text-xs text-muted-foreground">
-                      {d.store_address}
-                    </p>
+                    <p className="mt-1 text-xs text-muted-foreground">{d.store_address}</p>
                   ) : null}
                 </div>
               </div>
@@ -219,14 +203,11 @@ export function IncomingOrderPopup({
                   <h3 className="font-bold">Delivery address</h3>
                 </div>
 
-                <p className="text-sm">
-                  {d.customer_address ?? "No delivery address available"}
-                </p>
+                <p className="text-sm">{d.customer_address ?? "No delivery address available"}</p>
 
                 {d.distance_km != null ? (
                   <p className="mt-2 text-xs text-muted-foreground">
-                    Approx. delivery distance:{" "}
-                    {Number(d.distance_km).toFixed(2)} km
+                    Approx. delivery distance: {Number(d.distance_km).toFixed(2)} km
                   </p>
                 ) : null}
               </div>
