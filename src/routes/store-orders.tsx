@@ -106,7 +106,7 @@ function SellerOrderRow({
         </Link>
 
         <p className="text-xs text-muted-foreground">
-          {new Date(order.created_at).toLocaleString("en-PH")} · {ORDER_LABELS[order.status]} ·{" "}
+          {new Date(order.created_at).toISOString().slice(0, 16).replace("T", " ")} · {ORDER_LABELS[order.status]} ·{" "}
           {order.payment_method.toUpperCase()}
         </p>
 
