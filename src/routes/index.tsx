@@ -87,6 +87,14 @@ type LandingStore = {
   created_at: string;
 };
 
+type LandingProduct = {
+  id: string;
+  store_id: string;
+  name: string;
+  price: number;
+  images: unknown;
+};
+
 function LandingProductShowcase() {
   const storesQuery = useQuery({
     queryKey: ["landing-latest-partner-stores"],
@@ -113,8 +121,12 @@ function LandingProductShowcase() {
   return (
     <div className="relative">
       <div
-        className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3 pr-2"
-        style={{ scrollbarWidth: "none" }}
+        className="flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-3 pr-2 touch-pan-x"
+        style={{
+          scrollbarWidth: "none",
+          WebkitOverflowScrolling: "touch",
+          touchAction: "pan-x",
+        }}
       >
         {stores.map((store) => (
           <article
@@ -195,6 +207,131 @@ function LandingProductShowcase() {
   );
 }
 
+
+function LandingProductDiscovery() {
+  const productsQuery = useQuery({
+    queryKey: ["landing-product-discovery"],
+    queryFn: async (): Promise<Array<LandingProduct & { store_name: string }>> => {
+      const { data: stores, error: storesError } = await supabase
+        .from("stores")
+        .select("id,name")
+        .eq("is_active", true)
+        .eq("is_visible", true)
+        .eq("is_approved", true)
+        .is("deleted_at", null);
+
+      if (storesError) throw storesError;
+
+      const storeIds = (stores ?? []).map((store) => store.id);
+
+      if (storeIds.length === 0) return [];
+
+      const storeMap = new Map(
+        (stores ?? []).map((store) => [store.id, store.name]),
+      );
+
+      const { data, error } = await supabase
+        .from("products")
+        .select("id,store_id,name,price,images,created_at")
+        .in("store_id", storeIds)
+        .eq("is_published", true)
+        .eq("is_available", true)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .limit(30);
+
+      if (error) throw error;
+
+      return (data ?? [])
+        .map((product) => ({
+          id: product.id,
+          store_id: product.store_id,
+          name: product.name,
+          price: Number(product.price),
+          images: product.images,
+          store_name: storeMap.get(product.store_id) ?? "RushOrder PH Partner",
+        }))
+        .filter((product) => Boolean(product.store_name));
+    },
+    staleTime: 60_000,
+  });
+
+  const products = productsQuery.data ?? [];
+
+  return (
+    <section className="border-y border-border bg-secondary/40">
+      <div className="mx-auto w-full max-w-7xl px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
+        <div className="mb-7 flex items-end justify-between gap-4">
+          <div>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
+              Shop local
+            </p>
+            <h2 className="mt-2 text-2xl font-extrabold sm:text-3xl">
+              Fresh from our partners
+            </h2>
+          </div>
+
+          {products.length > 3 ? (
+            <span className="shrink-0 text-xs font-semibold text-muted-foreground">
+              Swipe for more →
+            </span>
+          ) : null}
+        </div>
+
+        {products.length > 0 ? (
+          <div
+            className="flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-3 touch-pan-x"
+            style={{
+              scrollbarWidth: "none",
+              WebkitOverflowScrolling: "touch",
+              touchAction: "pan-x",
+            }}
+          >
+            {products.map((product) => (
+              <Link
+                key={product.id}
+                to="/store/$storeId"
+                params={{ storeId: product.store_id }}
+                className="w-[calc((100vw-4rem)/1.35)] min-w-[15rem] max-w-[20rem] shrink-0 snap-start overflow-hidden rounded-3xl border border-border bg-card shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-1 sm:w-[18rem] lg:w-[20rem]"
+              >
+                <div className="h-52 bg-secondary sm:h-56">
+                  <StorageImage
+                    bucket={BUCKETS.productImages}
+                    path={firstImage(product.images)}
+                    alt={product.name}
+                    className="size-full object-cover"
+                  />
+                </div>
+
+                <div className="p-4">
+                  <p className="truncate text-xs font-semibold text-primary">
+                    {product.store_name}
+                  </p>
+
+                  <h3 className="mt-1 truncate text-base font-extrabold">
+                    {product.name}
+                  </h3>
+
+                  <p className="mt-2 text-lg font-extrabold">
+                    ₱{product.price.toLocaleString("en-PH", {
+                      minimumFractionDigits: 2,
+                      maximumFractionDigits: 2,
+                    })}
+                  </p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        ) : (
+          <div className="rounded-3xl border border-border bg-card p-10 text-center text-sm text-muted-foreground">
+            New products from RushOrder PH partners will appear here.
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
 function LandingPage() {
   return (
     <PublicLayout>
@@ -234,25 +371,7 @@ function LandingPage() {
         </div>
       </section>
 
-      <section className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8 lg:py-24">
-        <h2 className="max-w-2xl text-3xl font-extrabold sm:text-4xl">
-          Built for how Filipinos actually buy and sell
-        </h2>
-        <div className="mt-10 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-          {FEATURES.map((feature) => (
-            <article
-              key={feature.title}
-              className="rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)] transition-shadow hover:shadow-[var(--shadow-lifted)]"
-            >
-              <span className="flex size-11 items-center justify-center rounded-xl bg-primary-soft text-primary">
-                <feature.icon className="size-5" />
-              </span>
-              <h3 className="mt-5 font-display text-lg font-bold">{feature.title}</h3>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{feature.body}</p>
-            </article>
-          ))}
-        </div>
-      </section>
+      <LandingProductDiscovery />
 
       <section className="border-y border-border bg-secondary/50">
         <div className="mx-auto w-full max-w-7xl px-4 py-16 sm:px-6 lg:px-8">
