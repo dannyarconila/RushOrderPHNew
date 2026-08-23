@@ -1,4 +1,6 @@
+import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useEffect, useMemo, useState } from "react";
 import {
   ArrowRight,
   Bike,
@@ -12,8 +14,8 @@ import {
   Wallet,
 } from "lucide-react";
 
-import heroRider from "@/assets/hero-rider.jpg";
 import { PublicLayout } from "@/components/site/public-layout";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { InstallAppButton } from "@/components/site/install-app-button";
 
@@ -86,6 +88,221 @@ const WHY = [
   },
 ];
 
+type LandingStore = {
+  id: string;
+  name: string;
+  logo_url: string | null;
+  banner_url: string | null;
+  created_at: string;
+};
+
+type LandingProduct = {
+  id: string;
+  store_id: string;
+  name: string;
+  description: string | null;
+  price: number;
+  images: unknown;
+};
+
+type HeroSlide = {
+  product: LandingProduct;
+  store: LandingStore;
+  image: string | null;
+};
+
+function firstProductImage(images: unknown): string | null {
+  if (Array.isArray(images) && typeof images[0] === "string") {
+    return images[0];
+  }
+
+  return null;
+}
+
+function LandingProductShowcase() {
+  const [activeIndex, setActiveIndex] = useState(0);
+  const [mounted, setMounted] = useState(false);
+
+  const storesQuery = useQuery({
+    queryKey: ["landing-latest-partner-stores"],
+    queryFn: async (): Promise<LandingStore[]> => {
+      const { data, error } = await supabase
+        .from("stores")
+        .select("id,name,logo_url,banner_url,created_at")
+        .eq("is_active", true)
+        .eq("is_visible", true)
+        .eq("is_approved", true)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .limit(6);
+
+      if (error) throw error;
+
+      return (data ?? []) as LandingStore[];
+    },
+    staleTime: 60_000,
+  });
+
+  const storeIds = (storesQuery.data ?? []).map((store) => store.id);
+
+  const productsQuery = useQuery({
+    queryKey: ["landing-latest-partner-products", storeIds.join(",")],
+    enabled: storeIds.length > 0,
+    queryFn: async (): Promise<LandingProduct[]> => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("id,store_id,name,description,price,images")
+        .in("store_id", storeIds)
+        .eq("is_published", true)
+        .eq("is_available", true)
+        .is("deleted_at", null)
+        .order("created_at", { ascending: false })
+        .limit(60);
+
+      if (error) throw error;
+
+      return (data ?? []) as LandingProduct[];
+    },
+    staleTime: 60_000,
+  });
+
+  const slides = useMemo<HeroSlide[]>(() => {
+    const stores = storesQuery.data ?? [];
+    const products = productsQuery.data ?? [];
+
+    const storeMap = new Map(stores.map((store) => [store.id, store]));
+
+    return products
+      .map((product) => {
+        const store = storeMap.get(product.store_id);
+        if (!store) return null;
+
+        return {
+          product,
+          store,
+          image:
+            firstProductImage(product.images) ??
+            store.banner_url ??
+            store.logo_url ??
+            null,
+        };
+      })
+      .filter((slide): slide is HeroSlide => Boolean(slide));
+  }, [productsQuery.data, storesQuery.data]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted || slides.length <= 1) return;
+
+    const timer = window.setInterval(() => {
+      setActiveIndex((current) => (current + 1) % slides.length);
+    }, 4500);
+
+    return () => window.clearInterval(timer);
+  }, [mounted, slides.length]);
+
+  useEffect(() => {
+    if (activeIndex >= slides.length && slides.length > 0) {
+      setActiveIndex(0);
+    }
+  }, [activeIndex, slides.length]);
+
+  const activeSlide = slides[activeIndex] ?? null;
+
+  return (
+    <div className="relative overflow-hidden rounded-[2rem] border border-ink-foreground/10 bg-card/10 shadow-[var(--shadow-lifted)]">
+      {activeSlide ? (
+        <div className="relative min-h-[28rem]">
+          {activeSlide.image ? (
+            <img
+              src={activeSlide.image}
+              alt={`${activeSlide.product.name} from ${activeSlide.store.name}`}
+              className="absolute inset-0 h-full w-full object-cover"
+            />
+          ) : (
+            <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-card/20 to-ink" />
+          )}
+
+          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/5" />
+
+          <div className="absolute inset-x-0 bottom-0 p-6 sm:p-8">
+            <div className="max-w-lg">
+              <span className="inline-flex rounded-full bg-accent px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-accent-foreground">
+                New official partner
+              </span>
+
+              <p className="mt-4 text-sm font-semibold text-white/75">
+                {activeSlide.store.name} is now an official partner of RushOrder PH
+              </p>
+
+              <h3 className="mt-2 text-3xl font-extrabold leading-tight text-white sm:text-4xl">
+                {activeSlide.product.name}
+              </h3>
+
+              <p className="mt-2 text-lg font-bold text-white">
+                ₱{Number(activeSlide.product.price).toFixed(2)}
+              </p>
+
+              {activeSlide.product.description ? (
+                <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-white/70">
+                  {activeSlide.product.description}
+                </p>
+              ) : null}
+
+              <Button asChild className="mt-5" size="lg">
+                <Link
+                  to="/store/$storeId"
+                  params={{ storeId: activeSlide.store.id }}
+                >
+                  Visit store <ArrowRight className="size-4" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+
+          {slides.length > 1 ? (
+            <div className="absolute right-5 top-5 flex gap-1.5 rounded-full bg-black/30 px-2.5 py-2 backdrop-blur-sm">
+              {slides.slice(0, Math.min(slides.length, 6)).map((slide, index) => (
+                <button
+                  key={slide.product.id}
+                  type="button"
+                  aria-label={`Show ${slide.product.name}`}
+                  onClick={() => setActiveIndex(index)}
+                  className={`h-2 rounded-full transition-all ${
+                    activeIndex === index ? "w-6 bg-white" : "w-2 bg-white/50"
+                  }`}
+                />
+              ))}
+            </div>
+          ) : null}
+        </div>
+      ) : (
+        <div className="flex min-h-[28rem] items-center justify-center bg-gradient-to-br from-card/10 to-ink/40 p-8 text-center">
+          <div>
+            <span className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-accent/20 text-accent">
+              <Store className="size-7" />
+            </span>
+            <p className="mt-5 text-lg font-bold text-white">
+              Discover local stores coming to RushOrder PH
+            </p>
+            <p className="mt-2 text-sm text-white/60">
+              New products from our official partners will appear here.
+            </p>
+            <Button asChild className="mt-5">
+              <Link to="/marketplace">
+                Explore marketplace <ArrowRight className="size-4" />
+              </Link>
+            </Button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function LandingPage() {
   return (
     <PublicLayout>
@@ -99,20 +316,12 @@ function LandingPage() {
               RushOrder PH
             </h1>
 
-            <p className="mt-3 text-lg font-semibold text-ink-foreground/80">
-              Marketplace & Delivery for the Philippines
-            </p>
-
-            <h2 className="mt-6 text-4xl font-extrabold leading-[1.05] sm:text-5xl lg:text-6xl">
-              Everything your <span className="text-ember">neighbourhood sells</span>, delivered in
-              a rush.
+            <h2 className="mt-6 max-w-xl text-4xl font-extrabold leading-[1.05] sm:text-5xl lg:text-6xl">
+              Discover the latest <span className="text-ember">RushOrder PH partners</span>.
             </h2>
 
-            <p className="mt-5 max-w-xl text-base leading-relaxed text-ink-foreground/75 sm:text-lg">
-              RushOrder PH is a Philippine online marketplace and delivery platform that connects
-              customers with local stores and delivery riders. Customers can browse products, place
-              orders, and have their purchases delivered to their location, while sellers manage
-              their stores and riders accept delivery bookings.
+            <p className="mt-5 max-w-lg text-base leading-relaxed text-ink-foreground/75 sm:text-lg">
+              Shop products from local stores and official RushOrder PH partners near you.
             </p>
             <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <Button asChild size="lg">
@@ -144,24 +353,7 @@ function LandingPage() {
             </div>
           </div>
 
-          <div className="relative">
-            <img
-              src={heroRider}
-              alt="RushOrder PH rider delivering an order along a sunlit Manila street"
-              width={1600}
-              height={1200}
-              className="w-full rounded-3xl object-cover shadow-[var(--shadow-lifted)]"
-            />
-            <div className="absolute -bottom-5 left-5 flex items-center gap-3 rounded-2xl bg-card px-4 py-3 text-foreground shadow-[var(--shadow-lifted)]">
-              <span className="flex size-10 items-center justify-center rounded-xl bg-success/15 text-success">
-                <PackageCheck className="size-5" />
-              </span>
-              <div>
-                <p className="text-sm font-bold">Order picked up</p>
-                <p className="text-xs text-muted-foreground">Rider is 6 minutes away</p>
-              </div>
-            </div>
-          </div>
+          <LandingProductShowcase />
         </div>
       </section>
 
