@@ -121,11 +121,11 @@ function LandingProductShowcase() {
   return (
     <div className="relative min-w-0 w-full max-w-full overflow-hidden">
       <div
-        className="flex min-w-0 w-full snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-3 pr-2 touch-pan-x"
+        className="flex min-w-0 w-full snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-3 pr-2 touch-pan-x touch-pan-y"
         style={{
           scrollbarWidth: "none",
           WebkitOverflowScrolling: "touch",
-          touchAction: "pan-x",
+          touchAction: "pan-x pan-y",
         }}
       >
         {stores.map((store) => (
@@ -133,7 +133,7 @@ function LandingProductShowcase() {
             key={store.id}
             className="w-[calc(100%-1rem)] max-w-[28rem] shrink-0 snap-center overflow-hidden rounded-[2rem] border border-white/10 bg-black/20 shadow-[var(--shadow-lifted)] sm:w-full"
           >
-            <div className="relative h-[20rem] bg-black/20 sm:h-[24rem]">
+            <div className="relative h-[16rem] bg-black/20 sm:h-[20rem]">
               {store.banner_url ? (
                 <StorageImage
                   bucket={BUCKETS.storeBanners}
@@ -280,11 +280,11 @@ function LandingProductDiscovery() {
 
         {products.length > 0 ? (
           <div
-            className="flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-3 touch-pan-x"
+            className="flex snap-x snap-mandatory gap-4 overflow-x-auto overscroll-x-contain pb-3 touch-pan-x touch-pan-y"
             style={{
               scrollbarWidth: "none",
               WebkitOverflowScrolling: "touch",
-              touchAction: "pan-x",
+              touchAction: "pan-x pan-y",
             }}
           >
             {products.map((product) => (
@@ -294,7 +294,7 @@ function LandingProductDiscovery() {
                 params={{ storeId: product.store_id }}
                 className="w-[calc(100%-1rem)] min-w-[15rem] max-w-[20rem] shrink-0 snap-start overflow-hidden rounded-3xl border border-border bg-card shadow-[var(--shadow-soft)] transition-transform hover:-translate-y-1 sm:w-[18rem] lg:w-[20rem]"
               >
-                <div className="h-52 bg-secondary sm:h-56">
+                <div className="h-40 bg-secondary sm:h-48">
                   <StorageImage
                     bucket={BUCKETS.productImages}
                     path={firstImage(product.images)}
