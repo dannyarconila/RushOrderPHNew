@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { IncomingOrderPopup } from "@/components/seller/incoming-order-popup";
 import { useAuth } from "@/contexts/use-auth";
@@ -8,7 +8,10 @@ import { myStoresQuery } from "@/lib/stores";
 
 export function SellerIncomingOrderListener() {
   const { user } = useAuth();
-  const [incomingOrderId, setIncomingOrderId] = useState<string | null>(null);
+  const [activeOrderId, setActiveOrderId] = useState<string | null>(null);
+  const [queuedOrderIds, setQueuedOrderIds] = useState<string[]>([]);
+  const queuedRef = useRef<string[]>([]);
+  const activeRef = useRef<string | null>(null);
 
   const { data: stores } = useQuery({
     ...myStoresQuery(user?.id),
@@ -17,6 +20,58 @@ export function SellerIncomingOrderListener() {
 
   const storeIds = (stores ?? []).map((store) => store.id);
   const storeKey = storeIds.join(",");
+
+  const syncQueue = useCallback((ids: string[]) => {
+    queuedRef.current = ids;
+    setQueuedOrderIds(ids);
+  }, []);
+
+  const enqueueOrder = useCallback(
+    (orderId: string) => {
+      if (!orderId || orderId === activeRef.current || queuedRef.current.includes(orderId)) {
+        return;
+      }
+
+      const nextQueue = [...queuedRef.current, orderId];
+      syncQueue(nextQueue);
+
+      if (!activeRef.current) {
+        const [nextOrder, ...remaining] = nextQueue;
+        activeRef.current = nextOrder;
+        setActiveOrderId(nextOrder);
+        syncQueue(remaining);
+
+        console.log(
+          "[Seller popup] OPENING QUEUED ORDER:",
+          nextOrder,
+          "remaining:",
+          remaining.length,
+        );
+      } else {
+        console.log("[Seller popup] ORDER QUEUED:", orderId, "queue size:", nextQueue.length);
+      }
+    },
+    [syncQueue],
+  );
+
+  const advanceQueue = useCallback(() => {
+    const [nextOrder, ...remaining] = queuedRef.current;
+
+    activeRef.current = nextOrder ?? null;
+    setActiveOrderId(nextOrder ?? null);
+    syncQueue(remaining);
+
+    if (nextOrder) {
+      console.log(
+        "[Seller popup] OPENING NEXT QUEUED ORDER:",
+        nextOrder,
+        "remaining:",
+        remaining.length,
+      );
+    } else {
+      console.log("[Seller popup] QUEUE EMPTY");
+    }
+  }, [syncQueue]);
 
   useEffect(() => {
     if (!user?.id || storeIds.length === 0) return;
@@ -39,10 +94,7 @@ export function SellerIncomingOrderListener() {
 
           if (notification.kind !== "order") return;
 
-          console.log(
-            "[Seller popup] Order notification received:",
-            notification.title,
-          );
+          console.log("[Seller popup] Order notification received:", notification.title);
 
           const { data, error } = await supabase
             .from("orders")
@@ -51,23 +103,20 @@ export function SellerIncomingOrderListener() {
             .eq("status", "pending")
             .is("deleted_at", null)
             .order("created_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
+            .limit(20);
 
           if (error) {
-            console.error(
-              "[Seller popup] Could not find pending order:",
-              error,
-            );
+            console.error("[Seller popup] Could not find pending orders:", error);
             return;
           }
 
-          if (data?.id) {
-            console.log(
-              "[Seller popup] OPENING INCOMING ORDER POPUP:",
-              data.id,
-            );
-            setIncomingOrderId(data.id);
+          const pendingIds = (data ?? [])
+            .map((order) => order.id)
+            .filter(Boolean)
+            .reverse();
+
+          for (const orderId of pendingIds) {
+            enqueueOrder(orderId);
           }
         },
       )
@@ -78,14 +127,20 @@ export function SellerIncomingOrderListener() {
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [user?.id, storeKey]);
+  }, [user?.id, storeKey, enqueueOrder]);
 
-  if (!incomingOrderId) return null;
+  if (!activeOrderId) return null;
 
   return (
-    <IncomingOrderPopup
-      orderId={incomingOrderId}
-      onClose={() => setIncomingOrderId(null)}
-    />
+    <>
+      <IncomingOrderPopup orderId={activeOrderId} onClose={advanceQueue} />
+
+      {queuedOrderIds.length > 0 ? (
+        <div className="fixed bottom-5 left-1/2 z-[120] -translate-x-1/2 rounded-full border border-border bg-card px-4 py-2 text-xs font-semibold shadow-lg">
+          {queuedOrderIds.length} more incoming order
+          {queuedOrderIds.length === 1 ? "" : "s"} waiting
+        </div>
+      ) : null}
+    </>
   );
 }

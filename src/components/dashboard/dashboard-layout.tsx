@@ -210,13 +210,9 @@ export function DashboardLayout({
           </div>
         ) : null}
 
-        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 lg:px-8">
-          {children}
-        </main>
+        <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 lg:px-8">{children}</main>
 
-        {workspace === "Partner workspace" ? (
-          <SellerIncomingOrderListener />
-        ) : null}
+        {workspace === "Partner workspace" ? <SellerIncomingOrderListener /> : null}
       </div>
     </div>
   );

@@ -6,7 +6,6 @@ import { toast } from "sonner";
 
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { EmptyState, PageHeader, Panel } from "@/components/dashboard/primitives";
-import { IncomingOrderPopup } from "@/components/seller/incoming-order-popup";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -228,72 +227,6 @@ function StoreOrdersPage() {
   const stores = useQuery(myStoresQuery(user?.id));
   const storeIds = (stores.data ?? []).map((s) => s.id);
   const orders = useQuery(storeOrdersQuery(storeIds));
-  const [incomingOrderId, setIncomingOrderId] = useState<string | null>(null);
-
-  // Live incoming orders for the seller's stores.
-  useEffect(() => {
-    if (storeIds.length === 0) return;
-
-    const channels = storeIds.map((storeId) => {
-      const channel = supabase
-        .channel(`seller-orders:${storeId}`)
-        .on(
-          "postgres_changes",
-          {
-            event: "INSERT",
-            schema: "public",
-            table: "orders",
-          },
-          (payload) => {
-            const order = payload.new as {
-              id?: string;
-              store_id?: string;
-              status?: string;
-            };
-
-            console.log("[Seller realtime] New order:", order);
-
-            if (order.id && order.status === "pending") {
-              console.log("[Seller realtime] OPENING INCOMING ORDER POPUP:", order.id);
-              setIncomingOrderId(order.id);
-            } else {
-              console.warn("[Seller realtime] INSERT ignored:", order);
-            }
-
-            void queryClient.invalidateQueries({
-              queryKey: ["store-orders"],
-            });
-          },
-        )
-        .on(
-          "postgres_changes",
-          {
-            event: "UPDATE",
-            schema: "public",
-            table: "orders",
-            filter: `store_id=eq.${storeId}`,
-          },
-          () => {
-            void queryClient.invalidateQueries({
-              queryKey: ["store-orders"],
-            });
-          },
-        )
-        .subscribe((status) => {
-          console.log(`[Seller realtime] ${storeId}: ${status}`);
-        });
-
-      return channel;
-    });
-
-    return () => {
-      for (const channel of channels) {
-        void supabase.removeChannel(channel);
-      }
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [storeIds.join(","), queryClient]);
-
   const advance = useMutation({
     mutationFn: ({ id, status }: { id: string; status: OrderStatus }) =>
       updateOrderStatus(id, status),
@@ -345,10 +278,6 @@ function StoreOrdersPage() {
           </ul>
         </Panel>
       )}
-
-      {incomingOrderId ? (
-        <IncomingOrderPopup orderId={incomingOrderId} onClose={() => setIncomingOrderId(null)} />
-      ) : null}
     </DashboardLayout>
   );
 }
