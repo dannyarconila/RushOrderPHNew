@@ -152,9 +152,7 @@ function LandingProductShowcase() {
                 </div>
               ) : (
                 <div className="flex size-full items-center justify-center bg-gradient-to-br from-primary/30 via-card/20 to-ink p-8 text-center">
-                  <span className="text-2xl font-extrabold text-white">
-                    {store.name}
-                  </span>
+                  <span className="text-2xl font-extrabold text-white">{store.name}</span>
                 </div>
               )}
 
@@ -178,10 +176,7 @@ function LandingProductShowcase() {
 
               <div className="mt-5">
                 <Button asChild>
-                  <Link
-                    to="/store/$storeId"
-                    params={{ storeId: store.id }}
-                  >
+                  <Link to="/store/$storeId" params={{ storeId: store.id }}>
                     Visit store
                     <ArrowRight className="ml-2 size-4" />
                   </Link>
@@ -199,14 +194,11 @@ function LandingProductShowcase() {
       </div>
 
       {stores.length > 1 ? (
-        <p className="mt-2 text-center text-xs text-white/50">
-          Swipe to see more partners →
-        </p>
+        <p className="mt-2 text-center text-xs text-white/50">Swipe to see more partners →</p>
       ) : null}
     </div>
   );
 }
-
 
 function LandingProductDiscovery() {
   const productsQuery = useQuery({
@@ -226,9 +218,7 @@ function LandingProductDiscovery() {
 
       if (storeIds.length === 0) return [];
 
-      const storeMap = new Map(
-        (stores ?? []).map((store) => [store.id, store.name]),
-      );
+      const storeMap = new Map((stores ?? []).map((store) => [store.id, store.name]));
 
       const { data, error } = await supabase
         .from("products")
@@ -263,12 +253,8 @@ function LandingProductDiscovery() {
       <div className="mx-auto w-full max-w-7xl px-4 py-14 sm:px-6 lg:px-8 lg:py-20">
         <div className="mb-7 flex items-end justify-between gap-4">
           <div>
-            <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
-              Shop local
-            </p>
-            <h2 className="mt-2 text-2xl font-extrabold sm:text-3xl">
-              Fresh from our partners
-            </h2>
+            <p className="text-xs font-bold uppercase tracking-[0.18em] text-primary">Shop local</p>
+            <h2 className="mt-2 text-2xl font-extrabold sm:text-3xl">Fresh from our partners</h2>
           </div>
 
           {products.length > 3 ? (
@@ -308,12 +294,11 @@ function LandingProductDiscovery() {
                     {product.store_name}
                   </p>
 
-                  <h3 className="mt-1 truncate text-base font-extrabold">
-                    {product.name}
-                  </h3>
+                  <h3 className="mt-1 truncate text-base font-extrabold">{product.name}</h3>
 
                   <p className="mt-2 text-lg font-extrabold">
-                    ₱{product.price.toLocaleString("en-PH", {
+                    ₱
+                    {product.price.toLocaleString("en-PH", {
                       minimumFractionDigits: 2,
                       maximumFractionDigits: 2,
                     })}
@@ -344,7 +329,7 @@ function LandingPage() {
             <h1 className="mt-6 text-4xl font-extrabold leading-[1.05] sm:text-5xl lg:text-6xl">
               RushOrder PH
             </h1>
-<div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <Button asChild size="lg">
                 <Link to="/marketplace">
                   Start shopping <ArrowRight className="size-4" />
@@ -362,9 +347,7 @@ function LandingPage() {
 
               <InstallAppButton />
             </div>
-            <div className="mt-10 flex flex-wrap gap-6 text-sm text-ink-foreground/70">
-
-            </div>
+            <div className="mt-10 flex flex-wrap gap-6 text-sm text-ink-foreground/70"></div>
           </div>
 
           <LandingProductShowcase />
