@@ -77,7 +77,7 @@ function StorePage() {
           <Skeleton className="mt-6 h-48 rounded-2xl" />
         ) : store.data ? (
           <header className="mt-6 overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-soft)]">
-            <div className="h-40 bg-secondary">
+            <div className="h-56 bg-secondary sm:h-64">
               <StorageImage
                 bucket={BUCKETS.storeBanners}
                 path={store.data.banner_url}
@@ -148,7 +148,7 @@ function StorePage() {
                     key={p.id}
                     className="flex flex-col overflow-hidden rounded-2xl border border-border bg-card shadow-[var(--shadow-soft)]"
                   >
-                    <div className="h-28 bg-secondary">
+                    <div className="h-52 bg-secondary sm:h-60">
                       <StorageImage
                         bucket={BUCKETS.productImages}
                         path={firstImage(p.images)}
