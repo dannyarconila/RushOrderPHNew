@@ -15,9 +15,12 @@ import {
 } from "lucide-react";
 
 import { PublicLayout } from "@/components/site/public-layout";
+import { StorageImage } from "@/components/media/storage-image";
 import { supabase } from "@/integrations/supabase/client";
+import { BUCKETS } from "@/lib/storage";
 import { Button } from "@/components/ui/button";
 import { InstallAppButton } from "@/components/site/install-app-button";
+import { firstImage } from "@/lib/marketplace";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -111,14 +114,6 @@ type HeroSlide = {
   image: string | null;
 };
 
-function firstProductImage(images: unknown): string | null {
-  if (Array.isArray(images) && typeof images[0] === "string") {
-    return images[0];
-  }
-
-  return null;
-}
-
 function LandingProductShowcase() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [mounted, setMounted] = useState(false);
@@ -181,7 +176,7 @@ function LandingProductShowcase() {
           product,
           store,
           image:
-            firstProductImage(product.images) ??
+            firstImage(product.images) ??
             store.banner_url ??
             store.logo_url ??
             null,
@@ -217,8 +212,9 @@ function LandingProductShowcase() {
       {activeSlide ? (
         <div className="relative min-h-[28rem]">
           {activeSlide.image ? (
-            <img
-              src={activeSlide.image}
+            <StorageImage
+              bucket={BUCKETS.productImages}
+              path={activeSlide.image}
               alt={`${activeSlide.product.name} from ${activeSlide.store.name}`}
               className="absolute inset-0 h-full w-full object-cover"
             />
@@ -316,7 +312,7 @@ function LandingPage() {
               RushOrder PH
             </h1>
 
-            <h2 className="mt-6 max-w-xl text-4xl font-extrabold leading-[1.05] sm:text-5xl lg:text-6xl">
+            <h2 className="mt-5 max-w-lg text-2xl font-extrabold leading-tight sm:text-3xl lg:text-4xl">
               Discover the latest <span className="text-ember">RushOrder PH partners</span>.
             </h2>
 
