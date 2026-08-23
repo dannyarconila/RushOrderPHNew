@@ -31,8 +31,9 @@ const PILLARS = [
   },
   {
     icon: HeartHandshake,
-    title: "Fair to riders",
-    body: "Riders see the fee breakdown for every delivery, and payouts land in a wallet they control.",
+
+    title: "Clear delivery details",
+    body: "Riders receive the delivery details and applicable fees for each order through their RushOrder PH dashboard.",
   },
   {
     icon: Rocket,
