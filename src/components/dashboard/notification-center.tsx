@@ -121,7 +121,7 @@ export function NotificationCenter() {
       </Button>
 
       {open ? (
-        <div className="absolute right-0 top-11 z-50 w-[min(24rem,calc(100vw-1rem))] max-w-[calc(100vw-1rem)] overflow-hidden rounded-2xl border border-border bg-card shadow-xl">
+        <div className="absolute left-1/2 top-11 z-50 w-[calc(100vw-2rem)] max-w-96 -translate-x-1/2 overflow-hidden rounded-2xl border border-border bg-card shadow-xl sm:left-auto sm:right-0 sm:w-[min(24rem,calc(100vw-1rem))] sm:max-w-[calc(100vw-1rem)] sm:translate-x-0">
           <div className="flex items-start justify-between gap-3 border-b border-border px-4 py-3">
             <div>
               <p className="text-sm font-bold">Notifications</p>
@@ -166,9 +166,9 @@ export function NotificationCenter() {
                       )}
                     />
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-semibold">{item.title}</p>
+                      <p className="break-words text-sm font-semibold">{item.title}</p>
                       {item.body ? (
-                        <p className="mt-1 text-xs leading-5 text-muted-foreground">{item.body}</p>
+                        <p className="mt-1 break-words text-xs leading-5 text-muted-foreground">{item.body}</p>
                       ) : null}
                       <p className="mt-1 text-[11px] text-muted-foreground">
                         {formatPhilippineDateTime(item.created_at)}
