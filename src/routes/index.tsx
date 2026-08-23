@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   Bike,
@@ -87,25 +87,7 @@ type LandingStore = {
   created_at: string;
 };
 
-type LandingProduct = {
-  id: string;
-  store_id: string;
-  name: string;
-  description: string | null;
-  price: number;
-  images: unknown;
-};
-
-type HeroSlide = {
-  product: LandingProduct;
-  store: LandingStore;
-  image: string | null;
-};
-
 function LandingProductShowcase() {
-  const [activeIndex, setActiveIndex] = useState(0);
-  const [mounted, setMounted] = useState(false);
-
   const storesQuery = useQuery({
     queryKey: ["landing-latest-partner-stores"],
     queryFn: async (): Promise<LandingStore[]> => {
@@ -117,7 +99,7 @@ function LandingProductShowcase() {
         .eq("is_approved", true)
         .is("deleted_at", null)
         .order("created_at", { ascending: false })
-        .limit(6);
+        .limit(8);
 
       if (error) throw error;
 
@@ -126,163 +108,89 @@ function LandingProductShowcase() {
     staleTime: 60_000,
   });
 
-  const storeIds = (storesQuery.data ?? []).map((store) => store.id);
-
-  const productsQuery = useQuery({
-    queryKey: ["landing-latest-partner-products", storeIds.join(",")],
-    enabled: storeIds.length > 0,
-    queryFn: async (): Promise<LandingProduct[]> => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("id,store_id,name,description,price,images")
-        .in("store_id", storeIds)
-        .eq("is_published", true)
-        .eq("is_available", true)
-        .is("deleted_at", null)
-        .order("created_at", { ascending: false })
-        .limit(60);
-
-      if (error) throw error;
-
-      return (data ?? []) as LandingProduct[];
-    },
-    staleTime: 60_000,
-  });
-
-  const slides = useMemo<HeroSlide[]>(() => {
-    const stores = storesQuery.data ?? [];
-    const products = productsQuery.data ?? [];
-
-    const storeMap = new Map(stores.map((store) => [store.id, store]));
-
-    return products
-      .map((product) => {
-        const store = storeMap.get(product.store_id);
-        if (!store) return null;
-
-        return {
-          product,
-          store,
-          image:
-            firstImage(product.images) ??
-            store.banner_url ??
-            store.logo_url ??
-            null,
-        };
-      })
-      .filter((slide): slide is HeroSlide => Boolean(slide));
-  }, [productsQuery.data, storesQuery.data]);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted || slides.length <= 1) return;
-
-    const timer = window.setInterval(() => {
-      setActiveIndex((current) => (current + 1) % slides.length);
-    }, 4500);
-
-    return () => window.clearInterval(timer);
-  }, [mounted, slides.length]);
-
-  useEffect(() => {
-    if (activeIndex >= slides.length && slides.length > 0) {
-      setActiveIndex(0);
-    }
-  }, [activeIndex, slides.length]);
-
-  const activeSlide = slides[activeIndex] ?? null;
+  const stores = storesQuery.data ?? [];
 
   return (
-    <div className="relative overflow-hidden rounded-[2rem] border border-ink-foreground/10 bg-card/10 shadow-[var(--shadow-lifted)]">
-      {activeSlide ? (
-        <div className="relative min-h-[28rem]">
-          {activeSlide.image ? (
-            <StorageImage
-              bucket={BUCKETS.productImages}
-              path={activeSlide.image}
-              alt={`${activeSlide.product.name} from ${activeSlide.store.name}`}
-              className="absolute inset-0 h-full w-full object-cover"
-            />
-          ) : (
-            <div className="absolute inset-0 bg-gradient-to-br from-primary/30 via-card/20 to-ink" />
-          )}
+    <div className="relative">
+      <div
+        className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-3 pr-2"
+        style={{ scrollbarWidth: "none" }}
+      >
+        {stores.map((store) => (
+          <article
+            key={store.id}
+            className="w-[calc(100vw-3.5rem)] max-w-[28rem] shrink-0 snap-center overflow-hidden rounded-[2rem] border border-white/10 bg-black/20 shadow-[var(--shadow-lifted)] sm:w-full"
+          >
+            <div className="relative h-[20rem] bg-black/20 sm:h-[24rem]">
+              {store.banner_url ? (
+                <StorageImage
+                  bucket={BUCKETS.storeBanners}
+                  path={store.banner_url}
+                  alt={`${store.name} store banner`}
+                  className="size-full object-cover"
+                />
+              ) : store.logo_url ? (
+                <div className="flex size-full items-center justify-center bg-gradient-to-br from-primary/30 via-card/20 to-ink p-8">
+                  <StorageImage
+                    bucket={BUCKETS.storeLogos}
+                    path={store.logo_url}
+                    alt={`${store.name} logo`}
+                    className="size-32 rounded-3xl object-cover"
+                  />
+                </div>
+              ) : (
+                <div className="flex size-full items-center justify-center bg-gradient-to-br from-primary/30 via-card/20 to-ink p-8 text-center">
+                  <span className="text-2xl font-extrabold text-white">
+                    {store.name}
+                  </span>
+                </div>
+              )}
 
-          <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/25 to-black/5" />
+              <div className="absolute right-4 top-4 rounded-full bg-black/45 px-3 py-1.5 text-xs font-bold text-white backdrop-blur-md">
+                Official partner
+              </div>
+            </div>
 
-          <div className="absolute inset-x-0 bottom-0 p-6 sm:p-8">
-            <div className="max-w-lg">
-              <span className="inline-flex rounded-full bg-accent px-3 py-1 text-xs font-bold uppercase tracking-[0.18em] text-accent-foreground">
+            <div className="bg-card p-5 sm:p-6">
+              <span className="inline-flex rounded-full bg-accent px-3 py-1 text-[10px] font-bold uppercase tracking-[0.18em] text-accent-foreground">
                 New official partner
               </span>
 
-              <p className="mt-4 text-sm font-semibold text-white/75">
-                {activeSlide.store.name} is now an official partner of RushOrder PH
+              <p className="mt-3 text-sm font-semibold text-ink-foreground/65">
+                {store.name} is now an official partner of RushOrder PH
               </p>
 
-              <h3 className="mt-2 text-3xl font-extrabold leading-tight text-white sm:text-4xl">
-                {activeSlide.product.name}
+              <h3 className="mt-2 text-2xl font-extrabold leading-tight text-ink sm:text-3xl">
+                {store.name}
               </h3>
 
-              <p className="mt-2 text-lg font-bold text-white">
-                ₱{Number(activeSlide.product.price).toFixed(2)}
-              </p>
-
-              {activeSlide.product.description ? (
-                <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-white/70">
-                  {activeSlide.product.description}
-                </p>
-              ) : null}
-
-              <Button asChild className="mt-5" size="lg">
-                <Link
-                  to="/store/$storeId"
-                  params={{ storeId: activeSlide.store.id }}
-                >
-                  Visit store <ArrowRight className="size-4" />
-                </Link>
-              </Button>
+              <div className="mt-5">
+                <Button asChild>
+                  <Link
+                    to="/store/$storeId"
+                    params={{ storeId: store.id }}
+                  >
+                    Visit store
+                    <ArrowRight className="ml-2 size-4" />
+                  </Link>
+                </Button>
+              </div>
             </div>
-          </div>
+          </article>
+        ))}
 
-          {slides.length > 1 ? (
-            <div className="absolute right-5 top-5 flex gap-1.5 rounded-full bg-black/30 px-2.5 py-2 backdrop-blur-sm">
-              {slides.slice(0, Math.min(slides.length, 6)).map((slide, index) => (
-                <button
-                  key={slide.product.id}
-                  type="button"
-                  aria-label={`Show ${slide.product.name}`}
-                  onClick={() => setActiveIndex(index)}
-                  className={`h-2 rounded-full transition-all ${
-                    activeIndex === index ? "w-6 bg-white" : "w-2 bg-white/50"
-                  }`}
-                />
-              ))}
-            </div>
-          ) : null}
-        </div>
-      ) : (
-        <div className="flex min-h-[28rem] items-center justify-center bg-gradient-to-br from-card/10 to-ink/40 p-8 text-center">
-          <div>
-            <span className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-accent/20 text-accent">
-              <Store className="size-7" />
-            </span>
-            <p className="mt-5 text-lg font-bold text-white">
-              Discover local stores coming to RushOrder PH
-            </p>
-            <p className="mt-2 text-sm text-white/60">
-              New products from our official partners will appear here.
-            </p>
-            <Button asChild className="mt-5">
-              <Link to="/marketplace">
-                Explore marketplace <ArrowRight className="size-4" />
-              </Link>
-            </Button>
+        {stores.length === 0 && !storesQuery.isLoading ? (
+          <div className="flex min-h-[20rem] w-full items-center justify-center rounded-[2rem] border border-white/10 bg-black/20 p-8 text-center text-white/70">
+            New RushOrder PH partners will appear here.
           </div>
-        </div>
-      )}
+        ) : null}
+      </div>
+
+      {stores.length > 1 ? (
+        <p className="mt-2 text-center text-xs text-white/50">
+          Swipe to see more partners →
+        </p>
+      ) : null}
     </div>
   );
 }
@@ -299,15 +207,7 @@ function LandingPage() {
             <h1 className="mt-6 text-4xl font-extrabold leading-[1.05] sm:text-5xl lg:text-6xl">
               RushOrder PH
             </h1>
-
-            <h2 className="mt-5 max-w-lg text-2xl font-extrabold leading-tight sm:text-3xl lg:text-4xl">
-              Discover the latest <span className="text-ember">RushOrder PH partners</span>.
-            </h2>
-
-            <p className="mt-5 max-w-lg text-base leading-relaxed text-ink-foreground/75 sm:text-lg">
-              Shop products from local stores and official RushOrder PH partners near you.
-            </p>
-            <div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
+<div className="mt-8 flex flex-col gap-3 sm:flex-row sm:flex-wrap">
               <Button asChild size="lg">
                 <Link to="/marketplace">
                   Start shopping <ArrowRight className="size-4" />
