@@ -79,18 +79,6 @@ const CATEGORIES = [
   "Pabili & Errands",
 ];
 
-const WHY = [
-  { stat: "4 roles", label: "Customers, selling partners, riders and admins in one ecosystem." },
-  {
-    stat: "2 seller paths",
-    label: "Registered businesses and home-based sellers each get their own flow.",
-  },
-  {
-    stat: "100% verified",
-    label: "Government ID, selfie and document checks stored in private, encrypted storage.",
-  },
-];
-
 type LandingStore = {
   id: string;
   name: string;
@@ -338,14 +326,7 @@ function LandingPage() {
               <InstallAppButton />
             </div>
             <div className="mt-10 flex flex-wrap gap-6 text-sm text-ink-foreground/70">
-              {WHY.map((item) => (
-                <div key={item.stat}>
-                  <p className="font-display text-xl font-extrabold text-ink-foreground">
-                    {item.stat}
-                  </p>
-                  <p className="max-w-[14rem] text-xs leading-relaxed">{item.label}</p>
-                </div>
-              ))}
+
             </div>
           </div>
 
