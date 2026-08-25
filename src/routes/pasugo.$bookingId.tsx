@@ -316,7 +316,9 @@ function PasugoTrackingPage() {
             </div>
           </dl>
 
-          {booking.data?.status === "finding_rider" || booking.data?.status === "requested" ? (
+          {booking.data?.status === "finding_rider" ||
+          booking.data?.status === "requested" ||
+          booking.data?.status === "failed" ? (
             <Button
               variant="outline"
               className="mt-5"
