@@ -39,7 +39,7 @@ export const Route = createFileRoute("/checkout")({
       {
         name: "description",
         content:
-          "Confirm your delivery address, choose cash or GCash, and place your RushOrder PH delivery order.",
+          "Confirm your delivery address and place your RushOrder PH delivery order with cash on delivery.",
       },
       { property: "og:title", content: "Checkout — RushOrder PH" },
       {
@@ -55,7 +55,6 @@ export const Route = createFileRoute("/checkout")({
 
 const PAYMENT_OPTIONS: { value: PaymentMethod; label: string; hint: string }[] = [
   { value: "cod", label: "Cash on delivery", hint: "Pay the rider when your order arrives." },
-  { value: "gcash", label: "GCash", hint: "Pay online after placing the order." },
 ];
 
 const toNumber = (value: unknown): number | null => {
@@ -480,7 +479,7 @@ function CheckoutPage() {
         storeId,
         addressId: selectedAddress.id,
         notes,
-        paymentMethod: payment,
+        paymentMethod: "cod",
         idempotencyKey,
         lines: lines.map((l) => ({ productId: l.productId, quantity: l.quantity })),
       });
