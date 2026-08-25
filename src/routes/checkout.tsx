@@ -94,7 +94,6 @@ function CheckoutPage() {
   const [showNew, setShowNew] = useState(false);
   const [draft, setDraft] = useState(EMPTY_ADDRESS);
   const [editingAddressLocation, setEditingAddressLocation] = useState<string | null>(null);
-  const [isLocatingSelectedAddress, setIsLocatingSelectedAddress] = useState(false);
   const [isLocatingNewAddress, setIsLocatingNewAddress] = useState(false);
   const [editingAddressCoords, setEditingAddressCoords] = useState<{
     lat: number | null;
@@ -312,48 +311,6 @@ function CheckoutPage() {
       }),
   });
 
-  const useCurrentLocationForSelectedAddress = async () => {
-    if (!user) {
-      toast.error("Please sign in first.");
-      return;
-    }
-
-    if (!selectedAddress) {
-      toast.error("Please select or add a delivery address first.");
-      return;
-    }
-
-    setIsLocatingSelectedAddress(true);
-
-    try {
-      const coords = await getCurrentLocation();
-
-      updateAddressLocationMutation.mutate(
-        {
-          addressId: selectedAddress.id,
-          latitude: coords.latitude,
-          longitude: coords.longitude,
-        },
-        {
-          onSettled: () => {
-            setIsLocatingSelectedAddress(false);
-          },
-        },
-      );
-    } catch (error) {
-      setIsLocatingSelectedAddress(false);
-
-      const geolocationError = error as GeolocationPositionError;
-
-      toast.error("Could not get your current location.", {
-        description:
-          geolocationError.code === geolocationError.PERMISSION_DENIED
-            ? "Please allow location access for RushOrder PH."
-            : "Please try again or check your GPS connection.",
-      });
-    }
-  };
-
   const useCurrentLocationForNewAddress = async () => {
     setIsLocatingNewAddress(true);
 
@@ -396,18 +353,16 @@ function CheckoutPage() {
         }));
 
         toast.success("Current location detected", {
-          description: result.place_name || `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
+          description:
+            "Address details were filled automatically. Please enter your recipient name and contact number.",
         });
       } catch (reverseError) {
         // GPS is still valid even when reverse geocoding fails.
-        toast.success("Current location detected", {
-          description: `${latitude.toFixed(6)}, ${longitude.toFixed(6)}`,
-        });
-
         console.error("Reverse geocoding failed:", reverseError);
 
-        toast.warning("Address details could not be filled automatically", {
-          description: "Your exact coordinates were saved. You can enter the address manually.",
+        toast.warning("Location detected, but address details need your input", {
+          description:
+            "Your exact coordinates were saved. Please enter the address, recipient name, and contact number manually.",
         });
       }
     } catch (error) {
@@ -640,10 +595,11 @@ function CheckoutPage() {
                     </div>
                   )}
 
-                  <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                  <div className="mt-4">
                     <Button
                       type="button"
                       variant="outline"
+                      className="w-full"
                       onClick={() => {
                         setShowNew(true);
                         setEditingAddressLocation(null);
@@ -652,27 +608,6 @@ function CheckoutPage() {
                       }}
                     >
                       + Enter New Address
-                    </Button>
-
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={useCurrentLocationForSelectedAddress}
-                      disabled={
-                        isLocatingSelectedAddress ||
-                        updateAddressLocationMutation.isPending ||
-                        !selectedAddress
-                      }
-                    >
-                      {isLocatingSelectedAddress || updateAddressLocationMutation.isPending ? (
-                        <Loader2 className="size-4 animate-spin" />
-                      ) : (
-                        <MapPin className="size-4" />
-                      )}
-
-                      {isLocatingSelectedAddress || updateAddressLocationMutation.isPending
-                        ? "Getting location..."
-                        : "Use My Current Location"}
                     </Button>
                   </div>
                   {showNew ? (
@@ -703,6 +638,11 @@ function CheckoutPage() {
                             : "Use My Current Location"}
                         </Button>
                       </div>
+
+                      <p className="mt-2 text-xs text-muted-foreground">
+                        Your location can fill the address automatically. Recipient name and contact
+                        number must still be entered manually.
+                      </p>
 
                       <div className="mt-4 grid gap-4 sm:grid-cols-2">
                         <TextField
