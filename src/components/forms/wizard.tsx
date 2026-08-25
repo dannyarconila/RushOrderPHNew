@@ -70,6 +70,7 @@ export function TextField({
   type = "text",
   hint,
   required,
+  error,
 }: {
   label: string;
   value: string;
@@ -78,11 +79,20 @@ export function TextField({
   type?: string;
   hint?: string;
   required?: boolean;
+  error?: boolean;
 }) {
   return (
-    <Field label={label} hint={hint}>
+    <Field
+      label={label}
+      hint={hint}
+      className={error ? "text-destructive" : undefined}
+    >
       <input
-        className={inputClass}
+        className={cn(
+          inputClass,
+          error &&
+            "border-destructive bg-destructive/5 focus-visible:border-destructive focus-visible:ring-destructive/30",
+        )}
         value={value}
         type={type}
         required={required}

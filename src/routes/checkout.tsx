@@ -93,6 +93,7 @@ function CheckoutPage() {
   const [notes, setNotes] = useState("");
   const [showNew, setShowNew] = useState(false);
   const [draft, setDraft] = useState(EMPTY_ADDRESS);
+  const [highlightRequiredFields, setHighlightRequiredFields] = useState(false);
   const [editingAddressLocation, setEditingAddressLocation] = useState<string | null>(null);
   const [isLocatingNewAddress, setIsLocatingNewAddress] = useState(false);
   const [editingAddressCoords, setEditingAddressCoords] = useState<{
@@ -312,6 +313,7 @@ function CheckoutPage() {
   });
 
   const useCurrentLocationForNewAddress = async () => {
+    setHighlightRequiredFields(true);
     setIsLocatingNewAddress(true);
 
     try {
@@ -652,15 +654,29 @@ function CheckoutPage() {
                         />
 
                         <TextField
-                          label="Recipient name"
+                          label="Recipient name *"
                           value={draft.recipient_name}
                           onChange={(v) => setDraft((d) => ({ ...d, recipient_name: v }))}
+                          hint={
+                            highlightRequiredFields && !draft.recipient_name.trim()
+                              ? "Required — enter recipient name"
+                              : undefined
+                          }
+                          required
+                          error={highlightRequiredFields && !draft.recipient_name.trim()}
                         />
 
                         <TextField
-                          label="Phone"
+                          label="Phone *"
                           value={draft.phone}
                           onChange={(v) => setDraft((d) => ({ ...d, phone: v }))}
+                          hint={
+                            highlightRequiredFields && !draft.phone.trim()
+                              ? "Required — enter contact number"
+                              : undefined
+                          }
+                          required
+                          error={highlightRequiredFields && !draft.phone.trim()}
                         />
 
                         <TextField
