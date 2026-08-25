@@ -254,12 +254,21 @@ Deno.serve(async (req: Request) => {
 
       const notification = payload.record;
 
+      const notificationKind = notification.kind || "notification";
+
+      const actionUrl =
+        notificationKind === "new_order" || notificationKind === "order"
+          ? "/store-orders"
+          : notificationKind === "dispatch"
+            ? "/rider-orders"
+            : "/";
+
       const result = await sendPushToUser(
         notification.user_id,
         notification.title || "RushOrder PH",
         notification.body || "You have a new notification.",
-        "/",
-        notification.kind || "notification",
+        actionUrl,
+        notificationKind,
       );
 
       return Response.json(
