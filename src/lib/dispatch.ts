@@ -47,6 +47,7 @@ export const DISPATCH_SETTING_KEYS = [
   "dispatch_auto_expand",
   "dispatch_radius_expansion_km",
   "dispatch_strategy",
+  "dispatch_retry_rider_strategy",
 ] as const;
 
 const numberOf = (raw: unknown, fallback: number) => {

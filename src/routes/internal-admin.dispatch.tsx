@@ -52,6 +52,8 @@ const LABELS: Record<string, string> = {
   dispatch_auto_expand: "Auto-expand radius between retries (true/false)",
   dispatch_radius_expansion_km: "Radius added per retry (km)",
   dispatch_strategy: "Strategy (nearest_first | wave | broadcast)",
+  dispatch_retry_rider_strategy:
+    "Retry rider strategy",
 
   rider_platform_fee: "Rider platform base fee (PHP)",
   rider_platform_fee_included_km: "Distance included in base fee (km)",
@@ -352,11 +354,28 @@ function SettingField({ setting }: { setting: SettingRow }) {
     <div className="rounded-2xl border border-border bg-card p-4">
       <p className="text-sm font-semibold">{LABELS[setting.key] ?? setting.key}</p>
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Input
-          value={draft}
-          onChange={(event) => setDraft(event.target.value)}
-          className="min-w-[10rem] flex-1 font-mono text-sm"
-        />
+        {setting.key === "dispatch_retry_rider_strategy" ? (
+          <select
+            value={draft.replace(/^"|"$/g, "")}
+            onChange={(event) =>
+              setDraft(JSON.stringify(event.target.value))
+            }
+            className="min-w-[16rem] flex-1 rounded-md border border-input bg-background px-3 py-2 font-mono text-sm"
+          >
+            <option value="all_eligible">
+              Re-dispatch to all eligible riders
+            </option>
+            <option value="exclude_timed_out">
+              Exclude previously timed-out riders
+            </option>
+          </select>
+        ) : (
+          <Input
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            className="min-w-[10rem] flex-1 font-mono text-sm"
+          />
+        )}
         <Button size="sm" onClick={save} disabled={draft === initial || mutation.isPending}>
           {mutation.isPending ? "Saving…" : "Save"}
         </Button>
