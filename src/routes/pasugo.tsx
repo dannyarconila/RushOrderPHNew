@@ -154,12 +154,16 @@ function PasugoPage() {
       });
     },
     onSuccess: (bookingId) => {
+      console.debug("Pasugo booking created:", { bookingId });
+
       toast.success("Finding nearby riders now");
 
-      navigate({
-        to: "/pasugo/$bookingId",
-        params: { bookingId },
-      });
+      if (!bookingId) {
+        toast.error("Booking created but tracking ID is missing.");
+        return;
+      }
+
+      window.location.assign(`/pasugo/${encodeURIComponent(bookingId)}`);
     },
     onError: (error: Error) =>
       toast.error("Could not create booking", {
