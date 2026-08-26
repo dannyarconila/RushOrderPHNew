@@ -275,16 +275,23 @@ function PasugoTrackingPage() {
             </p>
           ) : null}
 
-          {booking.data?.status === "finding_rider" ||
-          booking.data?.status === "requested" ||
-          booking.data?.status === "failed" ? (
+          {booking.data?.status &&
+          !["delivered", "completed", "cancelled"].includes(booking.data.status) ? (
             <Button
               variant="outline"
               className="mt-5"
-              onClick={() => cancel.mutate()}
+              onClick={() => {
+                const confirmed = window.confirm(
+                  "Cancel this Pasugo booking? This will cancel the rider dispatch and any active rider offer.",
+                );
+
+                if (confirmed) {
+                  cancel.mutate();
+                }
+              }}
               disabled={cancel.isPending}
             >
-              {cancel.isPending ? "Cancelling…" : "Cancel booking"}
+              {cancel.isPending ? "Cancelling…" : "Cancel Pasugo"}
             </Button>
           ) : null}
 

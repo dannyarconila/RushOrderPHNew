@@ -362,6 +362,28 @@ export function activePasugoJobForRiderQuery(riderId: string | undefined) {
   });
 }
 
+export function riderPasugoHistoryQuery(riderId: string | undefined) {
+  return queryOptions({
+    queryKey: ["pasugo-rider-history", riderId ?? null],
+    enabled: Boolean(riderId),
+    queryFn: async (): Promise<PasugoDispatchJob[]> => {
+      if (!riderId) return [];
+
+      const { data, error } = await supabase
+        .from("pasugo_dispatch_jobs")
+        .select("*")
+        .eq("assigned_rider_id", riderId)
+        .eq("status", "delivered")
+        .order("updated_at", { ascending: false })
+        .limit(50);
+
+      if (error) throw error;
+
+      return (data ?? []) as PasugoDispatchJob[];
+    },
+  });
+}
+
 export async function acceptPasugoDispatch(
   jobId: string,
 ): Promise<{ ok: boolean; booking_id?: string | null; reason?: string | null }> {

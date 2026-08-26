@@ -433,7 +433,17 @@ function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
       </Panel>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard label="Deliveries today" value={String(todayCount)} icon={RouteIcon} />
+        <Link
+          to="/rider-orders"
+          className="block rounded-2xl transition-transform hover:-translate-y-0.5"
+        >
+          <StatCard
+            label="Deliveries today"
+            value={String(todayCount)}
+            icon={RouteIcon}
+            hint="View my orders"
+          />
+        </Link>
         <StatCard
           label="Completed"
           value={String(completed.length)}
