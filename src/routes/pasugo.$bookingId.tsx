@@ -343,7 +343,11 @@ function PasugoTrackingPage() {
 
         <div className="mt-4 flex flex-wrap gap-3">
           <Button asChild variant="outline">
-            <Link to="/pasugo">New booking</Link>
+            <Link to="/pasugo">Back to booking</Link>
+          </Button>
+
+          <Button asChild>
+            <Link to="/customer">Customer Dashboard</Link>
           </Button>
         </div>
       </main>
