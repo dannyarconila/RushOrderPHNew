@@ -210,13 +210,24 @@ function PasugoPage() {
               </span>
             </p>
 
-            <Button asChild className="mt-3" size="sm" variant="outline">
-              <Link
-                to="/pasugo/$bookingId"
-                params={{ bookingId: latest.data.id }}
-              >
-                Continue tracking
-              </Link>
+            <Button
+              className="mt-3"
+              size="sm"
+              variant="outline"
+              onClick={() => {
+                const bookingId = latest.data?.id;
+                if (!bookingId) {
+                  toast.error("Booking tracking ID is unavailable.");
+                  return;
+                }
+
+                navigate({
+                  to: "/pasugo/$bookingId",
+                  params: { bookingId },
+                });
+              }}
+            >
+              Continue tracking
             </Button>
           </div>
         ) : null}
