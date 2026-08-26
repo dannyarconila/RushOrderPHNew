@@ -2,6 +2,7 @@ import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bike, Clock3, PackageCheck, ShoppingBag, Store, Wallet } from "lucide-react";
 import { useEffect } from "react";
+import { toast } from "sonner";
 
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
 import { EmptyState, PageHeader, Panel, StatCard } from "@/components/dashboard/primitives";
@@ -46,8 +47,24 @@ function CustomerDashboard() {
 
   const recent = (orders ?? []).slice(0, 10);
 
-  const active = recent.filter((o) => !["delivered", "cancelled"].includes(o.status)).length;
+  const activeOrders = recent.filter(
+    (o) => !["delivered", "cancelled"].includes(o.status),
+  );
+  const active = activeOrders.length;
+  const mostRecentActiveOrder = activeOrders[0] ?? null;
   const spent = recent.reduce((sum, o) => sum + Number(o.total ?? 0), 0);
+
+  function openActiveOrder() {
+    if (!mostRecentActiveOrder) {
+      toast.info("No active Orders");
+      return;
+    }
+
+    navigate({
+      to: "/order/$orderId",
+      params: { orderId: mostRecentActiveOrder.id },
+    });
+  }
 
   return (
     <DashboardLayout
@@ -70,12 +87,23 @@ function CustomerDashboard() {
       />
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <StatCard
-          label="Active orders"
-          value={String(active)}
-          icon={Clock3}
-          hint="Being prepared or in transit"
-        />
+        <button
+          type="button"
+          onClick={openActiveOrder}
+          className="block w-full rounded-2xl text-left transition hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
+          aria-label={
+            mostRecentActiveOrder
+              ? "Open active order"
+              : "No active Orders"
+          }
+        >
+          <StatCard
+            label="Active orders"
+            value={String(active)}
+            icon={Clock3}
+            hint="Being prepared or in transit"
+          />
+        </button>
         <StatCard
           label="Orders placed"
           value={String(recent.length)}
