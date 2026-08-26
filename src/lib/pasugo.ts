@@ -434,6 +434,14 @@ export function customerLatestPasugoQuery(userId: string | undefined) {
         .from("pasugo_bookings")
         .select("*")
         .eq("customer_id", userId!)
+        .in("status", [
+          "requested",
+          "finding_rider",
+          "accepted",
+          "rider_arriving",
+          "picked_up",
+          "on_the_way",
+        ])
         .order("created_at", { ascending: false })
         .limit(1)
         .maybeSingle();
