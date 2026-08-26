@@ -194,7 +194,7 @@ function PasugoChatPage() {
             </Link>
           </Button>
           <Button asChild variant="outline">
-            <Link to="/rider">Rider dashboard</Link>
+            <Link to="/customer">Customer dashboard</Link>
           </Button>
         </div>
       </main>
