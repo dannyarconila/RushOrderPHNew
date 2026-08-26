@@ -117,15 +117,20 @@ function splitLineAddress(line: string) {
 export async function createPasugoBooking(input: CreatePasugoInput): Promise<string> {
   const pickupLat = input.pickupLat ?? null;
   const pickupLng = input.pickupLng ?? null;
-  const dropoffLat = input.dropoffLat ?? null;
-  const dropoffLng = input.dropoffLng ?? null;
 
-  const distanceKm =
-    pickupLat != null && pickupLng != null && dropoffLat != null && dropoffLng != null
-      ? haversineKm(pickupLat, pickupLng, dropoffLat, dropoffLng)
-      : 0;
+  // Pasugo is a rider-request service, not a pickup-to-dropoff delivery.
+  // The meaningful distance is rider -> customer location and is calculated
+  // by pasugo_dispatch_broadcast() when offers are sent to nearby riders.
+  // Keep the legacy dropoff fields only for database compatibility.
+  const dropoffLat = pickupLat;
+  const dropoffLng = pickupLng;
 
   const settings = await loadDispatchSettings();
+
+  // Do not calculate a pickup->dropoff trip here because Pasugo has no
+  // customer-entered destination in the new flow. pasugo_start() will use
+  // the configured minimum/default dispatch fee.
+  const distanceKm = 0;
   const deliveryFee = estimateDeliveryFee(distanceKm, settings);
 
   const slug = `pasugo-pickup-${input.userId.slice(0, 8)}`;
@@ -393,16 +398,6 @@ export async function retryPasugoDispatch(jobId: string) {
   if (error) throw error;
 }
 
-export async function expirePasugoSelectedRider(jobId: string) {
-  const { data, error } = await supabase.rpc("pasugo_expire_selected_rider", {
-    _job_id: jobId,
-  });
-
-  if (error) throw error;
-
-  return Boolean(data);
-}
-
 export async function cancelPasugoBooking(bookingId: string) {
   const { error } = await supabase.rpc("pasugo_cancel", { _booking_id: bookingId });
   if (error) throw error;
@@ -443,74 +438,3 @@ export function customerPasugoBookingsQuery(userId: string | undefined, limit = 
   });
 }
 
-export interface PasugoAvailableRider {
-  rider_id: string;
-  rider_name: string;
-  distance_km: number;
-  latitude: number;
-  longitude: number;
-  last_seen_at: string | null;
-}
-
-export function pasugoAvailableRidersQuery(jobId: string | undefined) {
-  return queryOptions({
-    queryKey: ["pasugo-available-riders", jobId ?? null],
-    enabled: Boolean(jobId),
-    staleTime: 5_000,
-    queryFn: async (): Promise<PasugoAvailableRider[]> => {
-      if (!jobId) return [];
-
-      const { data, error } = await supabase.rpc("pasugo_available_riders", {
-        _job_id: jobId,
-      });
-
-      if (error) throw error;
-
-      return (
-        (data ?? []) as Array<{
-          rider_id: string;
-          rider_name: string;
-          distance_km: number | string;
-          latitude: number | string;
-          longitude: number | string;
-          last_seen_at: string | null;
-        }>
-      ).map((rider) => ({
-        rider_id: rider.rider_id,
-        rider_name: rider.rider_name || "RushOrder Rider",
-        distance_km: Number(rider.distance_km),
-        latitude: Number(rider.latitude),
-        longitude: Number(rider.longitude),
-        last_seen_at: rider.last_seen_at,
-      }));
-    },
-  });
-}
-
-export async function selectPasugoRider(
-  jobId: string,
-  riderId: string,
-): Promise<{
-  ok: boolean;
-  offer_id?: string;
-  rider_id?: string;
-  distance_km?: number;
-  expires_at?: string;
-}> {
-  const { data, error } = await supabase.rpc("pasugo_select_rider", {
-    _job_id: jobId,
-    _rider_id: riderId,
-  });
-
-  if (error) throw error;
-
-  return (
-    (data as {
-      ok: boolean;
-      offer_id?: string;
-      rider_id?: string;
-      distance_km?: number;
-      expires_at?: string;
-    } | null) ?? { ok: false }
-  );
-}

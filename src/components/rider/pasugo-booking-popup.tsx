@@ -46,7 +46,10 @@ export function PasugoBookingPopup({
       if (result.ok) {
         toast.success("Pasugo booking assigned to you");
         if (result.booking_id) {
-          navigate({ to: "/pasugo-chat/$bookingId", params: { bookingId: result.booking_id } });
+          navigate({
+            to: "/pasugo/$bookingId",
+            params: { bookingId: result.booking_id },
+          });
         }
       } else {
         toast.info("Another rider accepted this booking first");
@@ -98,23 +101,25 @@ export function PasugoBookingPopup({
                 {peso(Number(job.delivery_fee))}
               </p>
             </div>
-            <p className="text-sm text-muted-foreground">
-              {Number(job.distance_km).toFixed(1)} km trip
+            <p className="text-sm font-semibold text-muted-foreground">
+              {offer.distance_km != null
+                ? `${Number(offer.distance_km).toFixed(1)} km away`
+                : "Nearby rider request"}
             </p>
           </div>
 
           <div className="space-y-3 rounded-2xl bg-muted/50 p-4">
             <Row
               icon={MapPin}
-              label="Pick up"
+              label="Customer"
               title={booking.customer_name ?? "Customer"}
-              detail={job.pickup_address}
+              detail={booking.customer_phone ?? "Contact number unavailable"}
             />
             <Row
               icon={Navigation}
-              label="Drop off"
-              title="Destination"
-              detail={job.dropoff_address}
+              label="Location"
+              title="Customer location"
+              detail={job.pickup_address}
             />
           </div>
 

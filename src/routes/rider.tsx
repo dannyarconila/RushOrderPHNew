@@ -13,6 +13,7 @@ import { useCallback, useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { DashboardLayout } from "@/components/dashboard/dashboard-layout";
+import LiveDeliveryMap from "@/components/maps/LiveDeliveryMap";
 import { PageHeader, Panel, StatCard, StatusBadge } from "@/components/dashboard/primitives";
 import { RoleGate } from "@/components/dashboard/role-gate";
 import { BookingPopup } from "@/components/rider/booking-popup";
@@ -32,9 +33,15 @@ import {
   riderStatusQuery,
   setRiderPresence,
   watchRiderLocation,
+  watchAssignedRider,
   stopWatchingLocation,
 } from "@/lib/dispatch";
-import { activePasugoJobForRiderQuery, riderPendingPasugoOfferQuery } from "@/lib/pasugo";
+import {
+  activePasugoJobForRiderQuery,
+  advancePasugoDispatch,
+  pasugoBookingQuery,
+  riderPendingPasugoOfferQuery,
+} from "@/lib/pasugo";
 import { minimumWalletBalanceQuery, myWalletQuery } from "@/lib/wallet";
 import { getCurrentLocation } from "@/lib/geolocation";
 
@@ -101,6 +108,95 @@ function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
     dispatchChatUnreadQuery(activeJob?.order_id, user?.id),
   );
   const { data: activePasugoJob } = useQuery(activePasugoJobForRiderQuery(user?.id));
+  const { data: activePasugoBooking } = useQuery(
+    pasugoBookingQuery(activePasugoJob?.booking_id ?? ""),
+  );
+
+  const [pasugoRiderLocation, setPasugoRiderLocation] = useState<{
+    lat: number;
+    lng: number;
+  } | null>(null);
+
+  const pasugoChatUnread = useQuery(
+    dispatchChatUnreadQuery(activePasugoJob?.booking_id, user?.id),
+  );
+
+  useEffect(() => {
+    if (!activePasugoJob?.assigned_rider_id) {
+      setPasugoRiderLocation(null);
+      return;
+    }
+
+    const channel = watchAssignedRider(
+      activePasugoJob.assigned_rider_id,
+      (location) => {
+        setPasugoRiderLocation(location);
+      },
+    );
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [activePasugoJob?.assigned_rider_id]);
+
+  useEffect(() => {
+    if (!activePasugoJob?.booking_id || !user?.id) return;
+
+    const channel = supabase
+      .channel(`pasugo-rider-chat-${activePasugoJob.booking_id}-${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "pasugo_chat_messages",
+          filter: `booking_id=eq.${activePasugoJob.booking_id}`,
+        },
+        (payload) => {
+          const message = payload.new as {
+            recipient_id?: string;
+          };
+
+          if (message.recipient_id === user.id) {
+            void queryClient.invalidateQueries({
+              queryKey: [
+                "dispatch-chat-unread",
+                activePasugoJob.booking_id,
+                user.id,
+              ],
+            });
+          }
+        },
+      )
+      .subscribe();
+
+    return () => {
+      void supabase.removeChannel(channel);
+    };
+  }, [activePasugoJob?.booking_id, queryClient, user?.id]);
+
+  const pasugoAdvance = useMutation({
+    mutationFn: ({
+      jobId,
+      step,
+    }: {
+      jobId: string;
+      step: "arrived" | "picked_up" | "delivered" | "completed";
+    }) => advancePasugoDispatch(jobId, step),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({
+        queryKey: ["pasugo-active-job", user?.id],
+      });
+      void queryClient.invalidateQueries({
+        queryKey: ["pasugo-booking", activePasugoJob?.booking_id],
+      });
+    },
+    onError: (error: Error) => {
+      toast.error("Could not update Pasugo booking", {
+        description: error.message,
+      });
+    },
+  });
 
   const online = Boolean(status?.is_online);
 
@@ -386,6 +482,104 @@ function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
               <dd className="mt-1 font-semibold">{String(Boolean(showOffer))}</dd>
             </div>
           </dl>
+        </Panel>
+      ) : null}
+
+      {activePasugoJob && activePasugoBooking ? (
+        <Panel
+          title="Active Pasugo booking"
+          description="Navigate to the customer and complete the standalone rider request."
+          className="mt-6"
+        >
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-baseline justify-between gap-3">
+              <div>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                  Customer
+                </p>
+                <p className="font-display text-xl font-extrabold">
+                  {activePasugoBooking.customer_name ?? "Customer"}
+                </p>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {activePasugoBooking.customer_phone ?? "Contact unavailable"}
+                </p>
+              </div>
+
+              <p className="text-sm font-semibold text-muted-foreground">
+                {peso(Number(activePasugoJob.delivery_fee))}
+              </p>
+            </div>
+
+            <div className="rounded-2xl bg-muted/50 p-4">
+              <p className="text-xs uppercase tracking-wide text-muted-foreground">
+                Customer location
+              </p>
+              <p className="mt-1 text-sm font-semibold">
+                {activePasugoBooking.pickup_address}
+              </p>
+            </div>
+
+            <div className="overflow-hidden rounded-xl border">
+              <LiveDeliveryMap
+                dispatchJob={{
+                  pickup_lat: activePasugoBooking.pickup_lat,
+                  pickup_lng: activePasugoBooking.pickup_lng,
+                  dropoff_lat: activePasugoBooking.pickup_lat,
+                  dropoff_lng: activePasugoBooking.pickup_lng,
+                  status: activePasugoJob.status,
+                }}
+                riderLocation={pasugoRiderLocation}
+              />
+            </div>
+
+            <div className="flex flex-wrap gap-3">
+              {activePasugoJob.status === "assigned" ? (
+                <Button
+                  disabled={pasugoAdvance.isPending}
+                  onClick={() =>
+                    pasugoAdvance.mutate({
+                      jobId: activePasugoJob.id,
+                      step: "picked_up",
+                    })
+                  }
+                >
+                  Mark picked up
+                </Button>
+              ) : (
+                <Button
+                  disabled={pasugoAdvance.isPending}
+                  onClick={() =>
+                    pasugoAdvance.mutate({
+                      jobId: activePasugoJob.id,
+                      step: "delivered",
+                    })
+                  }
+                >
+                  Complete delivery
+                </Button>
+              )}
+
+              <div className="relative">
+                <Button asChild variant="outline">
+                  <Link
+                    to="/pasugo-chat/$bookingId"
+                    params={{
+                      bookingId: activePasugoBooking.id,
+                    }}
+                  >
+                    Chat customer
+                  </Link>
+                </Button>
+
+                {pasugoChatUnread.data ? (
+                  <span
+                    className="absolute -right-1 -top-1 size-3 rounded-full bg-destructive ring-2 ring-card"
+                    aria-label="Unread message"
+                  />
+                ) : null}
+              </div>
+            </div>
+          </div>
         </Panel>
       ) : null}
 

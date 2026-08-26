@@ -1,8 +1,8 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Loader2, Navigation } from "lucide-react";
+import { Loader2, MapPin, Navigation } from "lucide-react";
 import type { ReactNode } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { PublicLayout } from "@/components/site/public-layout";
@@ -19,7 +19,7 @@ export const Route = createFileRoute("/pasugo")({
       {
         name: "description",
         content:
-          "Create a standalone Pasugo booking and find nearby RushOrder PH riders in real time.",
+          "Book an online RushOrder PH rider using your name, contact number and current location.",
       },
     ],
   }),
@@ -36,74 +36,168 @@ function PasugoPage() {
 
   const [customerName, setCustomerName] = useState("");
   const [customerPhone, setCustomerPhone] = useState(defaultAddress?.phone ?? "");
-  const [pickupAddress, setPickupAddress] = useState(defaultAddress?.line1 ?? "");
-  const [dropoffAddress, setDropoffAddress] = useState("");
-  const [pickupLat, setPickupLat] = useState(
-    defaultAddress?.latitude ? String(defaultAddress.latitude) : "",
+  const [location, setLocation] = useState(defaultAddress?.line1 ?? "");
+  const [latitude, setLatitude] = useState<number | null>(
+    defaultAddress?.latitude ?? null,
   );
-  const [pickupLng, setPickupLng] = useState(
-    defaultAddress?.longitude ? String(defaultAddress.longitude) : "",
+  const [longitude, setLongitude] = useState<number | null>(
+    defaultAddress?.longitude ?? null,
   );
-  const [dropoffLat, setDropoffLat] = useState("");
-  const [dropoffLng, setDropoffLng] = useState("");
-  const [notes, setNotes] = useState("");
+  const [locating, setLocating] = useState(false);
+
+  useEffect(() => {
+    if (defaultAddress?.phone && !customerPhone) {
+      setCustomerPhone(defaultAddress.phone);
+    }
+
+    if (defaultAddress?.line1 && !location) {
+      setLocation(defaultAddress.line1);
+    }
+
+    if (
+      defaultAddress?.latitude != null &&
+      defaultAddress?.longitude != null &&
+      latitude == null &&
+      longitude == null
+    ) {
+      setLatitude(defaultAddress.latitude);
+      setLongitude(defaultAddress.longitude);
+    }
+  }, [
+    defaultAddress,
+    customerPhone,
+    location,
+    latitude,
+    longitude,
+  ]);
+
+  const useCurrentLocation = () => {
+    if (!navigator.geolocation) {
+      toast.error("Location is not supported", {
+        description: "Please enter your location manually.",
+      });
+      return;
+    }
+
+    setLocating(true);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        const lat = position.coords.latitude;
+        const lng = position.coords.longitude;
+
+        setLatitude(lat);
+        setLongitude(lng);
+
+        setLocation(
+          `Current location (${lat.toFixed(6)}, ${lng.toFixed(6)})`,
+        );
+
+        setLocating(false);
+        toast.success("Current location detected");
+      },
+      (error) => {
+        setLocating(false);
+
+        toast.error("Could not get your location", {
+          description:
+            error.code === error.PERMISSION_DENIED
+              ? "Please allow location access and try again."
+              : "Please try again or enter your location manually.",
+        });
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 15000,
+        maximumAge: 30000,
+      },
+    );
+  };
 
   const submit = useMutation({
     mutationFn: async () => {
       if (!user) {
-        navigate({ to: "/login", search: { next: "/pasugo" }, replace: true });
+        navigate({
+          to: "/login",
+          search: { next: "/pasugo" },
+          replace: true,
+        });
         throw new Error("Sign in required.");
       }
-      if (!pickupAddress.trim() || !dropoffAddress.trim()) {
-        throw new Error("Pickup and drop-off addresses are required.");
+
+      if (!customerName.trim()) {
+        throw new Error("Customer name is required.");
       }
 
-      const parseNum = (v: string) => {
-        const n = Number(v);
-        return Number.isFinite(n) ? n : null;
-      };
+      if (!customerPhone.trim()) {
+        throw new Error("Contact number is required.");
+      }
+
+      if (!location.trim()) {
+        throw new Error("Location is required.");
+      }
+
+      if (latitude == null || longitude == null) {
+        throw new Error("Please use your current location before booking.");
+      }
 
       return createPasugoBooking({
         userId: user.id,
-        customerName,
-        customerPhone,
-        pickupAddress,
-        dropoffAddress,
-        pickupLat: parseNum(pickupLat),
-        pickupLng: parseNum(pickupLng),
-        dropoffLat: parseNum(dropoffLat),
-        dropoffLng: parseNum(dropoffLng),
-        notes,
+        customerName: customerName.trim(),
+        customerPhone: customerPhone.trim(),
+        pickupAddress: location.trim(),
+        dropoffAddress: location.trim(),
+        pickupLat: latitude,
+        pickupLng: longitude,
+        dropoffLat: latitude,
+        dropoffLng: longitude,
       });
     },
     onSuccess: (bookingId) => {
       toast.success("Finding nearby riders now");
+
       navigate({
         to: "/pasugo/$bookingId",
         params: { bookingId },
       });
     },
     onError: (error: Error) =>
-      toast.error("Could not create booking", { description: error.message }),
+      toast.error("Could not create booking", {
+        description: error.message,
+      }),
   });
+
+  const canBook =
+    customerName.trim().length > 0 &&
+    customerPhone.trim().length > 0 &&
+    location.trim().length > 0 &&
+    latitude != null &&
+    longitude != null &&
+    !submit.isPending &&
+    !locating;
 
   return (
     <PublicLayout>
-      <main className="mx-auto w-full max-w-5xl px-4 py-10 sm:px-6">
+      <main className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-6">
         <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
-          Pasugo / Errands
-        </p>
-        <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
-          Book a rider (standalone)
-        </h1>
-        <p className="mt-2 text-sm text-muted-foreground">
-          This booking is independent from marketplace orders. We will immediately search nearby
-          riders.
+          Pasugo
         </p>
 
-        {latest.data && !["completed", "cancelled"].includes(latest.data.status) ? (
+        <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
+          Book a rider
+        </h1>
+
+        <p className="mt-2 text-sm text-muted-foreground">
+          Enter your details and location. We will find an available online
+          rider near you.
+        </p>
+
+        {latest.data &&
+        !["completed", "cancelled"].includes(latest.data.status) ? (
           <div className="mt-5 rounded-2xl border border-primary/30 bg-primary-soft p-4">
-            <p className="text-sm font-semibold text-primary">You have an active Pasugo booking.</p>
+            <p className="text-sm font-semibold text-primary">
+              You have an active Pasugo booking.
+            </p>
 
             <p className="mt-1 text-sm text-muted-foreground">
               Status:{" "}
@@ -113,7 +207,10 @@ function PasugoPage() {
             </p>
 
             <Button asChild className="mt-3" size="sm" variant="outline">
-              <Link to="/order/$orderId" params={{ orderId: latest.data.id }}>
+              <Link
+                to="/pasugo/$bookingId"
+                params={{ bookingId: latest.data.id }}
+              >
                 Continue tracking
               </Link>
             </Button>
@@ -121,85 +218,93 @@ function PasugoPage() {
         ) : null}
 
         <section className="mt-6 rounded-2xl border border-border bg-card p-5 shadow-[var(--shadow-soft)] sm:p-6">
-          <div className="grid gap-4 sm:grid-cols-2">
-            <Field label="Customer name">
+          <div className="space-y-5">
+            <Field label="Name" required>
               <Input
                 value={customerName}
                 onChange={(e) => setCustomerName(e.target.value)}
-                placeholder="Optional"
+                placeholder="Enter your name"
+                autoComplete="name"
+                required
               />
             </Field>
-            <Field label="Customer phone">
+
+            <Field label="Contact number" required>
               <Input
                 value={customerPhone}
                 onChange={(e) => setCustomerPhone(e.target.value)}
                 placeholder="09XX XXX XXXX"
+                inputMode="tel"
+                autoComplete="tel"
+                required
               />
             </Field>
-            <Field label="Pickup address">
-              <Input
-                value={pickupAddress}
-                onChange={(e) => setPickupAddress(e.target.value)}
-                placeholder="Street / landmark"
-              />
-            </Field>
-            <Field label="Drop-off address">
-              <Input
-                value={dropoffAddress}
-                onChange={(e) => setDropoffAddress(e.target.value)}
-                placeholder="Street / landmark"
-              />
-            </Field>
-            <Field label="Pickup latitude">
-              <Input
-                value={pickupLat}
-                onChange={(e) => setPickupLat(e.target.value)}
-                placeholder="Optional"
-              />
-            </Field>
-            <Field label="Pickup longitude">
-              <Input
-                value={pickupLng}
-                onChange={(e) => setPickupLng(e.target.value)}
-                placeholder="Optional"
-              />
-            </Field>
-            <Field label="Destination latitude">
-              <Input
-                value={dropoffLat}
-                onChange={(e) => setDropoffLat(e.target.value)}
-                placeholder="Optional"
-              />
-            </Field>
-            <Field label="Destination longitude">
-              <Input
-                value={dropoffLng}
-                onChange={(e) => setDropoffLng(e.target.value)}
-                placeholder="Optional"
-              />
-            </Field>
-          </div>
-          <Field label="Notes / instructions" className="mt-4">
-            <Input
-              value={notes}
-              onChange={(e) => setNotes(e.target.value)}
-              placeholder="Item details, who to contact, special instructions"
-            />
-          </Field>
 
-          <div className="mt-6 flex flex-wrap gap-3">
-            <Button onClick={() => submit.mutate()} disabled={submit.isPending}>
-              {submit.isPending ? (
-                <>
-                  <Loader2 className="size-4 animate-spin" /> Finding riders...
-                </>
-              ) : (
-                <>
-                  <Navigation className="size-4" /> Book a rider now
-                </>
-              )}
-            </Button>
+            <Field label="Location" required>
+              <div className="space-y-2">
+                <Input
+                  value={location}
+                  onChange={(e) => {
+                    setLocation(e.target.value);
+                    setLatitude(null);
+                    setLongitude(null);
+                  }}
+                  placeholder="Your current location"
+                  required
+                />
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={useCurrentLocation}
+                  disabled={locating}
+                >
+                  {locating ? (
+                    <>
+                      <Loader2 className="size-4 animate-spin" />
+                      Getting your location...
+                    </>
+                  ) : (
+                    <>
+                      <MapPin className="size-4" />
+                      Use my current location
+                    </>
+                  )}
+                </Button>
+
+                {latitude != null && longitude != null ? (
+                  <p className="flex items-center gap-1.5 text-xs font-medium text-success">
+                    <MapPin className="size-3.5" />
+                    Location detected
+                  </p>
+                ) : (
+                  <p className="text-xs text-muted-foreground">
+                    Current location is required to find nearby riders.
+                  </p>
+                )}
+              </div>
+            </Field>
           </div>
+
+          <Button
+            className="mt-7 w-full"
+            size="lg"
+            onClick={() => submit.mutate()}
+            disabled={!canBook}
+          >
+            {submit.isPending ? (
+              <>
+                <Loader2 className="size-4 animate-spin" />
+                Finding riders...
+              </>
+            ) : (
+              <>
+                <Navigation className="size-4" />
+                Book a rider now
+              </>
+            )}
+          </Button>
         </section>
       </main>
     </PublicLayout>
@@ -208,17 +313,18 @@ function PasugoPage() {
 
 function Field({
   label,
-  className,
+  required,
   children,
 }: {
   label: string;
-  className?: string;
+  required?: boolean;
   children: ReactNode;
 }) {
   return (
-    <label className={`flex flex-col gap-1.5 ${className ?? ""}`}>
+    <label className="flex flex-col gap-1.5">
       <span className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-        {label}
+        {label}{" "}
+        {required ? <span className="text-destructive">*</span> : null}
       </span>
       {children}
     </label>
