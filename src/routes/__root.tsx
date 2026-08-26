@@ -12,6 +12,8 @@ import {
 import { useEffect, type ReactNode } from "react";
 
 import appCss from "../styles.css?url";
+import "leaflet/dist/leaflet.css";
+
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { AuthProvider } from "@/contexts/auth-context";
 import { CartProvider } from "@/contexts/cart-context";
