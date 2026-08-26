@@ -22,6 +22,7 @@ import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { peso } from "@/lib/currency";
+import { dispatchChatUnreadQuery } from "@/lib/dispatch-chat";
 import {
   activeJobQuery,
   advanceDispatch,
@@ -96,6 +97,9 @@ function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
   const { data: status } = useQuery(riderStatusQuery(user?.id));
   const { data: history } = useQuery(riderHistoryQuery(user?.id));
   const { data: activeJob } = useQuery(activeJobQuery(user?.id));
+  const { data: chatUnread } = useQuery(
+    dispatchChatUnreadQuery(activeJob?.order_id, user?.id),
+  );
   const { data: activePasugoJob } = useQuery(activePasugoJobForRiderQuery(user?.id));
 
   const online = Boolean(status?.is_online);
@@ -206,6 +210,20 @@ function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
           filter: `assigned_rider_id=eq.${user.id}`,
         },
         refreshDispatch,
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "dispatch_chat_messages",
+          filter: `recipient_id=eq.${user.id}`,
+        },
+        () => {
+          void queryClient.invalidateQueries({
+            queryKey: ["dispatch-chat-unread"],
+          });
+        },
       )
       .subscribe();
     return () => {
@@ -439,11 +457,20 @@ function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
                   Complete delivery
                 </Button>
               )}
-              <Button asChild variant="outline">
-                <Link to="/booking-chat/$orderId" params={{ orderId: activeJob.order_id }}>
-                  Chat customer
-                </Link>
-              </Button>
+              <div className="relative">
+                <Button asChild variant="outline">
+                  <Link to="/booking-chat/$orderId" params={{ orderId: activeJob.order_id }}>
+                    Chat customer
+                  </Link>
+                </Button>
+
+                {chatUnread ? (
+                  <span
+                    className="absolute -right-1 -top-1 size-3 rounded-full bg-destructive ring-2 ring-card"
+                    aria-label="Unread message"
+                  />
+                ) : null}
+              </div>
             </div>
           </div>
         </Panel>

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { peso } from "@/lib/currency";
 import { orderDispatchQuery, watchAssignedRider, watchDispatchJob } from "@/lib/dispatch";
+import { dispatchChatUnreadQuery } from "@/lib/dispatch-chat";
 import { ORDER_FLOW, ORDER_LABELS, orderItemsQuery, orderQuery } from "@/lib/orders";
 import {
   cancelPasugoBooking,
@@ -665,6 +666,11 @@ function PasugoTrackingPanel({
  */
 function DispatchPanel({ orderId }: { orderId: string }) {
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  const { data: chatUnread } = useQuery(
+    dispatchChatUnreadQuery(orderId, user?.id),
+  );
 
   const { data: job } = useQuery({
     ...orderDispatchQuery(orderId),
@@ -678,16 +684,40 @@ function DispatchPanel({ orderId }: { orderId: string }) {
 
   useEffect(() => {
     const sub = watchDispatchJob(orderId, () => {
-      queryClient.invalidateQueries({
+      void queryClient.invalidateQueries({
         queryKey: ["dispatch-job", orderId],
       });
     });
 
+    const chatChannel = supabase
+      .channel(`dispatch-chat-unread-${orderId}-${user?.id ?? "guest"}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "dispatch_chat_messages",
+          filter: `order_id=eq.${orderId}`,
+        },
+        (payload) => {
+          const message = payload.new as {
+            recipient_id?: string;
+          };
+
+          if (message.recipient_id === user?.id && user?.id) {
+            void queryClient.invalidateQueries({
+              queryKey: ["dispatch-chat-unread", orderId, user.id],
+            });
+          }
+        },
+      )
+      .subscribe();
+
     return () => {
-      // Use supabase.removeChannel to reliably remove the realtime channel instance
       void supabase.removeChannel(sub);
+      void supabase.removeChannel(chatChannel);
     };
-  }, [orderId, queryClient]);
+  }, [orderId, queryClient, user?.id]);
 
   useEffect(() => {
     if (!job?.assigned_rider_id) return;
@@ -749,11 +779,20 @@ function DispatchPanel({ orderId }: { orderId: string }) {
       ) : null}
 
       {job.status === "assigned" || job.status === "picked_up" || job.status === "delivered" ? (
-        <Button asChild variant="outline" className="mt-4">
-          <Link to="/booking-chat/$orderId" params={{ orderId }}>
-            Chat with rider
-          </Link>
-        </Button>
+        <div className="relative mt-4 inline-flex">
+          <Button asChild variant="outline">
+            <Link to="/booking-chat/$orderId" params={{ orderId }}>
+              Chat with rider
+            </Link>
+          </Button>
+
+          {chatUnread ? (
+            <span
+              className="absolute -right-1 -top-1 size-3 rounded-full bg-destructive ring-2 ring-card"
+              aria-label="Unread message"
+            />
+          ) : null}
+        </div>
       ) : null}
 
       <div className="mt-4 overflow-hidden rounded-xl border">

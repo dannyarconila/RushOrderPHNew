@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { markDispatchChatRead } from "@/lib/dispatch-chat";
 
 interface ChatMessageRow {
   id: string;
@@ -82,6 +83,16 @@ function BookingChatPage() {
       }));
     },
   });
+
+  useEffect(() => {
+    if (!user || !order.data?.rider_id) return;
+
+    void markDispatchChatRead(orderId, user.id).then(() => {
+      void queryClient.invalidateQueries({
+        queryKey: ["dispatch-chat-unread", orderId, user.id],
+      });
+    });
+  }, [orderId, order.data?.rider_id, user, queryClient]);
 
   useEffect(() => {
     const channel = supabase
