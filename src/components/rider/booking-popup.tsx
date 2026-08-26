@@ -227,10 +227,14 @@ export function BookingPopup({ data, onClose }: { data: OfferWithJob; onClose: (
             {details.isLoading ? (
               <p className="text-sm text-muted-foreground">Loading order details…</p>
             ) : details.isError ? (
-              <p className="text-sm text-destructive">
-                Could not load the order details. The booking can still be accepted if the delivery
-                is valid.
-              </p>
+              <div className="space-y-1 text-sm text-destructive">
+                <p>Could not load the order details.</p>
+                <p className="break-all font-mono text-xs">
+                  {details.error instanceof Error
+                    ? details.error.message
+                    : String(details.error)}
+                </p>
+              </div>
             ) : (
               <div className="space-y-2">
                 {(d?.items ?? []).map((item) => (
