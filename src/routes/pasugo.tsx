@@ -197,7 +197,7 @@ function PasugoPage() {
         </p>
 
         {latest.data &&
-        !["completed", "cancelled"].includes(latest.data.status) ? (
+        !["completed", "cancelled", "delivered"].includes(latest.data.status) ? (
           <div className="mt-5 rounded-2xl border border-primary/30 bg-primary-soft p-4">
             <p className="text-sm font-semibold text-primary">
               You have an active Pasugo booking.
