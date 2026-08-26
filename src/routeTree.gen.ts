@@ -62,6 +62,7 @@ import { Route as LegalIndexRouteImport } from './routes/legal.index'
 import { Route as LegalSlugRouteImport } from './routes/legal.$slug'
 import { Route as OrderOrderIdRouteImport } from './routes/order.$orderId'
 import { Route as PasugoChatBookingIdRouteImport } from './routes/pasugo-chat.$bookingId'
+import { Route as PasugoIndexRouteImport } from './routes/pasugo.index'
 import { Route as PasugoBookingIdRouteImport } from './routes/pasugo.$bookingId'
 import { Route as StoreStoreIdRouteImport } from './routes/store.$storeId'
 import { Route as DotlovableOauthConsentRouteImport } from './routes/[.]lovable.oauth.consent'
@@ -338,6 +339,11 @@ const PasugoChatBookingIdRoute = PasugoChatBookingIdRouteImport.update({
   path: '/pasugo-chat/$bookingId',
   getParentRoute: () => rootRouteImport,
 } as any)
+const PasugoIndexRoute = PasugoIndexRouteImport.update({
+  id: '/',
+  path: '/',
+  getParentRoute: () => PasugoRoute,
+} as any)
 const PasugoBookingIdRoute = PasugoBookingIdRouteImport.update({
   id: '/$bookingId',
   path: '/$bookingId',
@@ -416,6 +422,7 @@ export interface FileRoutesByFullPath {
   '/store/$storeId': typeof StoreStoreIdRoute
   '/internal-admin/': typeof InternalAdminIndexRoute
   '/legal/': typeof LegalIndexRoute
+  '/pasugo/': typeof PasugoIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
 }
@@ -436,7 +443,6 @@ export interface FileRoutesByTo {
   '/mcp': typeof McpRoute
   '/my-products': typeof MyProductsRoute
   '/my-stores': typeof MyStoresRoute
-  '/pasugo': typeof PasugoRouteWithChildren
   '/pharmacy': typeof PharmacyRoute
   '/register': typeof RegisterRoute
   '/rider': typeof RiderRoute
@@ -473,6 +479,7 @@ export interface FileRoutesByTo {
   '/store/$storeId': typeof StoreStoreIdRoute
   '/internal-admin': typeof InternalAdminIndexRoute
   '/legal': typeof LegalIndexRoute
+  '/pasugo': typeof PasugoIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
 }
@@ -533,6 +540,7 @@ export interface FileRoutesById {
   '/store/$storeId': typeof StoreStoreIdRoute
   '/internal-admin/': typeof InternalAdminIndexRoute
   '/legal/': typeof LegalIndexRoute
+  '/pasugo/': typeof PasugoIndexRoute
   '/.lovable/oauth/consent': typeof DotlovableOauthConsentRoute
   '/.mcp/invoke-tool/$tool': typeof Char91DotmcpChar93InvokeToolToolRoute
 }
@@ -594,6 +602,7 @@ export interface FileRouteTypes {
     | '/store/$storeId'
     | '/internal-admin/'
     | '/legal/'
+    | '/pasugo/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
   fileRoutesByTo: FileRoutesByTo
@@ -614,7 +623,6 @@ export interface FileRouteTypes {
     | '/mcp'
     | '/my-products'
     | '/my-stores'
-    | '/pasugo'
     | '/pharmacy'
     | '/register'
     | '/rider'
@@ -651,6 +659,7 @@ export interface FileRouteTypes {
     | '/store/$storeId'
     | '/internal-admin'
     | '/legal'
+    | '/pasugo'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
   id:
@@ -710,6 +719,7 @@ export interface FileRouteTypes {
     | '/store/$storeId'
     | '/internal-admin/'
     | '/legal/'
+    | '/pasugo/'
     | '/.lovable/oauth/consent'
     | '/.mcp/invoke-tool/$tool'
   fileRoutesById: FileRoutesById
@@ -1126,6 +1136,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof PasugoChatBookingIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/pasugo/': {
+      id: '/pasugo/'
+      path: '/'
+      fullPath: '/pasugo/'
+      preLoaderRoute: typeof PasugoIndexRouteImport
+      parentRoute: typeof PasugoRoute
+    }
     '/pasugo/$bookingId': {
       id: '/pasugo/$bookingId'
       path: '/$bookingId'
@@ -1217,10 +1234,12 @@ const LegalRouteWithChildren = LegalRoute._addFileChildren(LegalRouteChildren)
 
 interface PasugoRouteChildren {
   PasugoBookingIdRoute: typeof PasugoBookingIdRoute
+  PasugoIndexRoute: typeof PasugoIndexRoute
 }
 
 const PasugoRouteChildren: PasugoRouteChildren = {
   PasugoBookingIdRoute: PasugoBookingIdRoute,
+  PasugoIndexRoute: PasugoIndexRoute,
 }
 
 const PasugoRouteWithChildren =
