@@ -45,12 +45,15 @@ export function PasugoBookingPopup({
     onSuccess: (result) => {
       if (result.ok) {
         toast.success("Pasugo booking assigned to you");
-        if (result.booking_id) {
-          navigate({
-            to: "/pasugo/$bookingId",
-            params: { bookingId: result.booking_id },
-          });
-        }
+        // Rider acceptance must stay in the rider workspace.
+        // Refresh the active Pasugo state, then open the rider tracking view.
+        void queryClient.invalidateQueries({ queryKey: ["pasugo-active-job"] });
+        void queryClient.invalidateQueries({ queryKey: ["rider-status"] });
+
+        navigate({
+          to: "/rider",
+          replace: true,
+        });
       } else {
         toast.info("Another rider accepted this booking first");
       }
