@@ -427,7 +427,7 @@ function OrderTrackingPage() {
           )}
         </section>
 
-        <DispatchPanel orderId={orderId} />
+        {!cancelled ? <DispatchPanel orderId={orderId} /> : null}
 
         <section className="mt-6 rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-soft)]">
           <h2 className="flex items-center gap-2 font-display text-base font-bold">
