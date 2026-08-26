@@ -5,6 +5,7 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 
 import { PublicLayout } from "@/components/site/public-layout";
+import { useAuth } from "@/contexts/use-auth";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { peso } from "@/lib/currency";
@@ -42,6 +43,7 @@ export const Route = createFileRoute("/order/$orderId")({
 
 function OrderTrackingPage() {
   const { orderId } = Route.useParams();
+  const { roles } = useAuth();
   const queryClient = useQueryClient();
 
   const order = useQuery(orderQuery(orderId));
@@ -477,9 +479,25 @@ function OrderTrackingPage() {
           <OrderReview orderId={orderId} storeId={marketplaceOrder.store_id} />
         ) : null}
 
-        <Button asChild variant="outline" className="mt-6">
-          <Link to="/customer">Back to my orders</Link>
-        </Button>
+        <div className="mt-6 flex flex-wrap gap-2">
+          {roles.includes("customer") ? (
+            <Button asChild variant="outline">
+              <Link to="/customer">Back to Customer Dashboard</Link>
+            </Button>
+          ) : null}
+
+          {roles.includes("seller") ? (
+            <Button asChild variant="outline">
+              <Link to="/seller">Back to Seller Dashboard</Link>
+            </Button>
+          ) : null}
+
+          {roles.includes("rider") ? (
+            <Button asChild variant="outline">
+              <Link to="/rider">Back to Rider Dashboard</Link>
+            </Button>
+          ) : null}
+        </div>
       </div>
     </PublicLayout>
   );
