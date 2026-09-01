@@ -1,5 +1,5 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Bike, ChevronLeft, MapPin, Navigation, PackageCheck } from "lucide-react";
 
@@ -8,11 +8,16 @@ import { EmptyState, PageHeader, Panel } from "@/components/dashboard/primitives
 import { RoleGate } from "@/components/dashboard/role-gate";
 import { useAuth } from "@/contexts/use-auth";
 import { peso } from "@/lib/currency";
+import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
-import { activeJobQuery, riderHistoryQuery } from "@/lib/dispatch";
+import { BookingPopup } from "@/components/rider/booking-popup";
+import { activeJobQuery, pendingOfferQuery, riderHistoryQuery } from "@/lib/dispatch";
 import { activePasugoJobForRiderQuery, riderPasugoHistoryQuery } from "@/lib/pasugo";
 
 export const Route = createFileRoute("/rider-orders")({
+  validateSearch: (s: Record<string, unknown>): { incomingBooking?: string } => ({
+    incomingBooking: typeof s.incomingBooking === "string" ? s.incomingBooking : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "My orders — Rider — RushOrder PH" },
@@ -28,6 +33,7 @@ export const Route = createFileRoute("/rider-orders")({
 function RiderOrdersPage() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
+  const { incomingBooking } = Route.useSearch();
 
   useEffect(() => {
     if (!loading && !user) {
@@ -48,13 +54,32 @@ function RiderOrdersPage() {
       ]}
     >
       <RoleGate kind="rider">
-        <RiderOrdersContent riderId={user?.id} />
+        <RiderOrdersContent
+          riderId={user?.id}
+          incomingBooking={incomingBooking}
+          navigate={navigate}
+        />
       </RoleGate>
     </DashboardLayout>
   );
 }
 
-function RiderOrdersContent({ riderId }: { riderId?: string }) {
+function RiderOrdersContent({
+  riderId,
+  incomingBooking,
+  navigate,
+}: {
+  riderId?: string;
+  incomingBooking?: string;
+  navigate: ReturnType<typeof useNavigate>;
+}) {
+  const [incomingOffer, setIncomingOffer] = useState<{
+    offer: import("@/lib/dispatch").DispatchOffer;
+    job: import("@/lib/dispatch").DispatchJob;
+  } | null>(null);
+
+  const { data: pendingOffer } = useQuery(pendingOfferQuery(riderId));
+
   const { data: activeJob, isLoading: activeLoading } = useQuery(activeJobQuery(riderId));
   const { data: history, isLoading: historyLoading } = useQuery(riderHistoryQuery(riderId));
   const { data: activePasugoJob, isLoading: activePasugoLoading } = useQuery(
@@ -64,6 +89,51 @@ function RiderOrdersContent({ riderId }: { riderId?: string }) {
     riderPasugoHistoryQuery(riderId),
   );
 
+  useEffect(() => {
+    if (!riderId || !incomingBooking) return;
+
+    let cancelled = false;
+
+    const loadIncomingBooking = async () => {
+      const { data, error } = await supabase
+        .from("dispatch_offers")
+        .select("*, dispatch_jobs(*)")
+        .eq("id", incomingBooking)
+        .eq("rider_id", riderId)
+        .eq("status", "pending")
+        .gt("expires_at", new Date().toISOString())
+        .maybeSingle();
+
+      if (cancelled) return;
+
+      if (error) {
+        console.error("[Rider orders] Could not load incoming booking:", error);
+        return;
+      }
+
+      const row = data as
+        | (import("@/lib/dispatch").DispatchOffer & {
+            dispatch_jobs: import("@/lib/dispatch").DispatchJob | null;
+          })
+        | null;
+
+      if (!row?.dispatch_jobs || row.dispatch_jobs.status !== "searching") return;
+
+      const { dispatch_jobs: job, ...offer } = row;
+
+      setIncomingOffer({
+        offer: offer as import("@/lib/dispatch").DispatchOffer,
+        job: job as import("@/lib/dispatch").DispatchJob,
+      });
+    };
+
+    void loadIncomingBooking();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [riderId, incomingBooking]);
+
   const completed = history ?? [];
   const completedPasugo = pasugoHistory ?? [];
   const allHistory = [
@@ -71,8 +141,26 @@ function RiderOrdersContent({ riderId }: { riderId?: string }) {
     ...completedPasugo.map((job) => ({ type: "pasugo" as const, job })),
   ].sort((a, b) => new Date(b.job.updated_at).getTime() - new Date(a.job.updated_at).getTime());
 
+  const bookingPopupData = incomingOffer ?? pendingOffer ?? null;
+
   return (
     <>
+      {bookingPopupData ? (
+        <BookingPopup
+          data={bookingPopupData}
+          onClose={() => {
+            setIncomingOffer(null);
+
+            if (incomingBooking) {
+              void navigate({
+                to: "/rider-orders",
+                replace: true,
+              });
+            }
+          }}
+        />
+      ) : null}
+
       <PageHeader title="My orders" description="View your active and completed deliveries." />
 
       {activeLoading || activePasugoLoading ? (

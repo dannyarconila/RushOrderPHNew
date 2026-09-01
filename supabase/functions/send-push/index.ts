@@ -260,7 +260,9 @@ Deno.serve(async (req: Request) => {
         notificationKind === "new_order" || notificationKind === "order"
           ? "/store-orders"
           : notificationKind === "dispatch"
-            ? "/rider-orders"
+            ? notification.dispatch_offer_id
+              ? `/rider-orders?incomingBooking=${encodeURIComponent(notification.dispatch_offer_id)}`
+              : "/rider-orders"
             : "/";
 
       const result = await sendPushToUser(
