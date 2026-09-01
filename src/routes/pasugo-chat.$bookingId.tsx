@@ -209,7 +209,7 @@ function PasugoChatPage() {
             <>
               <Button asChild variant="outline">
                 <Link to="/pasugo/$bookingId" params={{ bookingId }}>
-                  Back to booking
+                  Back to tracking
                 </Link>
               </Button>
               <Button asChild variant="outline">
