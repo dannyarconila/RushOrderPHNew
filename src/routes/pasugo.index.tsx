@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/use-auth";
 import { myAddressesQuery, formatAddress } from "@/lib/addresses";
 import { createPasugoBooking, customerLatestPasugoQuery } from "@/lib/pasugo";
+import { reverseGeocodeFn } from "@/lib/geocoding.functions";
 
 export const Route = createFileRoute("/pasugo/")({
   head: () => ({
@@ -60,7 +61,30 @@ function PasugoPage() {
         address?.recipient_name ??
         "Customer";
       const phone = address?.phone ?? (user.phone || "");
-      const pickupAddress = address ? formatAddress(address) : "Current location";
+
+      let pickupAddress = "Current location";
+      try {
+        const reverse = await reverseGeocodeFn({
+          data: {
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          },
+        });
+
+        if (reverse?.address) {
+          pickupAddress = [
+            reverse.address.line1,
+            reverse.address.barangay,
+            reverse.address.city,
+            reverse.address.province,
+            reverse.address.postal_code,
+          ]
+            .filter(Boolean)
+            .join(", ");
+        }
+      } catch (error) {
+        console.warn("Pasugo reverse geocoding failed:", error);
+      }
       return createPasugoBooking({
         userId: user.id,
         customerName: profileName,
