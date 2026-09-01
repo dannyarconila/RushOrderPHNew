@@ -192,9 +192,20 @@ function PasugoTrackingPage() {
   }, [assignedRiderId, canChooseRider, hasPendingSelection, job.data?.id, queryClient]);
 
   useEffect(() => {
-    if (booking.data?.status === "accepted" && assignedRiderId) {
-      void navigate({ to: "/pasugo-chat/$bookingId", params: { bookingId }, replace: true });
-    }
+    if (booking.data?.status !== "accepted" || !assignedRiderId) return;
+    if (typeof window === "undefined") return;
+
+    const autoChatKey = `pasugo-auto-chat:${bookingId}`;
+
+    if (sessionStorage.getItem(autoChatKey) === "1") return;
+
+    sessionStorage.setItem(autoChatKey, "1");
+
+    void navigate({
+      to: "/pasugo-chat/$bookingId",
+      params: { bookingId },
+      replace: true,
+    });
   }, [assignedRiderId, booking.data?.status, bookingId, navigate]);
 
   /*
