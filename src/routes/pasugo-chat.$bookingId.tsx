@@ -91,6 +91,7 @@ function PasugoChatPage() {
     if (user.id === booking.data.assigned_rider_id) return booking.data.customer_id;
     return null;
   }, [user, booking.data]);
+  const isAssignedRider = Boolean(user && booking.data?.assigned_rider_id === user.id);
 
   useEffect(() => {
     if (!user || !recipientId) return;
@@ -200,14 +201,22 @@ function PasugoChatPage() {
         </section>
 
         <div className="mt-4 flex gap-3">
-          <Button asChild variant="outline">
-            <Link to="/pasugo/$bookingId" params={{ bookingId }}>
-              Back to booking
-            </Link>
-          </Button>
-          <Button asChild variant="outline">
-            <Link to="/customer">Customer dashboard</Link>
-          </Button>
+          {isAssignedRider ? (
+            <Button asChild variant="outline">
+              <Link to="/rider">My Rider dashboard</Link>
+            </Button>
+          ) : (
+            <>
+              <Button asChild variant="outline">
+                <Link to="/pasugo/$bookingId" params={{ bookingId }}>
+                  Back to booking
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link to="/customer">Customer dashboard</Link>
+              </Button>
+            </>
+          )}
         </div>
       </main>
     </PublicLayout>
