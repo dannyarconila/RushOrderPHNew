@@ -205,18 +205,19 @@ function PasugoChatPage() {
             <Button asChild variant="outline">
               <Link to="/rider">My Rider dashboard</Link>
             </Button>
-          ) : (
-            <>
-              <Button asChild variant="outline">
-                <Link to="/pasugo/$bookingId" params={{ bookingId }}>
-                  Back to tracking
-                </Link>
-              </Button>
-              <Button asChild variant="outline">
-                <Link to="/customer">Customer dashboard</Link>
-              </Button>
-            </>
-          )}
+          ) : null}
+
+          <Button asChild variant="outline">
+            <Link to="/pasugo/$bookingId" params={{ bookingId }}>
+              Back to tracking
+            </Link>
+          </Button>
+
+          {!isAssignedRider ? (
+            <Button asChild variant="outline">
+              <Link to="/customer">Customer dashboard</Link>
+            </Button>
+          ) : null}
         </div>
       </main>
     </PublicLayout>
