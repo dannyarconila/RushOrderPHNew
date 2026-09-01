@@ -52,8 +52,7 @@ const LABELS: Record<string, string> = {
   dispatch_auto_expand: "Auto-expand radius between retries (true/false)",
   dispatch_radius_expansion_km: "Radius added per retry (km)",
   dispatch_strategy: "Strategy (nearest_first | wave | broadcast)",
-  dispatch_retry_rider_strategy:
-    "Retry rider strategy",
+  dispatch_retry_rider_strategy: "Retry rider strategy",
 
   rider_platform_fee: "Rider platform base fee (PHP)",
   rider_platform_fee_included_km: "Distance included in base fee (km)",
@@ -357,17 +356,11 @@ function SettingField({ setting }: { setting: SettingRow }) {
         {setting.key === "dispatch_retry_rider_strategy" ? (
           <select
             value={draft.replace(/^"|"$/g, "")}
-            onChange={(event) =>
-              setDraft(JSON.stringify(event.target.value))
-            }
+            onChange={(event) => setDraft(JSON.stringify(event.target.value))}
             className="min-w-[16rem] flex-1 rounded-md border border-input bg-background px-3 py-2 font-mono text-sm"
           >
-            <option value="all_eligible">
-              Re-dispatch to all eligible riders
-            </option>
-            <option value="exclude_timed_out">
-              Exclude previously timed-out riders
-            </option>
+            <option value="all_eligible">Re-dispatch to all eligible riders</option>
+            <option value="exclude_timed_out">Exclude previously timed-out riders</option>
           </select>
         ) : (
           <Input

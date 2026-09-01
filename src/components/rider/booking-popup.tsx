@@ -230,9 +230,7 @@ export function BookingPopup({ data, onClose }: { data: OfferWithJob; onClose: (
               <div className="space-y-1 text-sm text-destructive">
                 <p>Could not load the order details.</p>
                 <p className="break-all font-mono text-xs">
-                  {details.error instanceof Error
-                    ? details.error.message
-                    : String(details.error)}
+                  {details.error instanceof Error ? details.error.message : String(details.error)}
                 </p>
               </div>
             ) : (

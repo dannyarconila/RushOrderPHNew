@@ -69,11 +69,7 @@ function RiderOrdersContent({ riderId }: { riderId?: string }) {
   const allHistory = [
     ...completed.map((job) => ({ type: "marketplace" as const, job })),
     ...completedPasugo.map((job) => ({ type: "pasugo" as const, job })),
-  ].sort(
-    (a, b) =>
-      new Date(b.job.updated_at).getTime() -
-      new Date(a.job.updated_at).getTime(),
-  );
+  ].sort((a, b) => new Date(b.job.updated_at).getTime() - new Date(a.job.updated_at).getTime());
 
   return (
     <>
@@ -87,15 +83,15 @@ function RiderOrdersContent({ riderId }: { riderId?: string }) {
         <div className="mt-6 space-y-4">
           {activeJob ? (
             <ActiveDeliveryCard
-              title={activeJob.dispatch_type === "pasugo" ? "Active Pasugo booking" : "Active delivery"}
+              title={
+                activeJob.dispatch_type === "pasugo" ? "Active Pasugo booking" : "Active delivery"
+              }
               type={activeJob.dispatch_type === "pasugo" ? "Pasugo" : "Marketplace"}
               fee={activeJob.delivery_fee}
               distance={activeJob.distance_km}
               status={activeJob.status}
               pickupTitle={
-                activeJob.dispatch_type === "pasugo"
-                  ? "Pickup"
-                  : (activeJob.store_name ?? "Store")
+                activeJob.dispatch_type === "pasugo" ? "Pickup" : (activeJob.store_name ?? "Store")
               }
               dropoffTitle={activeJob.dispatch_type === "pasugo" ? "Destination" : "Customer"}
               pickupAddress={activeJob.pickup_address}
@@ -120,7 +116,11 @@ function RiderOrdersContent({ riderId }: { riderId?: string }) {
         </div>
       ) : null}
 
-      <Panel title="Delivery history" description="Your completed Marketplace and Pasugo deliveries." className="mt-6">
+      <Panel
+        title="Delivery history"
+        description="Your completed Marketplace and Pasugo deliveries."
+        className="mt-6"
+      >
         {historyLoading || pasugoHistoryLoading ? (
           <p className="py-8 text-center text-sm text-muted-foreground">
             Loading delivery history…
@@ -232,18 +232,11 @@ function ActiveDeliveryCard({
         <div className="flex flex-wrap items-baseline justify-between gap-3">
           <p className="font-display text-2xl font-extrabold">{peso(Number(fee))}</p>
 
-          <p className="text-sm text-muted-foreground">
-            {Number(distance).toFixed(1)} km
-          </p>
+          <p className="text-sm text-muted-foreground">{Number(distance).toFixed(1)} km</p>
         </div>
 
         <div className="grid gap-3 sm:grid-cols-2">
-          <LocationCard
-            icon={MapPin}
-            label="Pick up"
-            title={pickupTitle}
-            address={pickupAddress}
-          />
+          <LocationCard icon={MapPin} label="Pick up" title={pickupTitle} address={pickupAddress} />
 
           <LocationCard
             icon={Navigation}
@@ -264,10 +257,7 @@ function ActiveDeliveryCard({
 
           {trackingBookingId ? (
             <Button asChild size="sm" variant="outline">
-              <Link
-                to="/pasugo/$bookingId"
-                params={{ bookingId: trackingBookingId }}
-              >
+              <Link to="/pasugo/$bookingId" params={{ bookingId: trackingBookingId }}>
                 View tracking
               </Link>
             </Button>

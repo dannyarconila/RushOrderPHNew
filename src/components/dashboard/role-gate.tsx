@@ -106,14 +106,8 @@ export function RoleGate({ kind, children }: { kind: Kind; children: ReactNode }
             label="Status"
             value={application.status === "pending" ? "Pending review" : "Under review"}
           />
-          <Detail
-            label="Date submitted"
-            value={formatPhilippineDate(submitted)}
-          />
-          <Detail
-            label="Estimated review"
-            value={`by ${formatPhilippineDate(estimate)}`}
-          />
+          <Detail label="Date submitted" value={formatPhilippineDate(submitted)} />
+          <Detail label="Estimated review" value={`by ${formatPhilippineDate(estimate)}`} />
         </dl>
         <p className="mt-4 text-sm text-muted-foreground">
           We'll notify you here and by in-app notification as soon as a decision is made.

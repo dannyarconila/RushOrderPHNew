@@ -168,7 +168,9 @@ export function NotificationCenter() {
                     <div className="min-w-0 flex-1">
                       <p className="break-words text-sm font-semibold">{item.title}</p>
                       {item.body ? (
-                        <p className="mt-1 break-words text-xs leading-5 text-muted-foreground">{item.body}</p>
+                        <p className="mt-1 break-words text-xs leading-5 text-muted-foreground">
+                          {item.body}
+                        </p>
                       ) : null}
                       <p className="mt-1 text-[11px] text-muted-foreground">
                         {formatPhilippineDateTime(item.created_at)}

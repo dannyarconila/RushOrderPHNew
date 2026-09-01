@@ -104,9 +104,7 @@ function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
   const { data: status } = useQuery(riderStatusQuery(user?.id));
   const { data: history } = useQuery(riderHistoryQuery(user?.id));
   const { data: activeJob } = useQuery(activeJobQuery(user?.id));
-  const { data: chatUnread } = useQuery(
-    dispatchChatUnreadQuery(activeJob?.order_id, user?.id),
-  );
+  const { data: chatUnread } = useQuery(dispatchChatUnreadQuery(activeJob?.order_id, user?.id));
   const { data: activePasugoJob } = useQuery(activePasugoJobForRiderQuery(user?.id));
   const { data: activePasugoBooking } = useQuery(
     pasugoBookingQuery(activePasugoJob?.booking_id ?? ""),
@@ -117,9 +115,7 @@ function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
     lng: number;
   } | null>(null);
 
-  const pasugoChatUnread = useQuery(
-    dispatchChatUnreadQuery(activePasugoJob?.booking_id, user?.id),
-  );
+  const pasugoChatUnread = useQuery(dispatchChatUnreadQuery(activePasugoJob?.booking_id, user?.id));
 
   useEffect(() => {
     if (!activePasugoJob?.assigned_rider_id) {
@@ -127,12 +123,9 @@ function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
       return;
     }
 
-    const channel = watchAssignedRider(
-      activePasugoJob.assigned_rider_id,
-      (location) => {
-        setPasugoRiderLocation(location);
-      },
-    );
+    const channel = watchAssignedRider(activePasugoJob.assigned_rider_id, (location) => {
+      setPasugoRiderLocation(location);
+    });
 
     return () => {
       void supabase.removeChannel(channel);
@@ -159,11 +152,7 @@ function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
 
           if (message.recipient_id === user.id) {
             void queryClient.invalidateQueries({
-              queryKey: [
-                "dispatch-chat-unread",
-                activePasugoJob.booking_id,
-                user.id,
-              ],
+              queryKey: ["dispatch-chat-unread", activePasugoJob.booking_id, user.id],
             });
           }
         },
@@ -504,9 +493,7 @@ function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
           <div className="space-y-4">
             <div className="flex flex-wrap items-baseline justify-between gap-3">
               <div>
-                <p className="text-xs uppercase tracking-wide text-muted-foreground">
-                  Customer
-                </p>
+                <p className="text-xs uppercase tracking-wide text-muted-foreground">Customer</p>
                 <p className="font-display text-xl font-extrabold">
                   {activePasugoBooking.customer_name ?? "Customer"}
                 </p>
@@ -524,9 +511,7 @@ function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
               <p className="text-xs uppercase tracking-wide text-muted-foreground">
                 Customer location
               </p>
-              <p className="mt-1 text-sm font-semibold">
-                {activePasugoBooking.pickup_address}
-              </p>
+              <p className="mt-1 text-sm font-semibold">{activePasugoBooking.pickup_address}</p>
             </div>
 
             <div className="overflow-hidden rounded-xl border">

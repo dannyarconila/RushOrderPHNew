@@ -50,9 +50,7 @@ function CustomerDashboard() {
   const recent = (orders ?? []).slice(0, 10);
   const recentPasugo = (pasugoBookings ?? []).slice(0, 10);
 
-  const activeOrders = recent.filter(
-    (o) => !["delivered", "cancelled"].includes(o.status),
-  );
+  const activeOrders = recent.filter((o) => !["delivered", "cancelled"].includes(o.status));
   const activePasugo = recentPasugo.filter(
     (booking) => !["delivered", "completed", "cancelled", "failed"].includes(booking.status),
   );
@@ -110,11 +108,7 @@ function CustomerDashboard() {
           type="button"
           onClick={openActiveOrder}
           className="block w-full rounded-2xl text-left transition hover:-translate-y-0.5 focus:outline-none focus-visible:ring-2 focus-visible:ring-primary"
-          aria-label={
-            mostRecentActiveOrder
-              ? "Open active order"
-              : "No active Orders"
-          }
+          aria-label={mostRecentActiveOrder ? "Open active order" : "No active Orders"}
         >
           <StatCard
             label="Active orders"
@@ -147,11 +141,7 @@ function CustomerDashboard() {
                 booking,
               })),
             ]
-              .sort(
-                (a, b) =>
-                  new Date(b.created_at).getTime() -
-                  new Date(a.created_at).getTime(),
-              )
+              .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
               .slice(0, 15)
               .map((entry) =>
                 entry.type === "pasugo" ? (
@@ -160,9 +150,7 @@ function CustomerDashboard() {
                     className="flex items-center justify-between gap-4 py-3"
                   >
                     <div>
-                      <p className="text-sm font-semibold">
-                        Pasugo booking
-                      </p>
+                      <p className="text-sm font-semibold">Pasugo booking</p>
 
                       <p className="text-xs text-muted-foreground">
                         {new Date(entry.booking.created_at).toLocaleString("en-PH")}
@@ -209,8 +197,7 @@ function CustomerDashboard() {
                       <p className="text-sm font-semibold group-hover:underline">
                         {entry.order.order_items?.[0]?.product_name ??
                           `Order #${entry.order.id.slice(0, 8)}`}
-                        {entry.order.order_items &&
-                        entry.order.order_items.length > 1
+                        {entry.order.order_items && entry.order.order_items.length > 1
                           ? ` + ${entry.order.order_items.length - 1} more`
                           : ""}
                       </p>

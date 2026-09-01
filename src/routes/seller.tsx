@@ -101,7 +101,9 @@ function SellerOverview() {
   const { data: stores } = useQuery(myStoresQuery(user?.id));
 
   const store = stores?.[0] ?? null;
-  const [availability, setAvailability] = useState<ReturnType<typeof storeAvailability> | null>(null);
+  const [availability, setAvailability] = useState<ReturnType<typeof storeAvailability> | null>(
+    null,
+  );
 
   useEffect(() => {
     setAvailability(store ? storeAvailability(store) : null);

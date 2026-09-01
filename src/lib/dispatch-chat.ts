@@ -10,10 +10,7 @@ export interface DispatchChatMessage {
   created_at: string;
 }
 
-export async function getDispatchChatUnread(
-  orderId: string,
-  userId: string,
-): Promise<boolean> {
+export async function getDispatchChatUnread(orderId: string, userId: string): Promise<boolean> {
   const { data: readState, error: readError } = await supabase
     .from("dispatch_chat_reads" as never)
     .select("last_read_at")
@@ -30,8 +27,7 @@ export async function getDispatchChatUnread(
     .eq("recipient_id", userId)
     .limit(1);
 
-  const lastReadAt =
-    (readState as { last_read_at?: string } | null)?.last_read_at;
+  const lastReadAt = (readState as { last_read_at?: string } | null)?.last_read_at;
 
   if (lastReadAt) {
     query = query.gt("created_at", lastReadAt);
@@ -44,11 +40,7 @@ export async function getDispatchChatUnread(
   return (data ?? []).length > 0;
 }
 
-
-export function dispatchChatUnreadQuery(
-  orderId: string | undefined,
-  userId: string | undefined,
-) {
+export function dispatchChatUnreadQuery(orderId: string | undefined, userId: string | undefined) {
   return queryOptions({
     queryKey: ["dispatch-chat-unread", orderId ?? null, userId ?? null],
     enabled: Boolean(orderId && userId),
@@ -59,25 +51,20 @@ export function dispatchChatUnreadQuery(
   });
 }
 
-export async function markDispatchChatRead(
-  orderId: string,
-  userId: string,
-): Promise<void> {
+export async function markDispatchChatRead(orderId: string, userId: string): Promise<void> {
   const now = new Date().toISOString();
 
-  const { error } = await supabase
-    .from("dispatch_chat_reads" as never)
-    .upsert(
-      {
-        order_id: orderId,
-        user_id: userId,
-        last_read_at: now,
-        updated_at: now,
-      } as never,
-      {
-        onConflict: "order_id,user_id",
-      },
-    );
+  const { error } = await supabase.from("dispatch_chat_reads" as never).upsert(
+    {
+      order_id: orderId,
+      user_id: userId,
+      last_read_at: now,
+      updated_at: now,
+    } as never,
+    {
+      onConflict: "order_id,user_id",
+    },
+  );
 
   if (error) throw error;
 }

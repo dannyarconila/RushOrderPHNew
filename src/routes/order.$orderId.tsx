@@ -668,9 +668,7 @@ function DispatchPanel({ orderId }: { orderId: string }) {
   const queryClient = useQueryClient();
   const { user } = useAuth();
 
-  const { data: chatUnread } = useQuery(
-    dispatchChatUnreadQuery(orderId, user?.id),
-  );
+  const { data: chatUnread } = useQuery(dispatchChatUnreadQuery(orderId, user?.id));
 
   const { data: job } = useQuery({
     ...orderDispatchQuery(orderId),

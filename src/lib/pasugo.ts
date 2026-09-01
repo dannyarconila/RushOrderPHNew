@@ -280,6 +280,55 @@ export function pasugoBookingQuery(bookingId: string) {
   });
 }
 
+export type PasugoAvailableRider = {
+  rider_id: string;
+  rider_name: string | null;
+  distance_km: number;
+  latitude: number;
+  longitude: number;
+  last_seen_at: string;
+};
+
+export type PasugoRiderSelection = {
+  ok: boolean;
+  offer_id?: string;
+  rider_id?: string;
+  distance_km?: number;
+  expires_at?: string;
+};
+
+export async function getPasugoAvailableRiders(jobId: string): Promise<PasugoAvailableRider[]> {
+  const { data, error } = await supabase.rpc("pasugo_available_riders", {
+    _job_id: jobId,
+  });
+
+  if (error) throw error;
+
+  return ((data ?? []) as PasugoAvailableRider[]).sort((a, b) => a.distance_km - b.distance_km);
+}
+
+export async function selectPasugoRider(
+  jobId: string,
+  riderId: string,
+): Promise<PasugoRiderSelection> {
+  const { data, error } = await supabase.rpc("pasugo_select_rider", {
+    _job_id: jobId,
+    _rider_id: riderId,
+  });
+
+  if (error) throw error;
+
+  const result = (data ?? { ok: false }) as PasugoRiderSelection;
+  if (!result.ok) throw new Error("The rider could not be selected. Please choose another rider.");
+  return result;
+}
+
+export async function expireSelectedPasugoRider(jobId: string) {
+  const { data, error } = await supabase.rpc("pasugo_expire_selected_rider", { _job_id: jobId });
+  if (error) throw error;
+  return Boolean(data);
+}
+
 export function pasugoJobQuery(bookingId: string) {
   return queryOptions({
     queryKey: ["pasugo-job", bookingId],
@@ -460,4 +509,3 @@ export function customerPasugoBookingsQuery(userId: string | undefined, limit = 
     },
   });
 }
-

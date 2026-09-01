@@ -82,11 +82,7 @@ export function TextField({
   error?: boolean;
 }) {
   return (
-    <Field
-      label={label}
-      hint={hint}
-      className={error ? "text-destructive" : undefined}
-    >
+    <Field label={label} hint={hint} className={error ? "text-destructive" : undefined}>
       <input
         className={cn(
           inputClass,
