@@ -18,7 +18,7 @@ import {
   pasugoJobQuery,
   selectPasugoRider,
 } from "@/lib/pasugo";
-import { watchAssignedRider } from "@/lib/dispatch";
+import { dispatchSettingsQuery, quoteDispatchFee, watchAssignedRider } from "@/lib/dispatch";
 import { pasugoChatUnreadQuery } from "@/lib/pasugo-chat";
 
 export const Route = createFileRoute("/pasugo/$bookingId")({
@@ -67,6 +67,7 @@ function PasugoTrackingPage() {
     queryFn: () => getPasugoAvailableRiders(job.data!.id),
     refetchInterval: canChooseRider ? 10_000 : false,
   });
+  const dispatchSettings = useQuery(dispatchSettingsQuery());
 
   const selectRider = useMutation({
     mutationFn: (riderId: string) => selectPasugoRider(job.data!.id, riderId),
@@ -303,7 +304,11 @@ function PasugoTrackingPage() {
               riders={availableRiders.data ?? []}
               loading={availableRiders.isLoading}
               selecting={selectRider.isPending}
-              fee={Number(job.data?.delivery_fee ?? booking.data?.estimated_fare ?? 0)}
+              quoteFee={(distanceKm) =>
+                dispatchSettings.data
+                  ? quoteDispatchFee(distanceKm, dispatchSettings.data)
+                  : Number(job.data?.delivery_fee ?? booking.data?.estimated_fare ?? 0)
+              }
               onSelect={(riderId) => selectRider.mutate(riderId)}
             />
           ) : searching ? (
@@ -432,7 +437,7 @@ function RiderSelection({
   riders,
   loading,
   selecting,
-  fee,
+  quoteFee,
   onSelect,
 }: {
   riders: {
@@ -443,7 +448,7 @@ function RiderSelection({
   }[];
   loading: boolean;
   selecting: boolean;
-  fee: number;
+  quoteFee: (distanceKm: number) => number;
   onSelect: (riderId: string) => void;
 }) {
   return (
@@ -475,7 +480,7 @@ function RiderSelection({
                   {Number(rider.distance_km).toFixed(1)} km away
                 </p>
                 <p className="mt-1 text-sm font-semibold">
-                  {peso(fee)}{" "}
+                  {peso(quoteFee(rider.distance_km))}{" "}
                   <span className="text-xs font-normal text-muted-foreground">estimated fee</span>
                 </p>
               </div>

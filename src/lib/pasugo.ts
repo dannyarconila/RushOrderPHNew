@@ -294,6 +294,7 @@ export type PasugoRiderSelection = {
   offer_id?: string;
   rider_id?: string;
   distance_km?: number;
+  delivery_fee?: number;
   expires_at?: string;
 };
 
