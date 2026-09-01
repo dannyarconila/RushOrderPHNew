@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
+import { markPasugoChatRead } from "@/lib/pasugo-chat";
 import { pasugoBookingQuery } from "@/lib/pasugo";
 
 interface PasugoChatMessage {
@@ -86,10 +87,17 @@ function PasugoChatPage() {
 
   const recipientId = useMemo(() => {
     if (!user || !booking.data?.assigned_rider_id) return null;
-    return user.id === booking.data.customer_id
-      ? booking.data.assigned_rider_id
-      : booking.data.customer_id;
+    if (user.id === booking.data.customer_id) return booking.data.assigned_rider_id;
+    if (user.id === booking.data.assigned_rider_id) return booking.data.customer_id;
+    return null;
   }, [user, booking.data]);
+
+  useEffect(() => {
+    if (!user || !recipientId) return;
+    void markPasugoChatRead(bookingId, user.id).then(() => {
+      void queryClient.invalidateQueries({ queryKey: ["pasugo-chat-unread", bookingId, user.id] });
+    });
+  }, [bookingId, queryClient, recipientId, user]);
 
   const send = useMutation({
     mutationFn: async () => {
@@ -126,6 +134,10 @@ function PasugoChatPage() {
           {!booking.data?.assigned_rider_id ? (
             <p className="rounded-xl border border-warning/30 bg-warning/10 px-4 py-3 text-sm text-warning-foreground">
               Chat opens once a rider accepts this booking.
+            </p>
+          ) : !recipientId && user ? (
+            <p className="rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              This chat is only available to the assigned rider and customer.
             </p>
           ) : null}
 
@@ -176,11 +188,11 @@ function PasugoChatPage() {
                   if (!send.isPending) void send.mutateAsync();
                 }
               }}
-              disabled={send.isPending || !booking.data?.assigned_rider_id}
+              disabled={send.isPending || !recipientId}
             />
             <Button
               onClick={() => void send.mutateAsync()}
-              disabled={send.isPending || !draft.trim() || !booking.data?.assigned_rider_id}
+              disabled={send.isPending || !draft.trim() || !recipientId}
             >
               <Send className="size-4" />
             </Button>

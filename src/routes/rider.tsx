@@ -24,6 +24,7 @@ import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { peso } from "@/lib/currency";
 import { dispatchChatUnreadQuery } from "@/lib/dispatch-chat";
+import { pasugoChatUnreadQuery } from "@/lib/pasugo-chat";
 import {
   activeJobQuery,
   advanceDispatch,
@@ -115,7 +116,7 @@ function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
     lng: number;
   } | null>(null);
 
-  const pasugoChatUnread = useQuery(dispatchChatUnreadQuery(activePasugoJob?.booking_id, user?.id));
+  const pasugoChatUnread = useQuery(pasugoChatUnreadQuery(activePasugoJob?.booking_id, user?.id));
 
   useEffect(() => {
     if (!activePasugoJob?.assigned_rider_id) {
@@ -152,7 +153,7 @@ function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
 
           if (message.recipient_id === user.id) {
             void queryClient.invalidateQueries({
-              queryKey: ["dispatch-chat-unread", activePasugoJob.booking_id, user.id],
+              queryKey: ["pasugo-chat-unread", activePasugoJob.booking_id, user.id],
             });
           }
         },

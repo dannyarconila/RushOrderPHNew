@@ -19,7 +19,7 @@ import {
   selectPasugoRider,
 } from "@/lib/pasugo";
 import { watchAssignedRider } from "@/lib/dispatch";
-import { dispatchChatUnreadQuery } from "@/lib/dispatch-chat";
+import { pasugoChatUnreadQuery } from "@/lib/pasugo-chat";
 
 export const Route = createFileRoute("/pasugo/$bookingId")({
   head: () => ({
@@ -37,6 +37,7 @@ export const Route = createFileRoute("/pasugo/$bookingId")({
 function PasugoTrackingPage() {
   const { bookingId } = Route.useParams();
   const { user } = useAuth();
+  const navigate = useNavigate();
   const queryClient = useQueryClient();
 
   const booking = useQuery(pasugoBookingQuery(bookingId));
@@ -83,7 +84,7 @@ function PasugoTrackingPage() {
     },
   });
 
-  const { data: chatUnread } = useQuery(dispatchChatUnreadQuery(bookingId, user?.id));
+  const { data: chatUnread } = useQuery(pasugoChatUnreadQuery(bookingId, user?.id));
 
   const [riderLocation, setRiderLocation] = useState<{
     lat: number;
@@ -149,7 +150,7 @@ function PasugoTrackingPage() {
 
           if (message.recipient_id === user?.id && user?.id) {
             void queryClient.invalidateQueries({
-              queryKey: ["dispatch-chat-unread", bookingId, user.id],
+              queryKey: ["pasugo-chat-unread", bookingId, user.id],
             });
           }
         },
