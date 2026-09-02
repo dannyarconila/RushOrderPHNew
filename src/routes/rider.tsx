@@ -347,6 +347,20 @@ function RiderOverview({
     }
   }, [user?.id]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (window.location.hash !== "#location-service") return;
+
+    const timer = window.setTimeout(() => {
+      document.getElementById("location-service")?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 150);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
   // Live GPS tracking while online and location service is enabled.
   useEffect(() => {
     if (!online || !locationService) return;
@@ -490,7 +504,10 @@ function RiderOverview({
           </p>
         ) : null}
 
-        <div className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-muted/30 p-4">
+        <div
+          id="location-service"
+          className="mt-4 flex scroll-mt-24 flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-muted/30 p-4"
+        >
           <div className="flex items-center gap-3">
             <span
               className={`flex size-10 items-center justify-center rounded-xl ${

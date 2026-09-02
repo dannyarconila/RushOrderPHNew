@@ -345,20 +345,28 @@ export function pasugoJobQuery(bookingId: string) {
   });
 }
 
-export function riderPendingPasugoOfferQuery(riderId: string | undefined) {
+export function riderPendingPasugoOfferQuery(
+  riderId: string | undefined,
+  offerId?: string,
+) {
   return queryOptions({
-    queryKey: ["pasugo-offer", riderId ?? null],
+    queryKey: ["pasugo-offer", riderId ?? null, offerId ?? null],
     enabled: Boolean(riderId),
     queryFn: async (): Promise<PasugoOfferWithJob | null> => {
-      const { data, error } = await supabase
+      let query = supabase
         .from("pasugo_dispatch_offers")
         .select("*,pasugo_dispatch_jobs(*),pasugo_bookings(*)")
         .eq("rider_id", riderId!)
         .eq("status", "pending")
-        .gt("expires_at", new Date().toISOString())
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .maybeSingle();
+        .gt("expires_at", new Date().toISOString());
+
+      if (offerId) {
+        query = query.eq("id", offerId);
+      } else {
+        query = query.order("created_at", { ascending: false }).limit(1);
+      }
+
+      const { data, error } = await query.maybeSingle();
       if (error) throw error;
       if (!data) return null;
 

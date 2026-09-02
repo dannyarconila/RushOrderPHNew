@@ -1,5 +1,5 @@
 import { Bell, CheckCheck, Loader2 } from "lucide-react";
-import { useNavigate } from "@tanstack/react-router";
+import { useNavigate, useRouterState } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -11,10 +11,11 @@ import { formatPhilippineDateTime } from "@/lib/date";
 import { getNotificationDestination } from "@/lib/notification-routing";
 
 export function NotificationCenter() {
-  const { user, primaryRole } = useAuth();
+  const { user } = useAuth();
   const userId = user?.id;
   const queryClient = useQueryClient();
   const navigate = useNavigate();
+  const pathname = useRouterState({ select: (state) => state.location.pathname });
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -160,9 +161,21 @@ export function NotificationCenter() {
                       markRead.mutate(item.id);
                     }
 
+                    const role =
+                      pathname.startsWith("/rider") || pathname.startsWith("/rider-orders")
+                        ? "rider"
+                        : pathname.startsWith("/seller") ||
+                            pathname.startsWith("/store-orders") ||
+                            pathname.startsWith("/my-stores") ||
+                            pathname.startsWith("/my-products")
+                          ? "seller"
+                          : pathname.startsWith("/internal-admin")
+                            ? "admin"
+                            : "customer";
+
                     const destination = getNotificationDestination({
                       kind: item.kind,
-                      role: primaryRole,
+                      role,
                     });
 
                     setOpen(false);
