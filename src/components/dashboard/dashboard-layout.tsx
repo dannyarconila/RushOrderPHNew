@@ -1,6 +1,6 @@
 import { Link, useNavigate, useRouterState } from "@tanstack/react-router";
 import { Bell, BellRing, CircleHelp, LogOut, Menu, X, type LucideIcon } from "lucide-react";
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 
 import { Logo } from "@/components/brand/logo";
@@ -34,34 +34,11 @@ export function DashboardLayout({
   onSignOut?: () => void | Promise<void>;
 }) {
   const [open, setOpen] = useState(false);
-  const [pushEnabled, setPushEnabled] = useState(false);
-  const [pushLoading, setPushLoading] = useState(false);
 
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const { user, enablePushNotifications } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  async function handleEnablePush() {
-    if (!user) return;
-
-    setPushLoading(true);
-
-    try {
-      await enablePushNotifications(user.id);
-      setPushEnabled(true);
-
-      toast.success("Notifications enabled", {
-        description: "RushOrder PH can now notify you even when the dashboard is closed.",
-      });
-    } catch (error) {
-      toast.error("Could not enable notifications", {
-        description: error instanceof Error ? error.message : "Please try again.",
-      });
-    } finally {
-      setPushLoading(false);
-    }
-  }
-
   async function handleSignOut() {
     if (onSignOut) {
       await onSignOut();
@@ -72,6 +49,17 @@ export function DashboardLayout({
     await supabase.auth.signOut();
     navigate({ to: "/", replace: true });
   }
+
+  // Automatically register push notifications for this signed-in user.
+  // If the browser permission is denied, the user must re-enable it from
+  // the device/browser settings; there is intentionally no app toggle.
+  useEffect(() => {
+    if (!user) return;
+
+    void enablePushNotifications(user.id).catch((error) => {
+      console.error("Automatic push notification setup failed", error);
+    });
+  }, [user, enablePushNotifications]);
 
   const supportItem: NavItem = {
     to: "/contact",
@@ -163,30 +151,6 @@ export function DashboardLayout({
             </span>
           </div>
           <div className="flex items-center gap-1">
-            {!pushEnabled ? (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => void handleEnablePush()}
-                disabled={pushLoading}
-                title="Enable push notifications"
-              >
-                {pushLoading ? (
-                  <Bell className="size-4 animate-pulse" />
-                ) : (
-                  <Bell className="size-4" />
-                )}
-                <span className="hidden sm:inline">
-                  {pushLoading ? "Enabling..." : "Enable notifications"}
-                </span>
-              </Button>
-            ) : (
-              <Button variant="ghost" size="sm" disabled title="Push notifications enabled">
-                <BellRing className="size-4" />
-                <span className="hidden sm:inline">Notifications on</span>
-              </Button>
-            )}
-
             <NotificationCenter />
 
             <Button asChild variant="ghost" size="sm">

@@ -4,6 +4,7 @@ import type { Session } from "@supabase/supabase-js";
 import { AuthContext, type AuthContextValue } from "./auth-context-base";
 import { supabase } from "@/integrations/supabase/client";
 import {
+  getPushPermission,
   registerPushServiceWorker,
   requestPushPermission,
   savePushSubscription,
@@ -25,10 +26,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
     await registerPushServiceWorker();
 
-    const permission = await requestPushPermission();
+    let permission = await getPushPermission();
+
+    if (permission === "denied") {
+      return;
+    }
+
+    if (permission === "default") {
+      permission = await requestPushPermission();
+    }
 
     if (permission !== "granted") {
-      throw new Error("Notification permission was not granted.");
+      return;
     }
 
     await savePushSubscription(userId, vapidPublicKey);
