@@ -1,4 +1,5 @@
 import { Bell, CheckCheck, Loader2 } from "lucide-react";
+import { useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 
@@ -7,11 +8,13 @@ import { useAuth } from "@/contexts/use-auth";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { formatPhilippineDateTime } from "@/lib/date";
+import { getNotificationDestination } from "@/lib/notification-routing";
 
 export function NotificationCenter() {
-  const { user } = useAuth();
+  const { user, primaryRole } = useAuth();
   const userId = user?.id;
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
 
@@ -152,10 +155,25 @@ export function NotificationCenter() {
                 <button
                   key={item.id}
                   type="button"
-                  onClick={() => !item.is_read && markRead.mutate(item.id)}
+                  onClick={() => {
+                    if (!item.is_read) {
+                      markRead.mutate(item.id);
+                    }
+
+                    const destination = getNotificationDestination({
+                      kind: item.kind,
+                      role: primaryRole,
+                    });
+
+                    setOpen(false);
+                    void navigate({
+                      to: destination as never,
+                    });
+                  }}
                   className={cn(
                     "block w-full border-b border-border px-4 py-3 text-left transition-colors last:border-b-0 hover:bg-muted/50",
                     !item.is_read && "bg-primary/5",
+                    item.kind === "rider_location_service" && "cursor-pointer",
                   )}
                 >
                   <div className="flex items-start gap-3">
