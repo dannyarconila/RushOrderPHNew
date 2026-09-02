@@ -47,6 +47,17 @@ import { minimumWalletBalanceQuery, myWalletQuery } from "@/lib/wallet";
 import { getCurrentLocation } from "@/lib/geolocation";
 
 export const Route = createFileRoute("/rider")({
+  validateSearch: (s: Record<string, unknown>): {
+    debugDispatch?: string | boolean;
+    incomingBooking?: string;
+  } => ({
+    debugDispatch:
+      typeof s.debugDispatch === "string" || typeof s.debugDispatch === "boolean"
+        ? s.debugDispatch
+        : undefined,
+    incomingBooking:
+      typeof s.incomingBooking === "string" ? s.incomingBooking : undefined,
+  }),
   head: () => ({
     meta: [
       { title: "Rider dashboard — RushOrder PH" },
@@ -66,7 +77,8 @@ export const Route = createFileRoute("/rider")({
 function RiderDashboard() {
   const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const search = Route.useSearch() as Record<string, unknown>;
+  const search = Route.useSearch();
+  const incomingBooking = search.incomingBooking;
 
   useEffect(() => {
     if (!loading && !user) navigate({ to: "/login", search: { next: "/rider" }, replace: true });
@@ -88,17 +100,25 @@ function RiderDashboard() {
       <RoleGate kind="rider">
         <RiderOverview
           debugDispatch={search.debugDispatch === "1" || search.debugDispatch === true}
+          incomingBooking={incomingBooking}
         />
       </RoleGate>
     </DashboardLayout>
   );
 }
 
-function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
+function RiderOverview({
+  debugDispatch = false,
+  incomingBooking,
+}: {
+  debugDispatch?: boolean;
+  incomingBooking?: string;
+}) {
   const { user } = useAuth();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const [dismissedOffer, setDismissedOffer] = useState<string | null>(null);
+  const [locationService, setLocationService] = useState(true);
 
   const { data: wallet } = useQuery(myWalletQuery(user?.id, "rider"));
   const { data: minimumBalance } = useQuery(minimumWalletBalanceQuery("rider"));
@@ -223,7 +243,7 @@ function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
   });
 
   const { data: pasugoOffer } = useQuery({
-    ...riderPendingPasugoOfferQuery(user?.id),
+    ...riderPendingPasugoOfferQuery(user?.id, incomingBooking),
     enabled: Boolean(user) && online && !activeJob && !activePasugoJob,
     refetchInterval: online && !activeJob && !activePasugoJob ? 3000 : false,
   });
@@ -317,9 +337,19 @@ function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
     };
   }, [user, refreshDispatch]);
 
-  // Live GPS tracking while online
+  // Persist the rider's location-service preference per account.
   useEffect(() => {
-    if (!online) return;
+    if (!user?.id || typeof window === "undefined") return;
+
+    const stored = window.localStorage.getItem(`rider-location-service:${user.id}`);
+    if (stored !== null) {
+      setLocationService(stored === "1");
+    }
+  }, [user?.id]);
+
+  // Live GPS tracking while online and location service is enabled.
+  useEffect(() => {
+    if (!online || !locationService) return;
 
     const watchId = watchRiderLocation(async (coords) => {
       console.debug("watchRiderLocation: coords", coords);
@@ -333,7 +363,46 @@ function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
     return () => {
       stopWatchingLocation(watchId);
     };
-  }, [online]);
+  }, [locationService, online]);
+
+  const toggleLocationService = async (next: boolean) => {
+    if (!user?.id) return;
+
+    if (!next && (activeJob || activePasugoJob)) {
+      toast.error("Location cannot be turned off during an active delivery.");
+      return;
+    }
+
+    if (next) {
+      try {
+        const coords = await getCurrentLocation();
+
+        if (!coords) {
+          toast.error("Location access is required.", {
+            description: "Please allow location access in your browser settings and try again.",
+          });
+          return;
+        }
+
+        if (online) {
+          await setRiderPresence(true, coords);
+        }
+
+        setLocationService(true);
+        window.localStorage.setItem(`rider-location-service:${user.id}`, "1");
+        toast.success("Location service enabled");
+      } catch (error) {
+        toast.error("Could not enable location service", {
+          description: error instanceof Error ? error.message : "Please allow location access.",
+        });
+      }
+      return;
+    }
+
+    setLocationService(false);
+    window.localStorage.setItem(`rider-location-service:${user.id}`, "0");
+    toast.success("Location service disabled");
+  };
 
   const presence = useMutation({
     mutationFn: async (next: boolean) => {
@@ -420,6 +489,35 @@ function RiderOverview({ debugDispatch = false }: { debugDispatch?: boolean }) {
             receive bookings.
           </p>
         ) : null}
+
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-border bg-muted/30 p-4">
+          <div className="flex items-center gap-3">
+            <span
+              className={`flex size-10 items-center justify-center rounded-xl ${
+                locationService
+                  ? "bg-primary/10 text-primary"
+                  : "bg-muted text-muted-foreground"
+              }`}
+            >
+              <MapPin className="size-5" />
+            </span>
+            <div>
+              <p className="text-sm font-bold">Location Service</p>
+              <p className="text-xs text-muted-foreground">
+                {locationService
+                  ? "Live location sharing is active"
+                  : "Location sharing is turned off"}
+              </p>
+            </div>
+          </div>
+
+          <Switch
+            checked={locationService}
+            disabled={Boolean(activeJob || activePasugoJob)}
+            onCheckedChange={(next) => void toggleLocationService(next)}
+            aria-label="Toggle rider location service"
+          />
+        </div>
       </Panel>
 
       <div className="grid gap-4 sm:grid-cols-3">
