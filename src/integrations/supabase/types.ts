@@ -586,6 +586,7 @@ export type Database = {
           id: string;
           is_read: boolean;
           kind: string;
+          pasugo_booking_id: string | null;
           title: string;
           user_id: string;
         };
@@ -595,6 +596,7 @@ export type Database = {
           id?: string;
           is_read?: boolean;
           kind?: string;
+          pasugo_booking_id?: string | null;
           title: string;
           user_id: string;
         };
@@ -604,6 +606,7 @@ export type Database = {
           id?: string;
           is_read?: boolean;
           kind?: string;
+          pasugo_booking_id?: string | null;
           title?: string;
           user_id?: string;
         };

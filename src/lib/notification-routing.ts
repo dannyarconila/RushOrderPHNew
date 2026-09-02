@@ -3,11 +3,13 @@ import type { AppRole } from "@/types";
 type NotificationRouteInput = {
   kind: string | null | undefined;
   role: AppRole;
+  pasugoBookingId?: string | null;
 };
 
 export function getNotificationDestination({
   kind,
   role,
+  pasugoBookingId,
 }: NotificationRouteInput): string {
   switch (kind) {
     case "rider_location_service":
@@ -30,6 +32,9 @@ export function getNotificationDestination({
     case "booking":
     case "pasugo":
       if (role === "rider") return "/rider";
+      if (role === "customer" && pasugoBookingId) {
+        return `/pasugo/${encodeURIComponent(pasugoBookingId)}`;
+      }
       if (role === "customer") return "/pasugo";
       return getDashboardRoute(role);
 

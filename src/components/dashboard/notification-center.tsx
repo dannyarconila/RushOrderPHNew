@@ -25,7 +25,7 @@ export function NotificationCenter() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("notifications")
-        .select("id,title,body,kind,is_read,created_at")
+        .select("id,title,body,kind,is_read,created_at,pasugo_booking_id")
         .eq("user_id", userId!)
         .order("created_at", { ascending: false })
         .limit(30);
@@ -176,6 +176,7 @@ export function NotificationCenter() {
                     const destination = getNotificationDestination({
                       kind: item.kind,
                       role,
+                      pasugoBookingId: item.pasugo_booking_id,
                     });
 
                     setOpen(false);

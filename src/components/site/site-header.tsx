@@ -3,6 +3,7 @@ import { Menu, X } from "lucide-react";
 import { useState } from "react";
 
 import { CartSheet } from "@/components/cart/cart-sheet";
+import { NotificationCenter } from "@/components/dashboard/notification-center";
 import { Logo } from "@/components/brand/logo";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/use-auth";
@@ -47,6 +48,7 @@ export function SiteHeader() {
 
         <div className="hidden items-center gap-2 md:flex">
           <CartSheet />
+          {user ? <NotificationCenter /> : null}
           {hasRole("seller") ? (
             <Button asChild variant="ghost" size="sm">
               <Link to="/seller">My Store</Link>
@@ -78,6 +80,7 @@ export function SiteHeader() {
 
         <div className="flex items-center gap-2 md:hidden">
           <CartSheet />
+          {user ? <NotificationCenter /> : null}
           <button
             type="button"
             aria-label={open ? "Close menu" : "Open menu"}
