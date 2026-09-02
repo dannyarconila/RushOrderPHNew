@@ -79,11 +79,25 @@ export function NotificationCenter() {
   useEffect(() => {
     if (!userId) return;
 
+    const channelName = `notifications:${userId}`;
+    const existingChannel = supabase
+      .getChannels()
+      .find((channel) => channel.topic === `realtime:${channelName}`);
+
+    if (existingChannel) {
+      void supabase.removeChannel(existingChannel);
+    }
+
     const channel = supabase
-      .channel(`notifications:${userId}`)
+      .channel(channelName)
       .on(
         "postgres_changes",
-        { event: "*", schema: "public", table: "notifications", filter: `user_id=eq.${userId}` },
+        {
+          event: "*",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${userId}`,
+        },
         () => {
           void queryClient.invalidateQueries({ queryKey: ["notifications", "mine", userId] });
         },
