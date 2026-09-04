@@ -77,10 +77,64 @@ function BecomeRiderPage() {
       navigate({ to: "/login", search: { next: "/become-rider" }, replace: true });
   }, [loading, user, navigate]);
 
+  function missingRiderFields(targetStep: number): string[] {
+    const missing: string[] = [];
+
+    if (targetStep === 0) {
+      if (!personal.full_name.trim()) missing.push("Full name");
+      if (!personal.email.trim()) missing.push("Email");
+      if (!personal.phone.trim()) missing.push("Mobile number");
+      if (!personal.birthdate.trim()) missing.push("Date of birth");
+    }
+
+    if (targetStep === 1) {
+      if (!address.street.trim()) missing.push("Street / building");
+      if (!address.barangay.trim()) missing.push("Barangay");
+      if (!address.city.trim()) missing.push("City / municipality");
+      if (!address.province.trim()) missing.push("Province");
+      if (!address.postal_code.trim()) missing.push("Postal code");
+    }
+
+    if (targetStep === 2) {
+      if (!vehicle.vehicle_type.trim()) missing.push("Vehicle type");
+      if (!vehicle.model.trim()) missing.push("Make & model");
+
+      if (vehicle.vehicle_type && vehicle.vehicle_type !== "Bicycle") {
+        if (!vehicle.plate_number.trim()) missing.push("Plate number");
+        if (!vehicle.license_number.trim()) missing.push("Driver's licence number");
+      }
+    }
+
+    if (targetStep === 3) {
+      if (!documents.valid_id) missing.push("Government-issued ID");
+      if (!documents.selfie_with_id) missing.push("Selfie holding your ID");
+
+      if (vehicle.vehicle_type && vehicle.vehicle_type !== "Bicycle") {
+        if (!documents.drivers_license) missing.push("Driver's licence");
+        if (!documents.or_cr) missing.push("Vehicle OR / CR");
+      }
+    }
+
+    if (targetStep === 4) {
+      if (!emergency.contact_name.trim()) missing.push("Emergency contact name");
+      if (!emergency.relationship.trim()) missing.push("Emergency contact relationship");
+      if (!emergency.contact_phone.trim()) missing.push("Emergency contact number");
+    }
+
+    return missing;
+  }
+
   async function submit() {
     if (!user) return;
-    if (!personal.full_name || !vehicle.vehicle_type) {
-      toast.error("Please complete your name and vehicle type");
+
+    const missing = [0, 1, 2, 3, 4].flatMap((targetStep) =>
+      missingRiderFields(targetStep),
+    );
+
+    if (missing.length > 0) {
+      toast.error("Please complete all required fields", {
+        description: missing.join(", "),
+      });
       return;
     }
     if (!acceptedLegal) {
@@ -130,23 +184,23 @@ function BecomeRiderPage() {
           {step === 0 ? (
             <div className="grid gap-5 sm:grid-cols-2">
               <TextField
-                label="Full name"
+                label="Full name *"
                 value={personal.full_name}
                 onChange={(v) => setPersonal({ ...personal, full_name: v })}
               />
               <TextField
-                label="Email"
+                label="Email *"
                 type="email"
                 value={personal.email}
                 onChange={(v) => setPersonal({ ...personal, email: v })}
               />
               <TextField
-                label="Mobile number"
+                label="Mobile number *"
                 value={personal.phone}
                 onChange={(v) => setPersonal({ ...personal, phone: v })}
               />
               <TextField
-                label="Date of birth"
+                label="Date of birth *"
                 type="date"
                 value={personal.birthdate}
                 onChange={(v) => setPersonal({ ...personal, birthdate: v })}
@@ -157,27 +211,27 @@ function BecomeRiderPage() {
           {step === 1 ? (
             <div className="grid gap-5 sm:grid-cols-2">
               <TextField
-                label="Street / building"
+                label="Street / building *"
                 value={address.street}
                 onChange={(v) => setAddress({ ...address, street: v })}
               />
               <TextField
-                label="Barangay"
+                label="Barangay *"
                 value={address.barangay}
                 onChange={(v) => setAddress({ ...address, barangay: v })}
               />
               <TextField
-                label="City / municipality"
+                label="City / municipality *"
                 value={address.city}
                 onChange={(v) => setAddress({ ...address, city: v })}
               />
               <TextField
-                label="Province"
+                label="Province *"
                 value={address.province}
                 onChange={(v) => setAddress({ ...address, province: v })}
               />
               <TextField
-                label="Postal code"
+                label="Postal code *"
                 value={address.postal_code}
                 onChange={(v) => setAddress({ ...address, postal_code: v })}
               />
@@ -187,13 +241,13 @@ function BecomeRiderPage() {
           {step === 2 ? (
             <div className="grid gap-5 sm:grid-cols-2">
               <SelectField
-                label="Vehicle type"
+                label="Vehicle type *"
                 value={vehicle.vehicle_type}
                 onChange={(v) => setVehicle({ ...vehicle, vehicle_type: v })}
                 options={VEHICLES}
               />
               <TextField
-                label="Make & model"
+                label="Make & model *"
                 value={vehicle.model}
                 onChange={(v) => setVehicle({ ...vehicle, model: v })}
                 placeholder="Honda Click 125i"
@@ -201,12 +255,12 @@ function BecomeRiderPage() {
               {motorised ? (
                 <>
                   <TextField
-                    label="Plate number"
+                    label="Plate number *"
                     value={vehicle.plate_number}
                     onChange={(v) => setVehicle({ ...vehicle, plate_number: v })}
                   />
                   <TextField
-                    label="Driver's licence number"
+                    label="Driver's licence number *"
                     value={vehicle.license_number}
                     onChange={(v) => setVehicle({ ...vehicle, license_number: v })}
                   />
@@ -249,17 +303,17 @@ function BecomeRiderPage() {
           {step === 4 ? (
             <div className="grid gap-5 sm:grid-cols-2">
               <TextField
-                label="Contact name"
+                label="Contact name *"
                 value={emergency.contact_name}
                 onChange={(v) => setEmergency({ ...emergency, contact_name: v })}
               />
               <TextField
-                label="Relationship"
+                label="Relationship *"
                 value={emergency.relationship}
                 onChange={(v) => setEmergency({ ...emergency, relationship: v })}
               />
               <TextField
-                label="Contact number"
+                label="Contact number *"
                 value={emergency.contact_phone}
                 onChange={(v) => setEmergency({ ...emergency, contact_phone: v })}
               />
@@ -324,7 +378,20 @@ function BecomeRiderPage() {
                 {submitting ? <Loader2 className="size-4 animate-spin" /> : null} Submit application
               </Button>
             ) : (
-              <Button onClick={() => setStep((s) => Math.min(s + 1, STEPS.length - 1))}>
+              <Button
+                onClick={() => {
+                  const missing = missingRiderFields(step);
+
+                  if (missing.length > 0) {
+                    toast.error("Please complete all required fields", {
+                      description: missing.join(", "),
+                    });
+                    return;
+                  }
+
+                  setStep((s) => Math.min(s + 1, STEPS.length - 1));
+                }}
+              >
                 Continue <ArrowRight className="size-4" />
               </Button>
             )}

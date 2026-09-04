@@ -129,22 +129,92 @@ function BecomeSellerPage() {
 
   const steps = type === "home_based" ? STEPS_HOME : STEPS_REGISTERED;
 
+  function missingSellerFields(targetStep: number): string[] {
+    const missing: string[] = [];
+
+    if (targetStep === 0 && !type) {
+      missing.push("Seller type");
+    }
+
+    if (targetStep === 1) {
+      if (!business.business_name.trim()) {
+        missing.push(type === "home_based" ? "Selling name" : "Registered business name");
+      }
+
+      if (type === "registered") {
+        if (!business.registration_type.trim()) missing.push("Registration type");
+        if (!business.registration_number.trim()) missing.push("Registration number");
+        if (!business.tin.trim()) missing.push("TIN");
+      } else {
+        if (!business.registration_type.trim()) missing.push("Years selling");
+      }
+    }
+
+    if (targetStep === 2) {
+      if (!owner.owner_name.trim()) missing.push("Owner full name");
+      if (!owner.owner_email.trim()) missing.push("Owner email");
+      if (!owner.owner_phone.trim()) missing.push("Owner mobile number");
+      if (!owner.birthdate.trim()) missing.push("Owner date of birth");
+    }
+
+    if (targetStep === 3) {
+      if (!address.street.trim()) missing.push("Street / building");
+      if (!address.barangay.trim()) missing.push("Barangay");
+      if (!address.city.trim()) missing.push("City / municipality");
+      if (!address.province.trim()) missing.push("Province");
+      if (!address.postal_code.trim()) missing.push("Postal code");
+    }
+
+    if (targetStep === 4) {
+      if (!store.store_name.trim()) missing.push("Store name");
+      if (!store.category.trim()) missing.push("Primary category");
+      if (!store.prep_time.trim()) missing.push("Average prep time");
+      if (!store.description.trim()) missing.push("Store description");
+    }
+
+    if (targetStep === 5) {
+      if (type === "registered") {
+        if (!documents.business_permit) missing.push("Business permit");
+        if (!documents.registration_certificate) missing.push("DTI / SEC certificate");
+        if (!documents.valid_id) missing.push("Owner valid ID");
+      } else {
+        if (!documents.valid_id) missing.push("Government-issued ID");
+        if (!documents.selfie_with_id) missing.push("Selfie holding your ID");
+      }
+    }
+
+    return missing;
+  }
+
   function next() {
-    if (step === 0 && !type) {
-      toast.error("Choose how you sell to continue");
+    const missing = missingSellerFields(step);
+
+    if (missing.length > 0) {
+      toast.error("Please complete all required fields", {
+        description: missing.join(", "),
+      });
       return;
     }
+
     setStep((s) => Math.min(s + 1, steps.length - 1));
   }
 
   async function submit() {
     if (!user) return;
-    if (!acceptedLegal) {
-      toast.error("Please accept the Seller Terms & Conditions and Privacy Policy.");
+
+    const missing = [0, 1, 2, 3, 4, 5].flatMap((targetStep) =>
+      missingSellerFields(targetStep),
+    );
+
+    if (missing.length > 0) {
+      toast.error("Please complete all required fields", {
+        description: missing.join(", "),
+      });
       return;
     }
-    if (!store.store_name || !address.city) {
-      toast.error("Please complete your store name and address");
+
+    if (!acceptedLegal) {
+      toast.error("Please accept the Seller Terms & Conditions and Privacy Policy.");
       return;
     }
 
@@ -259,25 +329,25 @@ function BecomeSellerPage() {
               {type === "registered" ? (
                 <>
                   <SelectField
-                    label="Registration type"
+                    label="Registration type *"
                     value={business.registration_type}
                     onChange={(v) => setBusiness({ ...business, registration_type: v })}
                     options={["DTI", "SEC", "CDA", "Barangay permit"]}
                   />
                   <TextField
-                    label="Registration number"
+                    label="Registration number *"
                     value={business.registration_number}
                     onChange={(v) => setBusiness({ ...business, registration_number: v })}
                   />
                   <TextField
-                    label="TIN"
+                    label="TIN *"
                     value={business.tin}
                     onChange={(v) => setBusiness({ ...business, tin: v })}
                   />
                 </>
               ) : (
                 <TextField
-                  label="Years selling"
+                  label="Years selling *"
                   value={business.registration_type}
                   onChange={(v) => setBusiness({ ...business, registration_type: v })}
                   placeholder="e.g. 2 years on Facebook"
@@ -289,23 +359,23 @@ function BecomeSellerPage() {
           {step === 2 ? (
             <div className="grid gap-5 sm:grid-cols-2">
               <TextField
-                label="Owner full name"
+                label="Owner full name *"
                 value={owner.owner_name}
                 onChange={(v) => setOwner({ ...owner, owner_name: v })}
               />
               <TextField
-                label="Owner email"
+                label="Owner email *"
                 type="email"
                 value={owner.owner_email}
                 onChange={(v) => setOwner({ ...owner, owner_email: v })}
               />
               <TextField
-                label="Mobile number"
+                label="Mobile number *"
                 value={owner.owner_phone}
                 onChange={(v) => setOwner({ ...owner, owner_phone: v })}
               />
               <TextField
-                label="Date of birth"
+                label="Date of birth *"
                 type="date"
                 value={owner.birthdate}
                 onChange={(v) => setOwner({ ...owner, birthdate: v })}
@@ -316,27 +386,27 @@ function BecomeSellerPage() {
           {step === 3 ? (
             <div className="grid gap-5 sm:grid-cols-2">
               <TextField
-                label="Street / building"
+                label="Street / building *"
                 value={address.street}
                 onChange={(v) => setAddress({ ...address, street: v })}
               />
               <TextField
-                label="Barangay"
+                label="Barangay *"
                 value={address.barangay}
                 onChange={(v) => setAddress({ ...address, barangay: v })}
               />
               <TextField
-                label="City / municipality"
+                label="City / municipality *"
                 value={address.city}
                 onChange={(v) => setAddress({ ...address, city: v })}
               />
               <TextField
-                label="Province"
+                label="Province *"
                 value={address.province}
                 onChange={(v) => setAddress({ ...address, province: v })}
               />
               <TextField
-                label="Postal code"
+                label="Postal code *"
                 value={address.postal_code}
                 onChange={(v) => setAddress({ ...address, postal_code: v })}
               />
@@ -347,25 +417,25 @@ function BecomeSellerPage() {
             <div className="grid gap-5">
               <div className="grid gap-5 sm:grid-cols-2">
                 <TextField
-                  label="Store name"
+                  label="Store name *"
                   value={store.store_name}
                   onChange={(v) => setStore({ ...store, store_name: v })}
                 />
                 <SelectField
-                  label="Primary category"
+                  label="Primary category *"
                   value={store.category}
                   onChange={(v) => setStore({ ...store, category: v })}
                   options={CATEGORIES}
                 />
                 <TextField
-                  label="Average prep time"
+                  label="Average prep time *"
                   value={store.prep_time}
                   onChange={(v) => setStore({ ...store, prep_time: v })}
                   placeholder="e.g. 20 minutes"
                 />
               </div>
               <TextAreaField
-                label="Store description"
+                label="Store description *"
                 value={store.description}
                 onChange={(v) => setStore({ ...store, description: v })}
                 placeholder="Tell customers what makes your store special."
