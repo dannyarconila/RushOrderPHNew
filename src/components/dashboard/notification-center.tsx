@@ -25,8 +25,9 @@ export function NotificationCenter() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("notifications")
-        .select("id,title,body,kind,is_read,created_at,pasugo_booking_id")
+        .select("id,title,body,kind,is_read,created_at,pasugo_booking_id,action_url")
         .eq("user_id", userId!)
+        .neq("kind", "pasugo_chat")
         .order("created_at", { ascending: false })
         .limit(30);
       if (error) throw error;
@@ -187,11 +188,14 @@ export function NotificationCenter() {
                             ? "admin"
                             : "customer";
 
-                    const destination = getNotificationDestination({
-                      kind: item.kind,
-                      role,
-                      pasugoBookingId: item.pasugo_booking_id,
-                    });
+                    const destination =
+                      item.kind === "announcement" && item.action_url
+                        ? item.action_url
+                        : getNotificationDestination({
+                            kind: item.kind,
+                            role,
+                            pasugoBookingId: item.pasugo_booking_id,
+                          });
 
                     setOpen(false);
                     void navigate({

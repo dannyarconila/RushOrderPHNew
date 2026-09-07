@@ -356,36 +356,87 @@ export const adminMutateFn = createServerFn({ method: "POST" })
       case "notify":
       case "broadcast": {
         const account = await requirePermission("announcements");
-        let userIds: string[];
+
         if (data.action === "notify") {
-          userIds = data.userIds;
-        } else {
-          if (data.audiences.length === 0) throw new Error("Pick at least one audience.");
-          const { data: rows, error } = await supabaseAdmin
-            .from("user_roles")
-            .select("user_id")
-            .in("role", data.audiences as never[]);
-          if (error) throw new Error(error.message);
-          userIds = [...new Set((rows ?? []).map((row) => row.user_id))];
+          if (data.userIds.length === 0) return { ok: true, affected: 0 };
+
+          const { error: insertError } = await supabaseAdmin.from("notifications").insert(
+            data.userIds.map((user_id) => ({
+              user_id,
+              title: data.title,
+              body: data.body,
+              kind: data.kind ?? "announcement",
+            })),
+          );
+          if (insertError) throw new Error(insertError.message);
+
+          await mod.audit({
+            account,
+            action: "announcement_sent",
+            entityType: "notifications",
+            details: { recipients: data.userIds.length, title: data.title },
+          });
+
+          return { ok: true, affected: data.userIds.length };
         }
-        if (userIds.length === 0) return { ok: true, affected: 0 };
+
+        if (data.audiences.length === 0) {
+          throw new Error("Pick at least one audience.");
+        }
+
+        const { data: rows, error } = await supabaseAdmin
+          .from("user_roles")
+          .select("user_id, role")
+          .in("role", data.audiences as never[]);
+
+        if (error) throw new Error(error.message);
+
+        const routeByRole: Record<string, string> = {
+          rider: "/rider",
+          seller: "/seller",
+          customer: "/customer",
+        };
+
+        const rolePriority = ["rider", "seller", "customer"];
+
+        const recipientRoutes = new Map<string, string>();
+
+        for (const role of rolePriority) {
+          if (!data.audiences.includes(role as never)) continue;
+
+          for (const row of rows ?? []) {
+            if (row.role === role && !recipientRoutes.has(row.user_id)) {
+              recipientRoutes.set(row.user_id, routeByRole[role]);
+            }
+          }
+        }
+
+        if (recipientRoutes.size === 0) return { ok: true, affected: 0 };
 
         const { error: insertError } = await supabaseAdmin.from("notifications").insert(
-          userIds.map((user_id) => ({
+          [...recipientRoutes.entries()].map(([user_id, action_url]) => ({
             user_id,
             title: data.title,
             body: data.body,
-            kind: data.action === "notify" ? (data.kind ?? "announcement") : "announcement",
+            kind: "announcement",
+            action_url,
           })),
         );
+
         if (insertError) throw new Error(insertError.message);
+
         await mod.audit({
           account,
           action: "announcement_sent",
           entityType: "notifications",
-          details: { recipients: userIds.length, title: data.title },
+          details: {
+            recipients: recipientRoutes.size,
+            audiences: data.audiences,
+            title: data.title,
+          },
         });
-        return { ok: true, affected: userIds.length };
+
+        return { ok: true, affected: recipientRoutes.size };
       }
 
       case "save_payment_method": {

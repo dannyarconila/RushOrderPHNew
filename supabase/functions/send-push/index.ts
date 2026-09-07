@@ -28,6 +28,7 @@ type NotificationRecord = {
   pasugo_booking_id?: string | null;
   dispatch_offer_id?: string | null;
   dispatch_offer_type?: string | null;
+  action_url?: string | null;
 };
 
 type WebhookPayload = {
@@ -260,14 +261,16 @@ Deno.serve(async (req: Request) => {
       const notificationKind = notification.kind || "notification";
 
       const actionUrl =
-        notification.pasugo_booking_id
-          ? `/pasugo/${encodeURIComponent(notification.pasugo_booking_id)}`
-          : notificationKind === "new_order" || notificationKind === "order"
-            ? "/store-orders"
-            : notificationKind === "dispatch"
-              ? notification.dispatch_offer_id
-                ? `/rider?incomingBooking=${encodeURIComponent(notification.dispatch_offer_id)}`
-                : "/rider"
+        notificationKind === "announcement" && notification.action_url
+          ? notification.action_url
+          : notification.pasugo_booking_id
+            ? `/pasugo/${encodeURIComponent(notification.pasugo_booking_id)}`
+            : notificationKind === "new_order" || notificationKind === "order"
+              ? "/store-orders"
+              : notificationKind === "dispatch"
+                ? notification.dispatch_offer_id
+                  ? `/rider?incomingBooking=${encodeURIComponent(notification.dispatch_offer_id)}`
+                  : "/rider"
               : "/";
 
       const result = await sendPushToUser(
