@@ -33,7 +33,7 @@ function MarketplacePage() {
         title="Shop every RushOrder partner in one place"
         description="Browse stores, search products and compare prices using your RushOrder PH account."
       >
-        <Button asChild variant="outline" className="border-ink-foreground/30 bg-transparent">
+        <Button asChild variant="outline" className="border-primary/20 bg-white text-primary shadow-[var(--shadow-soft)] hover:bg-white/90">
           <Link to="/errands">Run Errands/Pasugo</Link>
         </Button>
       </PageHero>

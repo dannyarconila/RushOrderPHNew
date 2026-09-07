@@ -340,7 +340,7 @@ function LandingPage() {
                 asChild
                 size="lg"
                 variant="outline"
-                className="border-ink-foreground/25 bg-transparent text-ink-foreground hover:bg-ink-foreground/10"
+                className="border-white/30 bg-white text-primary shadow-[var(--shadow-soft)] hover:bg-white/90 hover:text-primary"
               >
                 <Link to="/errands">Run Errands/Pasugo</Link>
               </Button>

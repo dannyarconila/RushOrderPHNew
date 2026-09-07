@@ -22,8 +22,8 @@ function ErrandsPage() {
   return (
     <PublicLayout>
       <main className="mx-auto w-full max-w-7xl px-4 py-12 sm:px-6 lg:px-8 lg:py-16">
-        <section className="rounded-3xl border border-border bg-card p-8 shadow-[var(--shadow-soft)] sm:p-10">
-          <span className="inline-flex items-center gap-2 rounded-full bg-primary-soft px-4 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-primary">
+        <section className="rounded-3xl border-2 border-primary/15 bg-white p-8 shadow-[var(--shadow-lifted)] sm:p-10">
+          <span className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-primary-soft px-4 py-1.5 text-xs font-bold uppercase tracking-[0.16em] text-primary">
             <Bike className="size-3.5" /> Pasugo / Pabili
           </span>
 
