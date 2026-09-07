@@ -45,13 +45,12 @@ export function PasugoBookingPopup({
     onSuccess: (result) => {
       if (result.ok) {
         toast.success("Pasugo booking assigned to you");
-        // Rider acceptance must stay in the rider workspace.
-        // Refresh the active Pasugo state, then open the rider tracking view.
         void queryClient.invalidateQueries({ queryKey: ["pasugo-active-job"] });
         void queryClient.invalidateQueries({ queryKey: ["rider-status"] });
 
         navigate({
-          to: "/rider",
+          to: "/pasugo-chat/$bookingId",
+          params: { bookingId: booking.id },
           replace: true,
         });
       } else {
@@ -105,11 +104,22 @@ export function PasugoBookingPopup({
               </p>
             </div>
             <p className="text-sm font-semibold text-muted-foreground">
-              {offer.distance_km != null
-                ? `${Number(offer.distance_km).toFixed(1)} km away`
-                : "Nearby rider request"}
+              {job.distance_km != null
+                ? `${Number(job.distance_km).toFixed(2)} km trip`
+                : "Distance unavailable"}
             </p>
           </div>
+
+          {booking.notes ? (
+            <div className="rounded-2xl border-2 border-primary/20 bg-primary/5 p-4">
+              <p className="text-xs font-extrabold uppercase tracking-wide text-primary">
+                Customer Request
+              </p>
+              <p className="mt-2 text-base font-bold leading-relaxed">
+                {booking.notes}
+              </p>
+            </div>
+          ) : null}
 
           <div className="space-y-3 rounded-2xl bg-muted/50 p-4">
             <Row
@@ -120,9 +130,15 @@ export function PasugoBookingPopup({
             />
             <Row
               icon={Navigation}
-              label="Location"
+              label="Pickup"
               title="Customer location"
               detail={job.pickup_address}
+            />
+            <Row
+              icon={MapPin}
+              label="Destination"
+              title="Pasugo destination"
+              detail={job.dropoff_address}
             />
           </div>
 

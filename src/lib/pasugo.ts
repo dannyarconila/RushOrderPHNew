@@ -117,20 +117,29 @@ function splitLineAddress(line: string) {
 export async function createPasugoBooking(input: CreatePasugoInput): Promise<string> {
   const pickupLat = input.pickupLat ?? null;
   const pickupLng = input.pickupLng ?? null;
+  const dropoffLat = input.dropoffLat ?? null;
+  const dropoffLng = input.dropoffLng ?? null;
 
-  // Pasugo is a rider-request service, not a pickup-to-dropoff delivery.
-  // The meaningful distance is rider -> customer location and is calculated
-  // by pasugo_dispatch_broadcast() when offers are sent to nearby riders.
-  // Keep the legacy dropoff fields only for database compatibility.
-  const dropoffLat = pickupLat;
-  const dropoffLng = pickupLng;
+  if (
+    pickupLat === null ||
+    pickupLng === null ||
+    dropoffLat === null ||
+    dropoffLng === null
+  ) {
+    throw new Error(
+      "Your pickup and destination locations are required for Pasugo.",
+    );
+  }
 
   const settings = await loadDispatchSettings();
 
-  // Do not calculate a pickup->dropoff trip here because Pasugo has no
-  // customer-entered destination in the new flow. pasugo_start() will use
-  // the configured minimum/default dispatch fee.
-  const distanceKm = 0;
+  const distanceKm = haversineKm(
+    pickupLat,
+    pickupLng,
+    dropoffLat,
+    dropoffLng,
+  );
+
   const deliveryFee = estimateDeliveryFee(distanceKm, settings);
 
   const slug = `pasugo-pickup-${input.userId.slice(0, 8)}`;
