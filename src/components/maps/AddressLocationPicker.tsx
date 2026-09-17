@@ -1,4 +1,5 @@
 import { useEffect, useMemo } from "react";
+import L from "leaflet";
 import { MapContainer, Marker, TileLayer, useMap, useMapEvents } from "react-leaflet";
 import { LocateFixed, MapPin } from "lucide-react";
 import { toast } from "sonner";
@@ -23,6 +24,43 @@ const DEFAULT_CENTER: Coordinate = {
   lat: 7.0731,
   lng: 125.6128,
 };
+
+const destinationIcon = L.divIcon({
+  className: "destination-map-pin",
+  html: `
+    <div style="
+      width: 42px;
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 9999px;
+      background: hsl(var(--primary));
+      color: white;
+      border: 3px solid white;
+      box-shadow: 0 3px 10px rgba(0,0,0,0.3);
+    ">
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        width="22"
+        height="22"
+        viewBox="0 0 24 24"
+        fill="none"
+        stroke="currentColor"
+        stroke-width="2.5"
+        stroke-linecap="round"
+        stroke-linejoin="round"
+      >
+        <path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/>
+        <circle cx="12" cy="10" r="2.5"/>
+      </svg>
+    </div>
+  `,
+  iconSize: [42, 42],
+  iconAnchor: [21, 21],
+});
+
+
 
 function MapClickHandler({ onChange }: { onChange: (coordinate: Coordinate) => void }) {
   useMapEvents({
@@ -119,6 +157,7 @@ export default function AddressLocationPicker({
 
           <Marker
             position={[coordinate.lat, coordinate.lng]}
+            icon={destinationIcon}
             draggable
             eventHandlers={{
               dragend(event) {
