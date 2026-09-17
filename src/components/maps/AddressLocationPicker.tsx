@@ -35,7 +35,7 @@ const destinationIcon = L.divIcon({
       align-items: center;
       justify-content: center;
       border-radius: 9999px;
-      background: hsl(var(--primary));
+      background: #2563eb;
       color: white;
       border: 3px solid white;
       box-shadow: 0 3px 10px rgba(0,0,0,0.3);
