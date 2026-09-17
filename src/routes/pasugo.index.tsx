@@ -5,6 +5,7 @@ import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { TextAreaField, TextField } from "@/components/forms/wizard";
+import AddressLocationPicker from "@/components/maps/AddressLocationPicker";
 import { PublicLayout } from "@/components/site/public-layout";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/use-auth";
@@ -335,6 +336,41 @@ function PasugoPage() {
                 <span className="text-muted-foreground">Located as:</span> {destinationPlace}
               </p>
             ) : null}
+
+            <AddressLocationPicker
+              latitude={destinationCoords?.lat ?? null}
+              longitude={destinationCoords?.lng ?? null}
+              onChange={(coordinate) => {
+                setDestinationCoords(coordinate);
+                setDestinationPlace("");
+
+                void reverseGeocodeFn({
+                  data: {
+                    latitude: coordinate.lat,
+                    longitude: coordinate.lng,
+                  },
+                })
+                  .then((result) => {
+                    const address = [
+                      result.address.line1,
+                      result.address.barangay,
+                      result.address.city,
+                      result.address.province,
+                    ]
+                      .filter(Boolean)
+                      .join(", ");
+
+                    if (address) {
+                      setDestination(address);
+                    }
+
+                    setDestinationPlace(result.place_name);
+                  })
+                  .catch((error) => {
+                    console.warn("Pasugo destination reverse geocoding failed:", error);
+                  });
+              }}
+            />
           </div>
 
           <TextAreaField
