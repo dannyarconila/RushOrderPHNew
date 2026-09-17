@@ -33,9 +33,7 @@ function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
   const dLng = toRad(lng2 - lng1);
   const a =
     Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) *
-      Math.cos(toRad(lat2)) *
-      Math.sin(dLng / 2) ** 2;
+    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
 
   return Math.round(6371 * 2 * Math.asin(Math.sqrt(a)) * 100) / 100;
 }
@@ -249,15 +247,12 @@ function PasugoPage() {
   });
 
   const active =
-    latest.data &&
-    !["completed", "cancelled", "delivered"].includes(latest.data.status);
+    latest.data && !["completed", "cancelled", "delivered"].includes(latest.data.status);
 
   return (
     <PublicLayout>
       <main className="mx-auto w-full max-w-2xl px-4 py-10 sm:px-6">
-        <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">
-          Pasugo
-        </p>
+        <p className="text-xs font-bold uppercase tracking-[0.2em] text-muted-foreground">Pasugo</p>
 
         <h1 className="mt-2 font-display text-3xl font-extrabold tracking-tight sm:text-4xl">
           Request a Rider
@@ -269,9 +264,7 @@ function PasugoPage() {
 
         {active ? (
           <section className="mt-6 rounded-2xl border border-primary/30 bg-primary-soft p-5">
-            <p className="font-semibold text-primary">
-              You have an active Pasugo request.
-            </p>
+            <p className="font-semibold text-primary">You have an active Pasugo request.</p>
 
             <Button
               className="mt-3"
@@ -315,18 +308,18 @@ function PasugoPage() {
                 setDestinationCoords(null);
                 setDestinationPlace("");
               }}
-              placeholder="e.g. Jollibee Tagoloan, Misamis Oriental"
+              placeholder="e.g. National Highway, Poblacion, Tagoloan, Misamis Oriental"
             />
+            <p className="mt-2 text-xs text-muted-foreground">
+              Enter the exact destination: Street/Purok, Barangay, Municipality/City, Province.
+            </p>
 
             <Button
               type="button"
               variant="outline"
               className="mt-3 w-full"
               onClick={() => findDestination.mutate()}
-              disabled={
-                findDestination.isPending ||
-                destination.trim().length < 5
-              }
+              disabled={findDestination.isPending || destination.trim().length < 5}
             >
               {findDestination.isPending ? (
                 <Loader2 className="size-4 animate-spin" />
@@ -334,17 +327,12 @@ function PasugoPage() {
                 <MapPin className="size-4" />
               )}
 
-              {findDestination.isPending
-                ? "Finding destination..."
-                : "Find Destination"}
+              {findDestination.isPending ? "Finding destination..." : "Find Destination"}
             </Button>
 
             {destinationPlace ? (
               <p className="mt-3 rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs font-semibold">
-                <span className="text-muted-foreground">
-                  Located as:
-                </span>{" "}
-                {destinationPlace}
+                <span className="text-muted-foreground">Located as:</span> {destinationPlace}
               </p>
             ) : null}
           </div>
@@ -365,8 +353,7 @@ function PasugoPage() {
                 <p className="text-sm font-bold">Your current location</p>
 
                 <p className="mt-1 text-xs text-muted-foreground">
-                  {pickupAddress ||
-                    "We'll use your GPS location when finding the rider."}
+                  {pickupAddress || "We'll use your GPS location when finding the rider."}
                 </p>
               </div>
             </div>
@@ -377,31 +364,21 @@ function PasugoPage() {
               <div className="rounded-2xl border border-border p-4">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <RouteIcon className="size-4" />
-                  <span className="text-xs font-bold uppercase tracking-wide">
-                    Distance
-                  </span>
+                  <span className="text-xs font-bold uppercase tracking-wide">Distance</span>
                 </div>
 
-                <p className="mt-2 text-2xl font-extrabold">
-                  {distanceKm.toFixed(2)} km
-                </p>
+                <p className="mt-2 text-2xl font-extrabold">{distanceKm.toFixed(2)} km</p>
 
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Pickup to destination
-                </p>
+                <p className="mt-1 text-xs text-muted-foreground">Pickup to destination</p>
               </div>
 
               <div className="rounded-2xl border border-primary/30 bg-primary/5 p-4">
                 <div className="flex items-center gap-2 text-primary">
                   <Wallet className="size-4" />
-                  <span className="text-xs font-bold uppercase tracking-wide">
-                    Delivery fee
-                  </span>
+                  <span className="text-xs font-bold uppercase tracking-wide">Delivery fee</span>
                 </div>
 
-                <p className="mt-2 text-2xl font-extrabold">
-                  {peso(estimatedFee)}
-                </p>
+                <p className="mt-2 text-2xl font-extrabold">{peso(estimatedFee)}</p>
 
                 <p className="mt-1 text-xs text-muted-foreground">
                   Based on current admin dispatch rates
@@ -441,9 +418,8 @@ function PasugoPage() {
           </Button>
 
           <p className="text-center text-xs text-muted-foreground">
-            Your request will be offered to all eligible online riders within
-            the configured dispatch radius. The first rider to accept gets the
-            booking.
+            Your request will be offered to all eligible online riders within the configured
+            dispatch radius. The first rider to accept gets the booking.
           </p>
         </section>
       </main>
