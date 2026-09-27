@@ -20,19 +20,27 @@ export function PasugoBookingPopup({
   const queryClient = useQueryClient();
   const navigate = useNavigate();
   const [remaining, setRemaining] = useState(() => secondsLeft(offer.expires_at));
+  const [initialRemaining, setInitialRemaining] = useState(() =>
+    Math.max(1, secondsLeft(offer.expires_at)),
+  );
 
   useEffect(() => {
-    setRemaining(secondsLeft(offer.expires_at));
+    const initial = Math.max(1, secondsLeft(offer.expires_at));
+    setInitialRemaining(initial);
+    setRemaining(initial);
+
     const timer = window.setInterval(() => {
       const next = secondsLeft(offer.expires_at);
       setRemaining(next);
+
       if (next <= 0) {
         window.clearInterval(timer);
         onClose();
       }
     }, 250);
+
     return () => window.clearInterval(timer);
-  }, [offer.expires_at, onClose]);
+  }, [offer.id, offer.expires_at, onClose]);
 
   const refresh = () => {
     void queryClient.invalidateQueries({ queryKey: ["pasugo-offer"] });
@@ -70,7 +78,7 @@ export function PasugoBookingPopup({
     },
   });
 
-  const total = Math.max(1, secondsLeft(offer.expires_at) || 30);
+  const total = initialRemaining;
   const progress = Math.min(100, Math.max(0, (remaining / total) * 100));
   const busy = accept.isPending || decline.isPending;
 
@@ -115,9 +123,7 @@ export function PasugoBookingPopup({
               <p className="text-xs font-extrabold uppercase tracking-wide text-primary">
                 Customer Request
               </p>
-              <p className="mt-2 text-base font-bold leading-relaxed">
-                {booking.notes}
-              </p>
+              <p className="mt-2 text-base font-bold leading-relaxed">{booking.notes}</p>
             </div>
           ) : null}
 
