@@ -28,6 +28,7 @@ import { pasugoChatUnreadQuery } from "@/lib/pasugo-chat";
 import {
   activeJobQuery,
   advanceDispatch,
+  dispatchSettingsQuery,
   type DispatchJob,
   pendingOfferQuery,
   riderHistoryQuery,
@@ -47,7 +48,9 @@ import { minimumWalletBalanceQuery, myWalletQuery } from "@/lib/wallet";
 import { getCurrentLocation } from "@/lib/geolocation";
 
 export const Route = createFileRoute("/rider")({
-  validateSearch: (s: Record<string, unknown>): {
+  validateSearch: (
+    s: Record<string, unknown>,
+  ): {
     debugDispatch?: string | boolean;
     incomingBooking?: string;
   } => ({
@@ -55,8 +58,7 @@ export const Route = createFileRoute("/rider")({
       typeof s.debugDispatch === "string" || typeof s.debugDispatch === "boolean"
         ? s.debugDispatch
         : undefined,
-    incomingBooking:
-      typeof s.incomingBooking === "string" ? s.incomingBooking : undefined,
+    incomingBooking: typeof s.incomingBooking === "string" ? s.incomingBooking : undefined,
   }),
   head: () => ({
     meta: [
@@ -123,6 +125,7 @@ function RiderOverview({
   const { data: wallet } = useQuery(myWalletQuery(user?.id, "rider"));
   const { data: minimumBalance } = useQuery(minimumWalletBalanceQuery("rider"));
   const { data: status } = useQuery(riderStatusQuery(user?.id));
+  const { data: dispatchSettings } = useQuery(dispatchSettingsQuery());
   const { data: history } = useQuery(riderHistoryQuery(user?.id));
   const { data: activeJob } = useQuery(activeJobQuery(user?.id));
   const { data: chatUnread } = useQuery(dispatchChatUnreadQuery(activeJob?.order_id, user?.id));
@@ -245,7 +248,10 @@ function RiderOverview({
   const { data: pasugoOffer } = useQuery({
     ...riderPendingPasugoOfferQuery(user?.id, incomingBooking),
     enabled: Boolean(user) && online && !activeJob && !activePasugoJob,
-    refetchInterval: online && !activeJob && !activePasugoJob ? 3000 : false,
+    refetchInterval:
+      online && !activeJob && !activePasugoJob
+        ? Math.max(1, dispatchSettings?.retryIntervalSeconds ?? 15) * 1000
+        : false,
   });
 
   const { data: application } = useQuery({
@@ -511,9 +517,7 @@ function RiderOverview({
           <div className="flex items-center gap-3">
             <span
               className={`flex size-10 items-center justify-center rounded-xl ${
-                locationService
-                  ? "bg-primary/10 text-primary"
-                  : "bg-muted text-muted-foreground"
+                locationService ? "bg-primary/10 text-primary" : "bg-muted text-muted-foreground"
               }`}
             >
               <MapPin className="size-5" />
@@ -809,7 +813,13 @@ function RiderOverview({
         <PasugoBookingPopup
           data={pasugoOffer}
           onClose={() => {
-            void queryClient.invalidateQueries({ queryKey: ["pasugo-offer"] });
+            void queryClient.removeQueries({
+              queryKey: ["pasugo-offer"],
+            });
+            void queryClient.refetchQueries({
+              queryKey: ["pasugo-offer"],
+              type: "active",
+            });
           }}
         />
       ) : null}
