@@ -247,9 +247,9 @@ function RiderOverview({
 
   const { data: pasugoOffer } = useQuery({
     ...riderPendingPasugoOfferQuery(user?.id),
-    enabled: Boolean(user) && online && !activeJob && !activePasugoJob,
+    enabled: Boolean(user) && online && !activeJob,
     refetchInterval:
-      online && !activeJob && !activePasugoJob
+      online && !activeJob
         ? Math.max(1, dispatchSettings?.retryIntervalSeconds ?? 15) * 1000
         : false,
   });
