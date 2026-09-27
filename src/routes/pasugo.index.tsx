@@ -81,10 +81,7 @@ function PasugoPage() {
 
     setDeliveryAddress(formattedAddress);
 
-    if (
-      savedDeliveryAddress.latitude != null &&
-      savedDeliveryAddress.longitude != null
-    ) {
+    if (savedDeliveryAddress.latitude != null && savedDeliveryAddress.longitude != null) {
       setDeliveryCoords({
         lat: Number(savedDeliveryAddress.latitude),
         lng: Number(savedDeliveryAddress.longitude),
@@ -344,7 +341,6 @@ function PasugoPage() {
             </div>
 
             <TextField
-              className="mt-4"
               label="Destination address"
               value={destination}
               onChange={(value) => {
@@ -421,7 +417,6 @@ function PasugoPage() {
             value={notes}
             onChange={setNotes}
             placeholder="e.g. Papalit ko Jollibee Tagoloan. Palihog palit ug 2-piece chicken meal."
-            rows={4}
           />
 
           <div className="rounded-2xl border border-border bg-muted/30 p-4">
@@ -429,9 +424,7 @@ function PasugoPage() {
               <Navigation className="size-5 text-primary" />
 
               <div>
-                <p className="text-sm font-bold">
-                  Where do you want the order to be delivered?
-                </p>
+                <p className="text-sm font-bold">Where do you want the order to be delivered?</p>
 
                 <p className="mt-1 text-xs text-muted-foreground">
                   Choose where the rider should bring the order after pickup.
@@ -464,9 +457,7 @@ function PasugoPage() {
 
             {deliveryMode === "to_me" ? (
               <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-3">
-                <p className="text-xs font-bold text-primary">
-                  Deliver to my saved address
-                </p>
+                <p className="text-xs font-bold text-primary">Deliver to my saved address</p>
 
                 <p className="mt-1 text-sm font-medium">
                   {deliveryAddress ||
@@ -512,10 +503,7 @@ function PasugoPage() {
                         toast.success("Delivery location found.");
                       })
                       .catch((error) => {
-                        console.error(
-                          "Pasugo delivery geocoding failed:",
-                          error,
-                        );
+                        console.error("Pasugo delivery geocoding failed:", error);
 
                         setDeliveryCoords(null);
                         setDeliveryPlace("");
@@ -534,12 +522,45 @@ function PasugoPage() {
 
                 {deliveryPlace ? (
                   <p className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs font-semibold">
-                    <span className="text-muted-foreground">
-                      Delivery location:
-                    </span>{" "}
+                    <span className="text-muted-foreground">Delivery location:</span>{" "}
                     {deliveryPlace}
                   </p>
                 ) : null}
+
+                <AddressLocationPicker
+                  latitude={deliveryCoords?.lat ?? null}
+                  longitude={deliveryCoords?.lng ?? null}
+                  onChange={(coordinate) => {
+                    setDeliveryCoords(coordinate);
+                    setDeliveryPlace("");
+
+                    void reverseGeocodeFn({
+                      data: {
+                        latitude: coordinate.lat,
+                        longitude: coordinate.lng,
+                      },
+                    })
+                      .then((result) => {
+                        const address = [
+                          result.address.line1,
+                          result.address.barangay,
+                          result.address.city,
+                          result.address.province,
+                        ]
+                          .filter(Boolean)
+                          .join(", ");
+
+                        if (address) {
+                          setDeliveryAddress(address);
+                        }
+
+                        setDeliveryPlace(result.place_name);
+                      })
+                      .catch((error) => {
+                        console.warn("Pasugo delivery reverse geocoding failed:", error);
+                      });
+                  }}
+                />
               </div>
             )}
           </div>
@@ -549,7 +570,9 @@ function PasugoPage() {
               <div className="rounded-2xl border border-border p-4">
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <RouteIcon className="size-4" />
-                  <span className="text-xs font-bold uppercase tracking-wide">Store to delivery</span>
+                  <span className="text-xs font-bold uppercase tracking-wide">
+                    Store to delivery
+                  </span>
                 </div>
 
                 <p className="mt-2 text-2xl font-extrabold">{distanceKm.toFixed(2)} km</p>

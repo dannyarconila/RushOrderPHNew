@@ -18,6 +18,7 @@ interface AddressLocationPickerProps {
   latitude: number | null;
   longitude: number | null;
   onChange: (coordinate: Coordinate) => void;
+  locationLabel?: string;
 }
 
 const DEFAULT_CENTER: Coordinate = {
@@ -60,8 +61,6 @@ const destinationIcon = L.divIcon({
   iconAnchor: [21, 21],
 });
 
-
-
 function MapClickHandler({ onChange }: { onChange: (coordinate: Coordinate) => void }) {
   useMapEvents({
     click(event) {
@@ -89,6 +88,7 @@ export default function AddressLocationPicker({
   latitude,
   longitude,
   onChange,
+  locationLabel = "Delivery location",
 }: AddressLocationPickerProps) {
   const coordinate = useMemo<Coordinate>(
     () =>
@@ -127,9 +127,9 @@ export default function AddressLocationPicker({
     <div className="sm:col-span-2 space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div>
-          <p className="text-sm font-semibold">Delivery location</p>
+          <p className="text-sm font-semibold">{locationLabel}</p>
           <p className="text-xs text-muted-foreground">
-            Tap the map or use your current location to place the delivery pin.
+            Tap the map or use your current location to place the exact pin.
           </p>
         </div>
 
@@ -176,7 +176,7 @@ export default function AddressLocationPicker({
         <div className="pointer-events-none absolute bottom-3 left-3 z-[1000] rounded-lg bg-background/95 px-3 py-2 text-xs shadow">
           <div className="flex items-center gap-1.5 font-medium">
             <MapPin className="size-3.5" />
-            Delivery pin
+            {locationLabel === "Store location" ? "Store pin" : "Delivery pin"}
           </div>
         </div>
       </div>
