@@ -45,7 +45,12 @@ function PasugoPage() {
 
   const addresses = useQuery(myAddressesQuery(user?.id));
   const latest = useQuery(customerLatestPasugoQuery(user?.id));
-  const dispatchSettings = useQuery(dispatchSettingsQuery());
+  const dispatchSettings = useQuery({
+    ...dispatchSettingsQuery(),
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: true,
+  });
 
   const [destination, setDestination] = useState("");
   const [notes, setNotes] = useState("");
@@ -442,10 +447,7 @@ function PasugoPage() {
                       toast.success("Delivery location found.");
                     })
                     .catch((error) => {
-                      console.error(
-                        "Pasugo delivery geocoding failed:",
-                        error,
-                      );
+                      console.error("Pasugo delivery geocoding failed:", error);
 
                       setDeliveryCoords(null);
                       setDeliveryPlace("");
@@ -464,10 +466,7 @@ function PasugoPage() {
 
               {deliveryPlace ? (
                 <p className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs font-semibold">
-                  <span className="text-muted-foreground">
-                    Delivery location:
-                  </span>{" "}
-                  {deliveryPlace}
+                  <span className="text-muted-foreground">Delivery location:</span> {deliveryPlace}
                 </p>
               ) : null}
 
@@ -501,10 +500,7 @@ function PasugoPage() {
                       setDeliveryPlace(result.place_name);
                     })
                     .catch((error) => {
-                      console.warn(
-                        "Pasugo delivery reverse geocoding failed:",
-                        error,
-                      );
+                      console.warn("Pasugo delivery reverse geocoding failed:", error);
                     });
                 }}
               />
