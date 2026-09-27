@@ -377,6 +377,7 @@ function PasugoPage() {
             ) : null}
 
             <AddressLocationPicker
+              locationLabel="Store location"
               latitude={destinationCoords?.lat ?? null}
               longitude={destinationCoords?.lng ?? null}
               onChange={(coordinate) => {
