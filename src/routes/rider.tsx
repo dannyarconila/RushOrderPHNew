@@ -246,7 +246,7 @@ function RiderOverview({
   });
 
   const { data: pasugoOffer } = useQuery({
-    ...riderPendingPasugoOfferQuery(user?.id, incomingBooking),
+    ...riderPendingPasugoOfferQuery(user?.id),
     enabled: Boolean(user) && online && !activeJob && !activePasugoJob,
     refetchInterval:
       online && !activeJob && !activePasugoJob
@@ -464,7 +464,7 @@ function RiderOverview({
     (job) => job.delivered_at && new Date(job.delivered_at).toDateString() === today,
   ).length;
 
-  const showOffer = offer && offer.offer.id !== dismissedOffer && !activeJob;
+  const showOffer = offer && offer.offer.id !== dismissedOffer && !activeJob && !pasugoOffer;
 
   return (
     <>
