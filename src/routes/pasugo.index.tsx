@@ -51,7 +51,6 @@ function PasugoPage() {
   const [notes, setNotes] = useState("");
   const [destinationPlace, setDestinationPlace] = useState("");
   const [pickupAddress, setPickupAddress] = useState("");
-  const [deliveryMode, setDeliveryMode] = useState<"to_me" | "other">("to_me");
   const [deliveryAddress, setDeliveryAddress] = useState("");
   const [deliveryCoords, setDeliveryCoords] = useState<{
     lat: number;
@@ -63,33 +62,6 @@ function PasugoPage() {
     lat: number;
     lng: number;
   } | null>(null);
-
-  const savedDeliveryAddress = addresses.data?.[0] ?? null;
-
-  useEffect(() => {
-    if (deliveryMode !== "to_me" || !savedDeliveryAddress) return;
-
-    const formattedAddress = [
-      savedDeliveryAddress.line1,
-      savedDeliveryAddress.barangay,
-      savedDeliveryAddress.city,
-      savedDeliveryAddress.province,
-      savedDeliveryAddress.postal_code,
-    ]
-      .filter(Boolean)
-      .join(", ");
-
-    setDeliveryAddress(formattedAddress);
-
-    if (savedDeliveryAddress.latitude != null && savedDeliveryAddress.longitude != null) {
-      setDeliveryCoords({
-        lat: Number(savedDeliveryAddress.latitude),
-        lng: Number(savedDeliveryAddress.longitude),
-      });
-    } else {
-      setDeliveryCoords(null);
-    }
-  }, [deliveryMode, savedDeliveryAddress]);
 
   const distanceKm = useMemo(() => {
     if (!destinationCoords || !deliveryCoords) return null;
@@ -433,137 +405,110 @@ function PasugoPage() {
               </div>
             </div>
 
-            <div className="mt-4 grid grid-cols-2 gap-2">
-              <Button
-                type="button"
-                variant={deliveryMode === "to_me" ? "default" : "outline"}
-                onClick={() => setDeliveryMode("to_me")}
-              >
-                To me
-              </Button>
-
-              <Button
-                type="button"
-                variant={deliveryMode === "other" ? "default" : "outline"}
-                onClick={() => {
-                  setDeliveryMode("other");
+            <div className="mt-4 space-y-3">
+              <TextField
+                label="Delivery address"
+                value={deliveryAddress}
+                onChange={(value) => {
+                  setDeliveryAddress(value);
                   setDeliveryCoords(null);
-                  setDeliveryAddress("");
                   setDeliveryPlace("");
                 }}
+                placeholder="Enter where you want the order delivered"
+              />
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full"
+                disabled={!deliveryAddress.trim()}
+                onClick={() => {
+                  void geocodeAddressFn({
+                    data: {
+                      line1: deliveryAddress.trim(),
+                      barangay: "",
+                      city: "",
+                      province: "",
+                      postal_code: "",
+                    },
+                  })
+                    .then((result) => {
+                      setDeliveryCoords({
+                        lat: result.latitude,
+                        lng: result.longitude,
+                      });
+
+                      setDeliveryPlace(result.place_name);
+                      toast.success("Delivery location found.");
+                    })
+                    .catch((error) => {
+                      console.error(
+                        "Pasugo delivery geocoding failed:",
+                        error,
+                      );
+
+                      setDeliveryCoords(null);
+                      setDeliveryPlace("");
+
+                      toast.error(
+                        error instanceof Error
+                          ? error.message
+                          : "Unable to find this delivery address.",
+                      );
+                    });
+                }}
               >
-                Other address
+                <MapPin className="mr-2 size-4" />
+                Find Delivery Location
               </Button>
-            </div>
 
-            {deliveryMode === "to_me" ? (
-              <div className="mt-4 rounded-xl border border-primary/20 bg-primary/5 p-3">
-                <p className="text-xs font-bold text-primary">Deliver to my saved address</p>
-
-                <p className="mt-1 text-sm font-medium">
-                  {deliveryAddress ||
-                    "No saved delivery address found. Please choose Other address."}
+              {deliveryPlace ? (
+                <p className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs font-semibold">
+                  <span className="text-muted-foreground">
+                    Delivery location:
+                  </span>{" "}
+                  {deliveryPlace}
                 </p>
-              </div>
-            ) : (
-              <div className="mt-4 space-y-3">
-                <TextField
-                  label="Delivery address"
-                  value={deliveryAddress}
-                  onChange={(value) => {
-                    setDeliveryAddress(value);
-                    setDeliveryCoords(null);
-                    setDeliveryPlace("");
-                  }}
-                  placeholder="Enter where you want the order delivered"
-                />
+              ) : null}
 
-                <Button
-                  type="button"
-                  variant="outline"
-                  className="w-full"
-                  disabled={!deliveryAddress.trim()}
-                  onClick={() => {
-                    void geocodeAddressFn({
-                      data: {
-                        line1: deliveryAddress.trim(),
-                        barangay: "",
-                        city: "",
-                        province: "",
-                        postal_code: "",
-                      },
+              <AddressLocationPicker
+                latitude={deliveryCoords?.lat ?? null}
+                longitude={deliveryCoords?.lng ?? null}
+                onChange={(coordinate) => {
+                  setDeliveryCoords(coordinate);
+                  setDeliveryPlace("");
+
+                  void reverseGeocodeFn({
+                    data: {
+                      latitude: coordinate.lat,
+                      longitude: coordinate.lng,
+                    },
+                  })
+                    .then((result) => {
+                      const address = [
+                        result.address.line1,
+                        result.address.barangay,
+                        result.address.city,
+                        result.address.province,
+                      ]
+                        .filter(Boolean)
+                        .join(", ");
+
+                      if (address) {
+                        setDeliveryAddress(address);
+                      }
+
+                      setDeliveryPlace(result.place_name);
                     })
-                      .then((result) => {
-                        setDeliveryCoords({
-                          lat: result.latitude,
-                          lng: result.longitude,
-                        });
-
-                        setDeliveryPlace(result.place_name);
-
-                        toast.success("Delivery location found.");
-                      })
-                      .catch((error) => {
-                        console.error("Pasugo delivery geocoding failed:", error);
-
-                        setDeliveryCoords(null);
-                        setDeliveryPlace("");
-
-                        toast.error(
-                          error instanceof Error
-                            ? error.message
-                            : "Unable to find this delivery address.",
-                        );
-                      });
-                  }}
-                >
-                  <MapPin className="mr-2 size-4" />
-                  Find Delivery Location
-                </Button>
-
-                {deliveryPlace ? (
-                  <p className="rounded-xl border border-primary/20 bg-primary/5 p-3 text-xs font-semibold">
-                    <span className="text-muted-foreground">Delivery location:</span>{" "}
-                    {deliveryPlace}
-                  </p>
-                ) : null}
-
-                <AddressLocationPicker
-                  latitude={deliveryCoords?.lat ?? null}
-                  longitude={deliveryCoords?.lng ?? null}
-                  onChange={(coordinate) => {
-                    setDeliveryCoords(coordinate);
-                    setDeliveryPlace("");
-
-                    void reverseGeocodeFn({
-                      data: {
-                        latitude: coordinate.lat,
-                        longitude: coordinate.lng,
-                      },
-                    })
-                      .then((result) => {
-                        const address = [
-                          result.address.line1,
-                          result.address.barangay,
-                          result.address.city,
-                          result.address.province,
-                        ]
-                          .filter(Boolean)
-                          .join(", ");
-
-                        if (address) {
-                          setDeliveryAddress(address);
-                        }
-
-                        setDeliveryPlace(result.place_name);
-                      })
-                      .catch((error) => {
-                        console.warn("Pasugo delivery reverse geocoding failed:", error);
-                      });
-                  }}
-                />
-              </div>
-            )}
+                    .catch((error) => {
+                      console.warn(
+                        "Pasugo delivery reverse geocoding failed:",
+                        error,
+                      );
+                    });
+                }}
+              />
+            </div>
           </div>
 
           {distanceKm != null && estimatedFee != null ? (
