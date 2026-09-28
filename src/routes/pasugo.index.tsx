@@ -12,6 +12,7 @@ import { useAuth } from "@/contexts/use-auth";
 import { myAddressesQuery } from "@/lib/addresses";
 import { createPasugoBooking, customerLatestPasugoQuery } from "@/lib/pasugo";
 import { dispatchSettingsQuery, quoteDispatchFee } from "@/lib/dispatch";
+import { supabase } from "@/integrations/supabase/client";
 import { geocodeAddressFn, reverseGeocodeFn } from "@/lib/geocoding.functions";
 import { peso } from "@/lib/currency";
 
@@ -27,17 +28,6 @@ export const Route = createFileRoute("/pasugo/")({
   }),
   component: PasugoPage,
 });
-
-function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number) {
-  const toRad = (deg: number) => (deg * Math.PI) / 180;
-  const dLat = toRad(lat2 - lat1);
-  const dLng = toRad(lng2 - lng1);
-  const a =
-    Math.sin(dLat / 2) ** 2 +
-    Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
-
-  return Math.round(6371 * 2 * Math.asin(Math.sqrt(a)) * 100) / 100;
-}
 
 function PasugoPage() {
   const { user } = useAuth();
@@ -68,16 +58,81 @@ function PasugoPage() {
     lng: number;
   } | null>(null);
 
-  const distanceKm = useMemo(() => {
-    if (!destinationCoords || !deliveryCoords) return null;
+  const [roadDistanceKm, setRoadDistanceKm] = useState<number | null>(null);
+  const [roadDistanceLoading, setRoadDistanceLoading] = useState(false);
+  const [roadDistanceError, setRoadDistanceError] = useState<string | null>(null);
 
-    return haversineKm(
-      destinationCoords.lat,
-      destinationCoords.lng,
-      deliveryCoords.lat,
-      deliveryCoords.lng,
-    );
+  useEffect(() => {
+    let cancelled = false;
+
+    if (!destinationCoords || !deliveryCoords) {
+      setRoadDistanceKm(null);
+      setRoadDistanceError(null);
+      setRoadDistanceLoading(false);
+      return;
+    }
+
+    const calculateRoadDistance = async () => {
+      setRoadDistanceLoading(true);
+      setRoadDistanceError(null);
+
+      try {
+        const { data: result, error } = await supabase.functions.invoke("pasugo-route-distance", {
+          body: {
+            pickup: {
+              latitude: destinationCoords.lat,
+              longitude: destinationCoords.lng,
+            },
+            delivery: {
+              latitude: deliveryCoords.lat,
+              longitude: deliveryCoords.lng,
+            },
+          },
+        });
+
+        if (error) {
+          throw error;
+        }
+
+        if (!result?.ok) {
+          throw new Error(
+            result?.error
+              ? typeof result.error === "string"
+                ? result.error
+                : "Unable to calculate road distance."
+              : "Unable to calculate road distance.",
+          );
+        }
+
+        if (typeof result.distanceKm !== "number") {
+          throw new Error("Google did not return a valid road distance.");
+        }
+
+        if (!cancelled) {
+          setRoadDistanceKm(result.distanceKm);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setRoadDistanceKm(null);
+          setRoadDistanceError(
+            error instanceof Error ? error.message : "Unable to calculate road distance.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setRoadDistanceLoading(false);
+        }
+      }
+    };
+
+    void calculateRoadDistance();
+
+    return () => {
+      cancelled = true;
+    };
   }, [deliveryCoords, destinationCoords]);
+
+  const distanceKm = roadDistanceKm;
 
   const estimatedFee = useMemo(() => {
     if (distanceKm == null || !dispatchSettings.data) return null;
@@ -507,7 +562,16 @@ function PasugoPage() {
             </div>
           </div>
 
-          {distanceKm != null && estimatedFee != null ? (
+          {roadDistanceLoading ? (
+            <div className="rounded-2xl border border-primary/20 bg-primary/5 p-4 text-sm text-primary">
+              Calculating actual road distance and delivery fee…
+            </div>
+          ) : roadDistanceError ? (
+            <div className="rounded-2xl border border-destructive/30 bg-destructive/5 p-4 text-sm text-destructive">
+              Unable to calculate the actual road distance. Please check the pickup and delivery
+              locations and try again.
+            </div>
+          ) : distanceKm != null && estimatedFee != null ? (
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-2xl border border-border p-4">
                 <div className="flex items-center gap-2 text-muted-foreground">
